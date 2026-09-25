@@ -1,0 +1,16 @@
+id: zeromark-146
+title: Unbounded penalty in executeForceExit
+type: original-research
+status: validated-fixed
+disclosure: sanitized
+category: privileged-input-validation
+security_property: A privileged exit operation must not accept a penalty above the protocol intended maximum.
+reproducible: true
+target: CarthaParentVault.sol
+entry_point: executeForceExit(address owner, uint256 penaltyBps)
+actor: FORCE_EXITER
+privilege: privileged-role
+root_cause: Missing upper-bound validation for penaltyBps at the parent-vault boundary.
+failure: penaltyBps=10000 can reduce payout to zero while shares are settled or burned.
+impact: Potential loss of the affected user's vault payout under the required privileged-role condition.
+mitigation: Add and enforce a parent-vault MAX_PENALTY_BPS guardrail.

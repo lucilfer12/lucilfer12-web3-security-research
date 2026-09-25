@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Security Invariant",
+  "type": "object",
+  "required": ["id", "name", "property", "scope", "verification"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "property": {"type": "string"},
+    "scope": {"type": "string"},
+    "verification": {"type": "array", "items": {"type": "string"}},
+    "counterexamples": {"type": "array", "items": {"type": "string"}}
+  }
+}

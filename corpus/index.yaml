@@ -1,0 +1,22 @@
+version: 1
+records:
+  - id: 0xmarkets-zeromark-146
+    type: original-research
+    status: validated-fixed
+    disclosure: sanitized
+    category: privileged-input-validation
+  - id: 0xmarkets-zeromark-145
+    type: original-research
+    status: accepted-fixed
+    disclosure: sanitized
+    category: accounting-functional-correctness
+  - id: near-neap-658
+    type: original-research
+    status: informative-duplicate
+    disclosure: sanitized
+    category: replay-protection
+  - id: europeum-didr-capability-invocation
+    type: original-research
+    status: under-review
+    disclosure: sanitized
+    category: lifecycle-controller-reachability

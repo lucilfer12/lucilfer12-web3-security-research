@@ -1,0 +1,13 @@
+id: near-neap-658
+title: Gas-key nonce reset and DelegateAction replay window
+type: original-research
+status: informative-duplicate
+disclosure: sanitized
+category: replay-protection
+security_property: Re-adding an authorization key must not make previously consumed signed actions valid again.
+reproducible: true
+target: nearcore runtime access-key and action validation paths
+root_cause: add_gas_key reset the access-key nonce to zero while DelegateAction validation used nonce as replay protection.
+failure: Delete and re-add of the same gas key could create a replay window for previously executed DelegateActions until the max block height condition.
+impact: Technical replay behavior was reported, while production applicability was separately limited by the protocol-version context at triage.
+mitigation: Preserve monotonic replay state or otherwise make key lifecycle transitions invalidate prior authorizations.
