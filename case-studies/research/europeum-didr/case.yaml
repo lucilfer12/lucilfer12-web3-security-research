@@ -1,0 +1,13 @@
+id: europeum-didr-capability-invocation
+title: Last resolvable capabilityInvocation key lifecycle guard
+type: original-research
+status: under-review
+disclosure: sanitized
+category: lifecycle-controller-reachability
+security_property: A DID controller path must not be permanently destroyed by revoking or expiring the last resolvable capabilityInvocation key.
+reproducible: true
+target: Europeum DIDR SC DualDefense
+root_cause: Direct revoke and expire paths lacked an equivalent last-controller or capabilityInvocation guard.
+failure: Revoking or expiring the last active resolvable capabilityInvocation key may make controller-gated operations unreachable.
+impact: Potential permanent loss of the normal authorization path, subject to the exact policy-registry and operator model.
+mitigation: Guard the final resolvable authorization path or provide a provably safe replacement transition.

@@ -1,0 +1,13 @@
+id: zeromark-145
+title: Silent payout shortfall in parent-vault withdrawal
+type: original-research
+status: accepted-fixed
+disclosure: sanitized
+category: accounting-functional-correctness
+security_property: A withdrawal marked sufficient should satisfy the intended share payout within the explicitly documented tolerance.
+reproducible: true
+target: Parent vault withdrawal path
+root_cause: _prepareSharePayout() returned sufficient=true despite a bounded child-liquidity shortfall.
+failure: The caller can receive slightly less than the intended share-value payout.
+impact: Dust-bounded shortfall; supplied triage noted USDC 6 decimals and interpreted +10 base units as 0.00001 USDC.
+mitigation: Align the sufficiency flag with actual tolerance semantics and regression-test the boundary.
