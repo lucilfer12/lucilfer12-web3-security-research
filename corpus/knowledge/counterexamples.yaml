@@ -1,0 +1,30 @@
+version: 1
+counterexamples:
+  - id: cx.replay.key-readdition
+    kind: replay
+    status: observed
+    case: near-neap-658
+    stimulus: Delete and re-add the same authorization key while a prior signed action remains within its validity window.
+    expected: Previously consumed authorization is permanently invalid.
+    observed: A nonce reset can create a replay window in the documented protocol context.
+  - id: cx.lifecycle.final-capability-removal
+    kind: lifecycle
+    status: observed
+    case: europeum-didr-capability-invocation
+    stimulus: Revoke or expire the last resolvable capabilityInvocation key.
+    expected: A controller authorization path remains reachable or the transition is safely rejected.
+    observed: The direct paths can remove the last normal route without an equivalent guard.
+  - id: cx.accounting.bounded-shortfall
+    kind: accounting
+    status: observed
+    case: zeromark-145
+    stimulus: Exercise the withdrawal boundary where child liquidity is slightly below requested payout.
+    expected: The sufficiency result matches the documented payout tolerance.
+    observed: The path can report sufficient while a bounded shortfall remains.
+  - id: cx.authorization.penalty-upper-bound
+    kind: authorization
+    status: observed
+    case: zeromark-146
+    stimulus: Supply a privileged penaltyBps value above the intended protocol maximum.
+    expected: The boundary rejects the out-of-range value.
+    observed: A value of 10000 can drive the affected payout to zero before the fix.

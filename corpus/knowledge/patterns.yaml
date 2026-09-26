@@ -1,0 +1,26 @@
+version: 1
+patterns:
+  - id: pattern.replay-state-reset
+    name: Replay state reset
+    status: candidate
+    statement: A lifecycle operation resets or recreates replay state without invalidating prior authorizations.
+    cases: [near-neap-658]
+    invariants: [invariant.replay.nonce-monotonicity]
+  - id: pattern.lifecycle-reachability-destruction
+    name: Lifecycle reachability destruction
+    status: candidate
+    statement: A cleanup or revocation path can remove the final reachable authorization route.
+    cases: [europeum-didr-capability-invocation]
+    invariants: [invariant.lifecycle.controller-reachability]
+  - id: pattern.unbounded-privileged-input
+    name: Unbounded privileged input
+    status: candidate
+    statement: A privileged entry point accepts a security-sensitive numeric parameter without the intended protocol bound.
+    cases: [zeromark-146]
+    invariants: [invariant.authorization.critical-state]
+  - id: pattern.silent-accounting-shortfall
+    name: Silent accounting shortfall
+    status: candidate
+    statement: A branch reports successful accounting semantics while a bounded value shortfall remains observable.
+    cases: [zeromark-145]
+    invariants: [invariant.accounting.withdrawal-conservation]

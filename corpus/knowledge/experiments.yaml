@@ -1,0 +1,12 @@
+version: 1
+experiments:
+  - id: experiment.repository-validation
+    status: executable
+    hypothesis: All structured research records satisfy their declared schemas and references.
+    command: [python, -m, w3sec, validate]
+    expected_exit: 0
+  - id: experiment.inventory-consistency
+    status: executable
+    hypothesis: The repository inventory can be generated without hidden parsing failures.
+    command: [python, -m, w3sec, inventory, --json]
+    expected_exit: 0

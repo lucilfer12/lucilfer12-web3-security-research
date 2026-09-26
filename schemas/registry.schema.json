@@ -1,0 +1,21 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Knowledge Registry","type":"object","required":["version"],
+  "properties":{
+    "version":{"type":"integer","minimum":1},
+    "invariants":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "patterns":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "counterexamples":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "protocols":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "experiments":{"type":"array","items":{"$ref":"#/$defs/item"}}
+  },
+  "$defs":{"item":{"type":"object","required":["id"],"properties":{
+    "id":{"type":"string","minLength":1},"name":{"type":"string"},"kind":{"type":"string"},
+    "status":{"type":"string"},"property":{"type":"string"},"statement":{"type":"string"},
+    "hypothesis":{"type":"string"},"command":{"type":"array","items":{"type":"string"}},
+    "expected_exit":{"type":"integer"},"case":{"type":"string"},
+    "cases":{"type":"array","items":{"type":"string"}},"invariants":{"type":"array","items":{"type":"string"}},
+    "patterns":{"type":"array","items":{"type":"string"}},"references":{"type":"array","items":{"type":"string"}}
+  },"additionalProperties":true}},
+  "additionalProperties":true
+}

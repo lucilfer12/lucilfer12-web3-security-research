@@ -11,3 +11,11 @@ root_cause: _prepareSharePayout() returned sufficient=true despite a bounded chi
 failure: The caller can receive slightly less than the intended share-value payout.
 impact: Dust-bounded shortfall; supplied triage noted USDC 6 decimals and interpreted +10 base units as 0.00001 USDC.
 mitigation: Align the sufficiency flag with actual tolerance semantics and regression-test the boundary.
+stages: [observed, modeled, reproduced, mitigated]
+invariants: [invariant.accounting.withdrawal-conservation, invariant.protocol.transition-closure]
+patterns: [pattern.silent-accounting-shortfall]
+counterexamples: [cx.accounting.bounded-shortfall]
+protocols: [protocol.0xmarkets.cartha]
+provenance:
+  - source: repository
+    locator: case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml

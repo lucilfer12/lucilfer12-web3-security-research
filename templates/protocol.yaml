@@ -1,0 +1,6 @@
+version: 1
+protocols:
+  - id: protocol.example
+    name: Example protocol or runtime
+    status: referenced
+    cases: [example.case]

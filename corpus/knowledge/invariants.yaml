@@ -1,0 +1,32 @@
+version: 1
+invariants:
+  - id: invariant.replay.nonce-monotonicity
+    name: Replay state monotonicity
+    status: active
+    property: A consumed authorization must not become valid again after key lifecycle changes.
+    cases: [near-neap-658]
+    references: [invariants/replay/nonce-monotonicity.md]
+  - id: invariant.lifecycle.controller-reachability
+    name: Controller reachability
+    status: active
+    property: At least one valid controller authorization path must remain reachable after lifecycle transitions.
+    cases: [europeum-didr-capability-invocation]
+    references: [invariants/lifecycle/reachability.md]
+  - id: invariant.authorization.critical-state
+    name: Critical-state authorization boundary
+    status: active
+    property: Privileged state transitions must enforce explicit authorization and input bounds.
+    cases: [zeromark-146]
+    references: [invariants/authorization/critical-state.md]
+  - id: invariant.accounting.withdrawal-conservation
+    name: Withdrawal conservation
+    status: active
+    property: A withdrawal reported as sufficient must satisfy its payout obligation within its documented tolerance.
+    cases: [zeromark-145]
+    references: [invariants/accounting/withdrawal.md]
+  - id: invariant.protocol.transition-closure
+    name: State-transition closure
+    status: active
+    property: Every reachable security-sensitive state transition must preserve its declared safety constraints.
+    cases: [europeum-didr-capability-invocation, near-neap-658, zeromark-145, zeromark-146]
+    references: [invariants/protocol/state-transition.md]

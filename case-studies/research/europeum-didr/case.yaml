@@ -11,3 +11,11 @@ root_cause: Direct revoke and expire paths lacked an equivalent last-controller 
 failure: Revoking or expiring the last active resolvable capabilityInvocation key may make controller-gated operations unreachable.
 impact: Potential permanent loss of the normal authorization path, subject to the exact policy-registry and operator model.
 mitigation: Guard the final resolvable authorization path or provide a provably safe replacement transition.
+stages: [observed, modeled, reproduced]
+invariants: [invariant.lifecycle.controller-reachability, invariant.protocol.transition-closure]
+patterns: [pattern.lifecycle-reachability-destruction]
+counterexamples: [cx.lifecycle.final-capability-removal]
+protocols: [protocol.europeum.didr]
+provenance:
+  - source: repository
+    locator: case-studies/research/europeum-didr/case.yaml

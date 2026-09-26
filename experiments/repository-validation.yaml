@@ -1,0 +1,5 @@
+id: experiment.repository-validation
+hypothesis: All structured research records satisfy schemas and cross-record references.
+command: [python, -m, w3sec, validate]
+timeout_seconds: 120
+expected_exit: 0

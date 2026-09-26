@@ -1,0 +1,9 @@
+version: 1
+counterexamples:
+  - id: cx.example.boundary
+    kind: boundary
+    status: observed
+    case: example.case
+    stimulus: State the minimal boundary condition.
+    expected: State the invariant-preserving outcome.
+    observed: State only what the evidence demonstrates.

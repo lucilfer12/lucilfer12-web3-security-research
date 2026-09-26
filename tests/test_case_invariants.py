@@ -1,8 +1,15 @@
+from pathlib import Path
 import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class SecurityPropertyDocumentationTests(unittest.TestCase):
     def test_core_methodology_terms(self):
-        text = open("docs/methodology/README.md", encoding="utf-8").read()
+        content = (ROOT / "docs/methodology/README.md").read_text(encoding="utf-8")
         for term in ("Invariant", "Reproduce", "Measure", "Harden", "Regress"):
-            self.assertIn(term, text)
+            self.assertIn(term, content)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,16 @@
+id: example.case
+title: Descriptive security research case
+type: original-research
+status: under-review
+disclosure: sanitized
+category: example-category
+security_property: State the property that must always hold.
+reproducible: false
+stages: [observed]
+invariants: [invariant.example]
+patterns: []
+counterexamples: []
+protocols: [protocol.example]
+provenance:
+  - source: repository
+    locator: path/to/source

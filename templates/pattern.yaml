@@ -1,0 +1,8 @@
+version: 1
+patterns:
+  - id: pattern.example
+    name: Example pattern
+    status: candidate
+    statement: Describe the repeated failure shape without overclaiming.
+    cases: [example.case]
+    invariants: [invariant.example]

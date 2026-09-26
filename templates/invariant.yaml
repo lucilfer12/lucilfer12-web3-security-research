@@ -1,0 +1,7 @@
+version: 1
+invariants:
+  - id: invariant.example
+    name: Example invariant
+    status: active
+    property: State the invariant in testable terms.
+    references: [invariants/protocol/state-transition.md]

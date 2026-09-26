@@ -1,0 +1,6 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Research Lineage","type":"object","required":["version","edges"],
+  "properties":{"version":{"type":"integer","minimum":1},"edges":{"type":"array","items":{"type":"object","required":["source","relation","target"],"properties":{"source":{"type":"string"},"relation":{"type":"string"},"target":{"type":"string"},"evidence":{"type":"array","items":{"type":"string"}},"valid_from":{"type":["string","null"]},"valid_to":{"type":["string","null"]}},"additionalProperties":false}}},
+  "additionalProperties":false
+}

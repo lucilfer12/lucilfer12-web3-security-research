@@ -1,25 +1,6 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Research Corpus Index",
-  "type": "object",
-  "required": ["version", "records"],
-  "properties": {
-    "version": {"type": "integer", "minimum": 1},
-    "records": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "type", "status", "disclosure", "category"],
-        "properties": {
-          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$"},
-          "type": {"type": "string"},
-          "status": {"type": "string"},
-          "disclosure": {"type": "string"},
-          "category": {"type": "string"}
-        },
-        "additionalProperties": true
-      }
-    }
-  },
-  "additionalProperties": true
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Research Corpus Index","type":"object","required":["version","records"],
+  "properties":{"version":{"type":"integer","minimum":1},"records":{"type":"array","items":{"type":"object","required":["id","type","status","disclosure","category"],"properties":{"id":{"type":"string"},"type":{"type":"string"},"status":{"type":"string"},"disclosure":{"type":"string"},"category":{"type":"string"}},"additionalProperties":true}}},
+  "additionalProperties":true
 }

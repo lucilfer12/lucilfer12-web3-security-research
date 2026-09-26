@@ -14,3 +14,11 @@ root_cause: Missing upper-bound validation for penaltyBps at the parent-vault bo
 failure: penaltyBps=10000 can reduce payout to zero while shares are settled or burned.
 impact: Potential loss of the affected user's vault payout under the required privileged-role condition.
 mitigation: Add and enforce a parent-vault MAX_PENALTY_BPS guardrail.
+stages: [observed, modeled, reproduced, mitigated]
+invariants: [invariant.authorization.critical-state, invariant.protocol.transition-closure]
+patterns: [pattern.unbounded-privileged-input]
+counterexamples: [cx.authorization.penalty-upper-bound]
+protocols: [protocol.0xmarkets.cartha]
+provenance:
+  - source: repository
+    locator: case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml

@@ -1,0 +1,6 @@
+version: 1
+edges:
+  - source: case:example.case
+    relation: tests
+    target: invariant:invariant.example
+    evidence: [example.case]

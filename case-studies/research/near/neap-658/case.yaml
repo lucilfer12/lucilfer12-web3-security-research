@@ -11,3 +11,11 @@ root_cause: add_gas_key reset the access-key nonce to zero while DelegateAction 
 failure: Delete and re-add of the same gas key could create a replay window for previously executed DelegateActions until the max block height condition.
 impact: Technical replay behavior was reported, while production applicability was separately limited by the protocol-version context at triage.
 mitigation: Preserve monotonic replay state or otherwise make key lifecycle transitions invalidate prior authorizations.
+stages: [observed, modeled, reproduced]
+invariants: [invariant.replay.nonce-monotonicity, invariant.protocol.transition-closure]
+patterns: [pattern.replay-state-reset]
+counterexamples: [cx.replay.key-readdition]
+protocols: [protocol.near.runtime]
+provenance:
+  - source: repository
+    locator: case-studies/research/near/neap-658/case.yaml

@@ -1,0 +1,45 @@
+version: 1
+edges:
+  - source: case:near-neap-658
+    relation: tests
+    target: invariant:invariant.replay.nonce-monotonicity
+    evidence: [case:near-neap-658]
+  - source: case:near-neap-658
+    relation: produces
+    target: counterexample:cx.replay.key-readdition
+  - source: counterexample:cx.replay.key-readdition
+    relation: suggests
+    target: pattern:pattern.replay-state-reset
+
+  - source: case:europeum-didr-capability-invocation
+    relation: tests
+    target: invariant:invariant.lifecycle.controller-reachability
+    evidence: [case:europeum-didr-capability-invocation]
+  - source: case:europeum-didr-capability-invocation
+    relation: produces
+    target: counterexample:cx.lifecycle.final-capability-removal
+  - source: counterexample:cx.lifecycle.final-capability-removal
+    relation: suggests
+    target: pattern:pattern.lifecycle-reachability-destruction
+
+  - source: case:zeromark-145
+    relation: tests
+    target: invariant:invariant.accounting.withdrawal-conservation
+    evidence: [case:zeromark-145]
+  - source: case:zeromark-145
+    relation: produces
+    target: counterexample:cx.accounting.bounded-shortfall
+  - source: counterexample:cx.accounting.bounded-shortfall
+    relation: suggests
+    target: pattern:pattern.silent-accounting-shortfall
+
+  - source: case:zeromark-146
+    relation: tests
+    target: invariant:invariant.authorization.critical-state
+    evidence: [case:zeromark-146]
+  - source: case:zeromark-146
+    relation: produces
+    target: counterexample:cx.authorization.penalty-upper-bound
+  - source: counterexample:cx.authorization.penalty-upper-bound
+    relation: suggests
+    target: pattern:pattern.unbounded-privileged-input

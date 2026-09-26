@@ -1,47 +1,89 @@
 # Web3 Security Research
-**A reproducible research environment for adversarial analysis of decentralized systems.**
-This repository is a long-lived research record rather than a collection of claims. It connects threat modeling, security invariants, state-transition analysis, adversarial testing, reproducible proof-of-concepts, remediation, regression evidence, incident forensics, and generalized security patterns.
+
+A durable, evidence-first operating system for adversarial analysis of decentralized
+systems. This repository preserves research as structured, traceable knowledge rather
+than a flat list of vulnerability claims.
+
 ## Research loop
-Observe -> Model -> Hypothesize -> Formalize -> Attack -> Reproduce -> Measure -> Harden -> Regress -> Generalize
-## Research domains
-- Smart-contract and EVM security
-- DeFi accounting, solvency, liquidation and economic invariants
-- Authorization and privilege boundaries
-- Lifecycle and state-machine failures
-- Replay protection and nonce semantics
-- Bridges and cross-domain message security
-- Oracle and pricing assumptions
-- Protocol-runtime security
-- Public incident reconstruction and forensic analysis
+
+Observe -> Model -> Hypothesize -> Formalize -> Attack -> Reproduce -> Measure ->
+Harden -> Regress -> Generalize
+
+## System architecture
+
+The repository is now organized as seven cooperating layers:
+
+1. Records: case studies, invariants, counterexamples, patterns, protocols and experiments.
+2. Knowledge graph: typed nodes and explicit lineage edges.
+3. Provenance: source locators with optional commit, line range and content hash.
+4. Temporal memory: append-only hash-chained research events in the ledger.
+5. Deterministic tooling: schema validation, referential integrity, inventory and queries.
+6. Executable research: bounded experiment manifests with captured output and exit contracts.
+7. Human analysis: interpretation stays above the evidence layer and never replaces it.
 ## Repository map
+
 | Area | Purpose |
-|---|---|
-| docs/ | Research doctrine, methodology and operating standards |
-| atlas/ | Security-domain map and terminology |
-| invariants/ | Security properties and testable invariants |
-| labs/ | Small adversarial models and regression experiments |
-| case-studies/ | Carefully classified research records |
-| corpus/ | Structured research corpus and provenance |
-| schemas/ | Validation contracts |
-| src/w3sec/ | Lightweight CLI and validation utilities |
-| templates/ | Reusable research templates |
-| experiments/ | Hypotheses and experimental records |
-| ledger/ | Research provenance and lessons |
-## Evidence standard
-A security claim should be traceable through:
-Claim -> Source/Code -> Security Property -> Reproduction -> Observed Failure -> Impact -> Mitigation -> Regression
-Status is explicit. A validated/fixed finding is not presented as equivalent to an informative, duplicate, experimental, or still-private report.
-## Existing research
-This hub is additive. It does not replace existing repositories or history.
-- lucilfer12/web3-smart-contract-forensics
-- lucilfer12/security-invariant-lab
-- lucilfer12/smart-contract-security-lab
-- lucilfer12/web3-zeroday-forensics
-- lucilfer12/private-security-research
-## Responsible disclosure
-Do not publish private reports, client information, credentials, KYC data, unreleased exploit details, or confidential triage material.
-## Reproducibility
-Run:
+| --- | --- |
+| case-studies/ | Durable sanitized research records |
+| corpus/knowledge/ | Machine-readable invariants, patterns, counterexamples, protocols and lineage |
+| schemas/ | JSON Schema contracts for the research model |
+| experiments/ | Executable, bounded research manifests |
+| invariants/ | Human-readable security properties |
+| labs/ | Adversarial modeling and regression workspace |
+| ledger/ | Research history and lessons |
+| src/w3sec/ | Validation, graph, query, inventory, ledger and experiment CLI |
+| docs/ | Methodology, architecture, disclosure and operating standards |
+## CLI
+
+Validate all record and reference contracts:
+
     python -m w3sec validate
-    python -m unittest discover -s tests -v
-The project grows through evidence-backed research, not artificial volume.
+
+Generate machine-readable inventory and research debt:
+
+    python -m w3sec inventory --json
+
+Query cases:
+
+    python -m w3sec query --category replay-protection
+    python -m w3sec query --status validated-fixed
+
+Walk research lineage:
+
+    python -m w3sec lineage case:near-neap-658 --depth 3
+
+Verify or append temporal ledger events:
+
+    python -m w3sec ledger verify
+    python -m w3sec ledger append case:near-neap-658 observation --stage reproduced
+
+Check or explicitly run an experiment:
+
+    python -m w3sec experiment check experiments/repository-validation.yaml
+    python -m w3sec experiment run experiments/repository-validation.yaml --root .
+## Evidence discipline
+
+A case should remain traceable through:
+
+Claim -> Source/Code -> Security Property -> Reproduction -> Observed Failure ->
+Impact -> Mitigation -> Regression -> Generalize
+
+Research stages are explicit. Missing stages are reported as research debt, not silently
+invented. Candidate patterns remain candidates until stronger evidence supports promotion.
+
+## Current corpus
+
+The integrated knowledge layer covers the existing four case studies and adds:
+5 canonical invariants, 4 sanitized counterexamples, 4 candidate patterns, 3 protocol
+entities, 12 lineage edges and 2 executable experiment manifests.
+
+## Responsible disclosure
+
+Do not publish private reports, client information, credentials, KYC data, unreleased
+exploit details, or confidential triage material.
+
+## Verification
+
+The CI pipeline installs dependencies, compiles the package, runs the complete unit suite,
+validates repository contracts, builds the deterministic inventory and executes the
+research-validation manifests.

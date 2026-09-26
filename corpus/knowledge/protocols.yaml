@@ -1,0 +1,14 @@
+version: 1
+protocols:
+  - id: protocol.near.runtime
+    name: NEAR runtime
+    status: referenced
+    cases: [near-neap-658]
+  - id: protocol.europeum.didr
+    name: Europeum DIDR
+    status: referenced
+    cases: [europeum-didr-capability-invocation]
+  - id: protocol.0xmarkets.cartha
+    name: 0xMarkets Cartha parent vault
+    status: referenced
+    cases: [zeromark-145, zeromark-146]

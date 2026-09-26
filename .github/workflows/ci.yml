@@ -12,7 +12,13 @@ jobs:
           python-version: "3.12"
       - name: Install project dependencies
         run: python -m pip install --upgrade pip && python -m pip install -e .
+      - name: Compile source
+        run: python -m compileall -q src
       - name: Validate research records
         run: python -m unittest discover -s tests -v
-      - name: Validate CLI
+      - name: Validate repository contracts
         run: python -m w3sec validate
+      - name: Verify deterministic inventory
+        run: python -m w3sec inventory --json
+      - name: Verify executable research manifests
+        run: python -m w3sec experiment run experiments/repository-validation.yaml --root . && python -m w3sec experiment run experiments/inventory-consistency.yaml --root .
