@@ -13,7 +13,7 @@ Harden -> Regress -> Generalize
 
 The repository is now organized as seven cooperating layers:
 
-1. Records: case studies, invariants, counterexamples, patterns, protocols and experiments.
+1. Records: cases, invariants, counterexamples, patterns, protocols, evidence, hypotheses and experiments.
 2. Knowledge graph: typed nodes and explicit lineage edges.
 3. Provenance: source locators with optional commit, line range and content hash.
 4. Temporal memory: append-only hash-chained research events in the ledger.
@@ -25,7 +25,7 @@ The repository is now organized as seven cooperating layers:
 | Area | Purpose |
 | --- | --- |
 | case-studies/ | Durable sanitized research records |
-| corpus/knowledge/ | Machine-readable invariants, patterns, counterexamples, protocols and lineage |
+| corpus/knowledge/ | Machine-readable invariants, evidence, hypotheses, protocols, patterns, counterexamples and lineage |
 | schemas/ | JSON Schema contracts for the research model |
 | experiments/ | Executable, bounded research manifests |
 | invariants/ | Human-readable security properties |
@@ -43,14 +43,21 @@ Generate machine-readable inventory and research debt:
 
     python -m w3sec inventory --json
 
-Query cases:
+Query cases and research state:
 
     python -m w3sec query --category replay-protection
+    python -m w3sec query --stage reproduced --invariant invariant.replay.nonce-monotonicity
     python -m w3sec query --status validated-fixed
 
 Walk research lineage:
 
-    python -m w3sec lineage case:near-neap-658 --depth 3
+    python -m w3sec lineage case:near-neap-658 --depth 4
+
+Inspect coverage, graph and unified audit:
+
+    python -m w3sec coverage --json
+    python -m w3sec graph --json
+    python -m w3sec audit --json
 
 Verify or append temporal ledger events:
 
@@ -74,8 +81,10 @@ invented. Candidate patterns remain candidates until stronger evidence supports 
 ## Current corpus
 
 The integrated knowledge layer covers the existing four case studies and adds:
-5 canonical invariants, 4 sanitized counterexamples, 4 candidate patterns, 3 protocol
-entities, 12 lineage edges and 2 executable experiment manifests.
+5 canonical invariants, 4 sanitized counterexamples, 4 candidate hypotheses, 4 candidate
+patterns, 3 protocol entities, 4 evidence records, 8 repository sources, 4 regression
+contracts, 3 protocol-version contexts, 31 explicit lineage edges, and 2 executable
+experiment manifests. The graph currently materializes 43 typed nodes.
 
 ## Responsible disclosure
 

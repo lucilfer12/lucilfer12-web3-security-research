@@ -20,11 +20,16 @@ def build_inventory(root: Path) -> dict[str, Any]:
     knowledge_files: dict[str, int] = {}
     for path in discover_knowledge_files(root):
         data = load_yaml_mapping(path)
-        for key in ("invariants", "patterns", "counterexamples", "experiments", "protocols", "edges"):
+        for key in (
+            "invariants", "patterns", "counterexamples", "experiments",
+            "protocols", "evidence", "hypotheses", "source_repos",
+            "regressions", "protocol_versions", "negative_results", "edges",
+        ):
             items = data.get(key)
             if isinstance(items, list):
                 registry_counts[key] += len(items)
                 knowledge_files[f"{path.stem}.{key}"] = len(items)
+
     status_values = [str(record.get("status", "")) for _, record in cases]
     category_values = [str(record.get("category", "")) for _, record in cases]
     type_values = [str(record.get("type", "")) for _, record in cases]
@@ -34,15 +39,15 @@ def build_inventory(root: Path) -> dict[str, Any]:
     reproducible = 0
     for _, record in cases:
         reproducible += record.get("reproducible") is True
-        stages = record.get("stages", [])
         try:
-            normalized = {ResearchStage(value) for value in stages}
+            normalized = {ResearchStage(value) for value in record.get("stages", [])}
         except (TypeError, ValueError):
             normalized = set()
         for stage in normalized:
             stage_counts[stage.value] += 1
         for gap in stage_gaps(normalized):
             debt_counts[gap.value] += 1
+
     return {
         "schema_version": 1,
         "case_count": len(cases),

@@ -7,15 +7,25 @@
     "patterns":{"type":"array","items":{"$ref":"#/$defs/item"}},
     "counterexamples":{"type":"array","items":{"$ref":"#/$defs/item"}},
     "protocols":{"type":"array","items":{"$ref":"#/$defs/item"}},
-    "experiments":{"type":"array","items":{"$ref":"#/$defs/item"}}
+    "experiments":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "evidence":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "hypotheses":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "source_repos":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "regressions":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "protocol_versions":{"type":"array","items":{"$ref":"#/$defs/item"}},
+    "negative_results":{"type":"array","items":{"$ref":"#/$defs/item"}}
   },
   "$defs":{"item":{"type":"object","required":["id"],"properties":{
     "id":{"type":"string","minLength":1},"name":{"type":"string"},"kind":{"type":"string"},
-    "status":{"type":"string"},"property":{"type":"string"},"statement":{"type":"string"},
-    "hypothesis":{"type":"string"},"command":{"type":"array","items":{"type":"string"}},
-    "expected_exit":{"type":"integer"},"case":{"type":"string"},
-    "cases":{"type":"array","items":{"type":"string"}},"invariants":{"type":"array","items":{"type":"string"}},
-    "patterns":{"type":"array","items":{"type":"string"}},"references":{"type":"array","items":{"type":"string"}}
+    "status":{"type":"string"},"role":{"type":"string"},"scope":{"type":"string"},
+    "repository":{"type":"string"},"property":{"type":"string"},"statement":{"type":"string"},
+    "hypothesis":{"type":"string"},"source":{"type":"string"},"locator":{"type":"string"},
+    "command":{"type":"array","items":{"type":"string"}},"expected_exit":{"type":"integer"},
+    "case":{"type":"string"},"cases":{"type":"array","items":{"type":"string"}},
+    "invariants":{"type":"array","items":{"type":"string"}},
+    "patterns":{"type":"array","items":{"type":"string"}},
+    "evidence":{"type":"array","items":{"type":"string"}},
+    "references":{"type":"array","items":{"type":"string"}}
   },"additionalProperties":true}},
   "additionalProperties":true
 }

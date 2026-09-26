@@ -3,43 +3,101 @@ edges:
   - source: case:near-neap-658
     relation: tests
     target: invariant:invariant.replay.nonce-monotonicity
-    evidence: [case:near-neap-658]
+    evidence: [evidence.case.near]
   - source: case:near-neap-658
     relation: produces
     target: counterexample:cx.replay.key-readdition
   - source: counterexample:cx.replay.key-readdition
     relation: suggests
     target: pattern:pattern.replay-state-reset
+  - source: case:near-neap-658
+    relation: cites
+    target: evidence:evidence.case.near
+  - source: case:near-neap-658
+    relation: explores
+    target: hypothesis:hypothesis.replay.lifecycle-reset
+  - source: case:near-neap-658
+    relation: requires-regression
+    target: regression:regression.near.nonce-monotonicity
+  - source: case:near-neap-658
+    relation: uses-source
+    target: source:source.repo.central
 
   - source: case:europeum-didr-capability-invocation
     relation: tests
     target: invariant:invariant.lifecycle.controller-reachability
-    evidence: [case:europeum-didr-capability-invocation]
+    evidence: [evidence.case.europeum]
   - source: case:europeum-didr-capability-invocation
     relation: produces
     target: counterexample:cx.lifecycle.final-capability-removal
   - source: counterexample:cx.lifecycle.final-capability-removal
     relation: suggests
     target: pattern:pattern.lifecycle-reachability-destruction
+  - source: case:europeum-didr-capability-invocation
+    relation: cites
+    target: evidence:evidence.case.europeum
+  - source: case:europeum-didr-capability-invocation
+    relation: explores
+    target: hypothesis:hypothesis.lifecycle.final-authorization
+  - source: case:europeum-didr-capability-invocation
+    relation: requires-regression
+    target: regression:regression.europeum.final-capability
+  - source: case:europeum-didr-capability-invocation
+    relation: uses-source
+    target: source:source.repo.central
 
   - source: case:zeromark-145
     relation: tests
     target: invariant:invariant.accounting.withdrawal-conservation
-    evidence: [case:zeromark-145]
+    evidence: [evidence.case.zeromark-145]
   - source: case:zeromark-145
     relation: produces
     target: counterexample:cx.accounting.bounded-shortfall
   - source: counterexample:cx.accounting.bounded-shortfall
     relation: suggests
     target: pattern:pattern.silent-accounting-shortfall
+  - source: case:zeromark-145
+    relation: cites
+    target: evidence:evidence.case.zeromark-145
+  - source: case:zeromark-145
+    relation: explores
+    target: hypothesis:hypothesis.accounting.sufficiency-boundary
+  - source: case:zeromark-145
+    relation: requires-regression
+    target: regression:regression.zeromark-145.withdrawal
+  - source: case:zeromark-145
+    relation: uses-source
+    target: source:source.repo.central
 
   - source: case:zeromark-146
     relation: tests
     target: invariant:invariant.authorization.critical-state
-    evidence: [case:zeromark-146]
+    evidence: [evidence.case.zeromark-146]
   - source: case:zeromark-146
     relation: produces
     target: counterexample:cx.authorization.penalty-upper-bound
   - source: counterexample:cx.authorization.penalty-upper-bound
     relation: suggests
     target: pattern:pattern.unbounded-privileged-input
+  - source: case:zeromark-146
+    relation: cites
+    target: evidence:evidence.case.zeromark-146
+  - source: case:zeromark-146
+    relation: explores
+    target: hypothesis:hypothesis.authorization.input-boundary
+  - source: case:zeromark-146
+    relation: requires-regression
+    target: regression:regression.zeromark-146.penalty-bound
+  - source: case:zeromark-146
+    relation: uses-source
+    target: source:source.repo.central
+
+  - source: protocol-version:protocol-version.near.runtime
+    relation: contexts
+    target: protocol:protocol.near.runtime
+  - source: protocol-version:protocol-version.europeum.didr
+    relation: contexts
+    target: protocol:protocol.europeum.didr
+  - source: protocol-version:protocol-version.0xmarkets.cartha
+    relation: contexts
+    target: protocol:protocol.0xmarkets.cartha

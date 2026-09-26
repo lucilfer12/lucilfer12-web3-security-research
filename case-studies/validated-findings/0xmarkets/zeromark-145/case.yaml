@@ -16,6 +16,10 @@ invariants: [invariant.accounting.withdrawal-conservation, invariant.protocol.tr
 patterns: [pattern.silent-accounting-shortfall]
 counterexamples: [cx.accounting.bounded-shortfall]
 protocols: [protocol.0xmarkets.cartha]
+evidence: [evidence.case.zeromark-145]
+sources: [source.repo.central]
+hypotheses: [hypothesis.accounting.sufficiency-boundary]
+regressions: [regression.zeromark-145.withdrawal]
 provenance:
   - source: repository
     locator: case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml

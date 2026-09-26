@@ -16,6 +16,10 @@ invariants: [invariant.replay.nonce-monotonicity, invariant.protocol.transition-
 patterns: [pattern.replay-state-reset]
 counterexamples: [cx.replay.key-readdition]
 protocols: [protocol.near.runtime]
+evidence: [evidence.case.near]
+sources: [source.repo.central]
+hypotheses: [hypothesis.replay.lifecycle-reset]
+regressions: [regression.near.nonce-monotonicity]
 provenance:
   - source: repository
     locator: case-studies/research/near/neap-658/case.yaml

@@ -6,10 +6,8 @@
     "id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]+$"},
     "title":{"type":"string","minLength":8},
     "type":{"enum":["original-research","public-incident","laboratory"]},
-    "status":{"type":"string","minLength":1},
-    "category":{"type":"string","minLength":1},
-    "security_property":{"type":"string","minLength":1},
-    "disclosure":{"type":"string"},
+    "status":{"type":"string","minLength":1},"category":{"type":"string","minLength":1},
+    "security_property":{"type":"string","minLength":1},"disclosure":{"type":"string"},
     "reproducible":{"type":"boolean"},
     "references":{"type":"array","items":{"type":"string"}},
     "stages":{"type":"array","uniqueItems":true,"items":{"enum":["observed","modeled","formalized","reproduced","measured","mitigated","regressed","generalized"]}},
@@ -17,9 +15,19 @@
     "patterns":{"type":"array","items":{"type":"string"}},
     "counterexamples":{"type":"array","items":{"type":"string"}},
     "protocols":{"type":"array","items":{"type":"string"}},
+    "evidence":{"type":"array","items":{"type":"string"}},
+    "hypotheses":{"type":"array","items":{"type":"string"}},
+    "regressions":{"type":"array","items":{"type":"string"}},
+    "sources":{"type":"array","items":{"type":"string"}},
     "tags":{"type":"array","items":{"type":"string"}},
-    "provenance":{"type":"array","items":{"type":"object","required":["source","locator"],"properties":{"source":{"type":"string","minLength":1},"locator":{"type":"string","minLength":1},"commit":{"type":"string"},"line_start":{"type":"integer","minimum":1},"line_end":{"type":"integer","minimum":1},"content_hash":{"type":"string"}},"additionalProperties":false}},
-    "relationships":{"type":"array","items":{"type":"object","required":["relation","target"],"properties":{"relation":{"type":"string","minLength":1},"target":{"type":"string","minLength":3}},"additionalProperties":false}}
+    "provenance":{"type":"array","items":{"type":"object","required":["source","locator"],"properties":{
+      "source":{"type":"string","minLength":1},"locator":{"type":"string","minLength":1},
+      "commit":{"type":"string"},"line_start":{"type":"integer","minimum":1},
+      "line_end":{"type":"integer","minimum":1},"content_hash":{"type":"string"}
+    },"additionalProperties":false}},
+    "relationships":{"type":"array","items":{"type":"object","required":["relation","target"],
+      "properties":{"relation":{"type":"string","minLength":1},"target":{"type":"string","minLength":3}},
+      "additionalProperties":false}}
   },
   "additionalProperties":true
 }

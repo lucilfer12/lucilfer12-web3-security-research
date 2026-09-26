@@ -1,0 +1,42 @@
+version: 1
+source_repos:
+  - id: source.repo.central
+    repository: lucilfer12/lucilfer12-web3-security-research
+    role: canonical-research-os
+    status: active
+    scope: Evidence-first cases, invariants, experiments, lineage, provenance and regression memory.
+  - id: source.repo.forensics
+    repository: lucilfer12/web3-smart-contract-forensics
+    role: external-corpus
+    status: active
+    scope: Public smart-contract findings, incidents, evidence and root-cause records.
+  - id: source.repo.invariants
+    repository: lucilfer12/security-invariant-lab
+    role: execution-lab
+    status: active
+    scope: Executable invariants, state exploration, minimization and regression research.
+  - id: source.repo.smart-contract-lab
+    repository: lucilfer12/smart-contract-security-lab
+    role: execution-lab
+    status: active
+    scope: Solidity, Foundry, DeFi, bridges, access control, oracle and invariant labs.
+  - id: source.repo.zeroday
+    repository: lucilfer12/web3-zeroday-forensics
+    role: forensic-corpus
+    status: active
+    scope: Public incident timelines, patch fingerprints, variant relationships and safe regressions.
+  - id: source.repo.private
+    repository: lucilfer12/private-security-research
+    role: authorized-workspace
+    status: restricted
+    scope: Authorized private assessments and synthetic reproductions; content is not copied into the public corpus.
+  - id: source.repo.boot-trading
+    repository: lucilfer12/Boot-trading
+    role: auxiliary-repository
+    status: empty
+    scope: Repository exists but currently contains no published files.
+  - id: source.repo.porsche-site
+    repository: lucilfer12/porsche-customer.github.io
+    role: public-research-surface
+    status: referenced
+    scope: Separate static research/PoC surface; not treated as canonical evidence.

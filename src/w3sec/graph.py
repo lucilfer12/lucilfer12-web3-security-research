@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .model import LineageEdge, NodeRef
-from .records import discover_case_records, load_yaml_mapping
+from .records import discover_case_records, discover_knowledge_files, load_yaml_mapping
 
 
 @dataclass
@@ -18,7 +18,6 @@ class AttackPath:
     invariant: str
     impact: str
     edges: list[tuple[str, str]] = field(default_factory=list)
-
     def nodes(self) -> list[str]:
         return [self.actor, self.entry_point, self.authorization,
                 self.state_mutation, self.invariant, self.impact]
@@ -36,7 +35,6 @@ class ResearchGraph:
         self.nodes: dict[str, NodeRef] = {}
         self.edges: list[LineageEdge] = []
         self._edge_keys: set[tuple[str, str, str]] = set()
-
     def add_node(self, node: NodeRef) -> None:
         self.nodes[node.key] = node
 
@@ -55,7 +53,6 @@ class ResearchGraph:
 
     def reverse_neighbors(self, node: NodeRef) -> list[NodeRef]:
         return [e.source for e in self.edges if e.target.key == node.key]
-
     def walk(self, start: NodeRef, depth: int = 2, reverse: bool = False) -> list[NodeRef]:
         if depth < 0:
             raise ValueError("depth must be >= 0")
@@ -97,7 +94,6 @@ class ResearchGraph:
                     return list(reversed(path))
                 queue.append(neighbor)
         return []
-
     @classmethod
     def from_repo(cls, root: Path) -> "ResearchGraph":
         graph = cls()
@@ -112,6 +108,10 @@ class ResearchGraph:
                 ("patterns", "pattern"),
                 ("counterexamples", "counterexample"),
                 ("protocols", "protocol"),
+                ("evidence", "evidence"),
+                ("hypotheses", "hypothesis"),
+                ("sources", "source"),
+                ("regressions", "regression"),
             ):
                 for target_id in _strings(record.get(field)):
                     graph.add_edge(LineageEdge(case, f"references-{kind}",
@@ -123,6 +123,27 @@ class ResearchGraph:
                         str(relation.get("relation", "related-to")),
                         NodeRef.parse(str(relation["target"])),
                     ))
+
+        for path in discover_knowledge_files(root):
+            data = load_yaml_mapping(path)
+            stem_map = {
+                "invariants": ("invariant", "invariants"),
+                "patterns": ("pattern", "patterns"),
+                "counterexamples": ("counterexample", "counterexamples"),
+                "protocols": ("protocol", "protocols"),
+                "evidence": ("evidence", "evidence"),
+                "hypotheses": ("hypothesis", "hypotheses"),
+                "sources": ("source", "source_repos"),
+                "regressions": ("regression", "regressions"),
+                "protocol_versions": ("protocol-version", "protocol_versions"),
+                "negative_results": ("negative_result", "negative_results"),
+            }
+            mapping = stem_map.get(path.stem)
+            if mapping:
+                kind, field = mapping
+                for item in data.get(field, []) or []:
+                    if isinstance(item, dict) and item.get("id"):
+                        graph.add_node(NodeRef(kind, str(item["id"])))
 
         lineage = root / "corpus" / "knowledge" / "lineage.yaml"
         if lineage.exists():

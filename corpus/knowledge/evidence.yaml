@@ -1,0 +1,26 @@
+version: 1
+evidence:
+  - id: evidence.case.europeum
+    kind: case-record
+    source: repository
+    locator: case-studies/research/europeum-didr/case.yaml
+    case: europeum-didr-capability-invocation
+    content_hash: sha256:2402D5700B622B87CF5F1AEAA2CFFE303E2E77C3190899EA545E691D23880A1B
+  - id: evidence.case.near
+    kind: case-record
+    source: repository
+    locator: case-studies/research/near/neap-658/case.yaml
+    case: near-neap-658
+    content_hash: sha256:BB8DF5062330870DC0993CBF77592AF826B932D1C032B64AC16A9224C9C5F4C6
+  - id: evidence.case.zeromark-145
+    kind: case-record
+    source: repository
+    locator: case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml
+    case: zeromark-145
+    content_hash: sha256:6B3A288F251C975055B9BFCDBC022BB1203235E121AB63FC9153EFD9FFE4C0D8
+  - id: evidence.case.zeromark-146
+    kind: case-record
+    source: repository
+    locator: case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml
+    case: zeromark-146
+    content_hash: sha256:FE50266F8C65D77BC366E05F337199ED372452630BBDEFFC493B930E483CFD87

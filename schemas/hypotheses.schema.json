@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Research Hypothesis Registry","type":"object","required":["version","hypotheses"],
+  "properties":{"version":{"type":"integer","minimum":1},"hypotheses":{
+    "type":"array","items":{"$ref":"#/$defs/hypothesis"}
+  }},
+  "$defs":{"hypothesis":{"type":"object","required":["id","status","statement"],"properties":{
+    "id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]+$"},
+    "status":{"enum":["candidate","supported","rejected","superseded"]},
+    "statement":{"type":"string","minLength":12},
+    "cases":{"type":"array","items":{"type":"string"}},
+    "invariants":{"type":"array","items":{"type":"string"}},
+    "evidence":{"type":"array","items":{"type":"string"}}
+  },"additionalProperties":true}}
+}

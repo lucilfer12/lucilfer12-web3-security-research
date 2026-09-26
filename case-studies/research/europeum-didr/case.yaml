@@ -16,6 +16,10 @@ invariants: [invariant.lifecycle.controller-reachability, invariant.protocol.tra
 patterns: [pattern.lifecycle-reachability-destruction]
 counterexamples: [cx.lifecycle.final-capability-removal]
 protocols: [protocol.europeum.didr]
+evidence: [evidence.case.europeum]
+sources: [source.repo.central]
+hypotheses: [hypothesis.lifecycle.final-authorization]
+regressions: [regression.europeum.final-capability]
 provenance:
   - source: repository
     locator: case-studies/research/europeum-didr/case.yaml

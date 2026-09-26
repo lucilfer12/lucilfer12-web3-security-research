@@ -18,6 +18,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Validate repository contracts
         run: python -m w3sec validate
+      - name: Unified research audit
+        run: python -m w3sec audit --json
       - name: Verify deterministic inventory
         run: python -m w3sec inventory --json
       - name: Verify executable research manifests

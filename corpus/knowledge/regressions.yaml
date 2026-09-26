@@ -1,0 +1,22 @@
+version: 1
+regressions:
+  - id: regression.europeum.final-capability
+    status: planned
+    case: europeum-didr-capability-invocation
+    property: The final resolvable capabilityInvocation path remains reachable after lifecycle operations.
+    acceptance: A regression execution must reject or safely handle removal of the final authorization route.
+  - id: regression.near.nonce-monotonicity
+    status: planned
+    case: near-neap-658
+    property: Re-adding an authorization key cannot make a previously consumed signed action valid.
+    acceptance: A replay regression must remain invalid across key lifecycle transitions.
+  - id: regression.zeromark-145.withdrawal
+    status: required
+    case: zeromark-145
+    property: A sufficiency result must match the documented withdrawal tolerance.
+    acceptance: Boundary regression must detect the bounded child-liquidity shortfall semantics.
+  - id: regression.zeromark-146.penalty-bound
+    status: required
+    case: zeromark-146
+    property: Privileged penalty input must remain within the protocol maximum.
+    acceptance: Out-of-range penaltyBps values must fail before payout state is mutated.

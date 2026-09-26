@@ -1,0 +1,26 @@
+version: 1
+hypotheses:
+  - id: hypothesis.lifecycle.final-authorization
+    status: candidate
+    statement: Lifecycle transitions that remove authorization material may violate controller reachability when they do not prove an alternative route remains.
+    cases: [europeum-didr-capability-invocation]
+    invariants: [invariant.lifecycle.controller-reachability]
+    evidence: [evidence.case.europeum]
+  - id: hypothesis.replay.lifecycle-reset
+    status: candidate
+    statement: Recreating an authorization identity without preserving replay state can reopen a prior authorization window.
+    cases: [near-neap-658]
+    invariants: [invariant.replay.nonce-monotonicity]
+    evidence: [evidence.case.near]
+  - id: hypothesis.accounting.sufficiency-boundary
+    status: candidate
+    statement: A success flag at an accounting boundary must be derived from the same tolerance model as the final value transfer.
+    cases: [zeromark-145]
+    invariants: [invariant.accounting.withdrawal-conservation]
+    evidence: [evidence.case.zeromark-145]
+  - id: hypothesis.authorization.input-boundary
+    status: candidate
+    statement: Security-sensitive privileged numeric inputs require explicit upper and lower protocol bounds at the privileged boundary.
+    cases: [zeromark-146]
+    invariants: [invariant.authorization.critical-state]
+    evidence: [evidence.case.zeromark-146]

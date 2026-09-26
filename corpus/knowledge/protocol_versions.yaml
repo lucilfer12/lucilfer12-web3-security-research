@@ -1,0 +1,17 @@
+version: 1
+protocol_versions:
+  - id: protocol-version.near.runtime
+    protocol: protocol.near.runtime
+    version: unknown
+    status: unresolved
+    cases: [near-neap-658]
+  - id: protocol-version.europeum.didr
+    protocol: protocol.europeum.didr
+    version: unknown
+    status: unresolved
+    cases: [europeum-didr-capability-invocation]
+  - id: protocol-version.0xmarkets.cartha
+    protocol: protocol.0xmarkets.cartha
+    version: unknown
+    status: unresolved
+    cases: [zeromark-145, zeromark-146]

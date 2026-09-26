@@ -13,22 +13,23 @@ from w3sec.model import NodeRef, ResearchStage, stage_gaps
 from w3sec.query import CaseQuery, query_cases
 from w3sec.validator import validate_repo
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class SystemTests(unittest.TestCase):
     def test_stage_gap_order(self):
         gaps = stage_gaps([ResearchStage.OBSERVED, ResearchStage.REPRODUCED])
-        self.assertEqual(
-            [ResearchStage.MODELED, ResearchStage.FORMALIZED],
-            gaps,
-        )
+        self.assertEqual([ResearchStage.MODELED, ResearchStage.FORMALIZED], gaps)
+
     def test_inventory_and_query(self):
         inventory = build_inventory(ROOT)
         self.assertEqual(4, inventory["case_count"])
+        self.assertEqual(4, inventory["knowledge_registry_counts"]["evidence"])
+        self.assertEqual(4, inventory["knowledge_registry_counts"]["hypotheses"])
+        self.assertEqual(4, inventory["knowledge_registry_counts"]["regressions"])
+        self.assertEqual(8, inventory["knowledge_registry_counts"]["source_repos"])
         self.assertGreaterEqual(inventory["knowledge_registry_counts"]["invariants"], 5)
-        matches = query_cases(ROOT, CaseQuery(category="replay-protection"))
+        matches = query_cases(ROOT, CaseQuery(category="replay-protection", stage="reproduced"))
         self.assertEqual(["near-neap-658"], [record["id"] for _, record in matches])
 
     def test_graph_lineage(self):
@@ -37,9 +38,13 @@ class SystemTests(unittest.TestCase):
         nodes = {node.key for node in graph.walk(start, depth=3)}
         self.assertIn("invariant:invariant.replay.nonce-monotonicity", nodes)
         self.assertIn("pattern:pattern.replay-state-reset", nodes)
+        self.assertIn("evidence:evidence.case.near", nodes)
+        self.assertIn("hypothesis:hypothesis.replay.lifecycle-reset", nodes)
+        self.assertIn("source:source.repo.central", nodes)
 
     def test_validator(self):
         self.assertEqual([], validate_repo(ROOT))
+
     def test_ledger_hash_chain(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "events.jsonl"
@@ -54,6 +59,11 @@ class SystemTests(unittest.TestCase):
             lines = path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(2, len(lines))
             self.assertEqual("demo-case", json.loads(lines[-1])["subject"]["id"])
+            tampered = json.loads(lines[-1])
+            tampered["payload"]["key"] = "tampered"
+            path.write_text(lines[0] + "\n" + json.dumps(tampered) + "\n", encoding="utf-8")
+            self.assertTrue(verify_chain(path))
+
 
 if __name__ == "__main__":
     unittest.main()

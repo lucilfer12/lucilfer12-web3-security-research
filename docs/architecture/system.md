@@ -4,7 +4,7 @@ The repository is organized around durable evidence, not a flat vulnerability li
 
 ## Layers
 
-1. Records: case studies, invariants, experiments, counterexamples and patterns.
+1. Records: case studies, invariants, evidence, hypotheses, experiments, counterexamples and patterns.
 2. Graph: typed nodes plus lineage edges across those records.
 3. Provenance: source locators, optional commit and line ranges, and content hashes.
 4. Temporal ledger: append-only hash chained events for research history.
@@ -25,7 +25,7 @@ stages are research debt, not proof of a security failure.
 
 Case -> Invariant -> Counterexample -> Pattern
 
-Cases can also connect to Protocols, Experiments, Evidence and other Cases. Lineage
+Cases can also connect to Protocols, Experiments, Evidence, Hypotheses, source repositories and other Cases. Lineage
 edges are explicit so future work can add competing hypotheses or historical versions
 without rewriting the original claim.
 

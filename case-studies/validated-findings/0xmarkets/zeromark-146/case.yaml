@@ -19,6 +19,10 @@ invariants: [invariant.authorization.critical-state, invariant.protocol.transiti
 patterns: [pattern.unbounded-privileged-input]
 counterexamples: [cx.authorization.penalty-upper-bound]
 protocols: [protocol.0xmarkets.cartha]
+evidence: [evidence.case.zeromark-146]
+sources: [source.repo.central]
+hypotheses: [hypothesis.authorization.input-boundary]
+regressions: [regression.zeromark-146.penalty-bound]
 provenance:
   - source: repository
     locator: case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml
