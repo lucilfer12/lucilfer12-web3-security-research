@@ -1,11 +1,11 @@
 version: 1
 records:
-  - id: 0xmarkets-zeromark-146
+  - id: zeromark-146
     type: original-research
     status: validated-fixed
     disclosure: sanitized
     category: privileged-input-validation
-  - id: 0xmarkets-zeromark-145
+  - id: zeromark-145
     type: original-research
     status: accepted-fixed
     disclosure: sanitized

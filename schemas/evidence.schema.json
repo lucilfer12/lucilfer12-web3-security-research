@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research Evidence",
+  "type": "object",
+  "required": ["id", "kind", "source", "locator"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$"},
+    "kind": {"type": "string"},
+    "source": {"type": "string"},
+    "locator": {"type": "string"},
+    "commit": {"type": "string"},
+    "line_start": {"type": "integer", "minimum": 1},
+    "line_end": {"type": "integer", "minimum": 1},
+    "content_hash": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": true
+}

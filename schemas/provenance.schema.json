@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research Provenance Reference",
+  "type": "object",
+  "required": ["source", "locator"],
+  "properties": {
+    "source": {"type": "string", "minLength": 1},
+    "locator": {"type": "string", "minLength": 1},
+    "commit": {"type": "string"},
+    "line_start": {"type": "integer", "minimum": 1},
+    "line_end": {"type": "integer", "minimum": 1}
+  },
+  "additionalProperties": false
+}
