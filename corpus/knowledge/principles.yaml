@@ -1,0 +1,17 @@
+version: 1
+principles:
+  - id: principle.research.provenance
+    kind: security-research-principle
+    status: active
+    statement: Every promoted security claim must retain an auditable provenance path.
+    references: [claim.model.evidence-first]
+  - id: principle.research.reproduction
+    kind: security-research-principle
+    status: active
+    statement: Reproduction artifacts are preferred over prose-only conclusions.
+    references: [assumption.heuristic-is-not-proof]
+  - id: principle.research.scope
+    kind: security-research-principle
+    status: active
+    statement: Generalization must record scope, exceptions, and unresolved boundaries.
+    references: [question.research.cross-case-recurrence]

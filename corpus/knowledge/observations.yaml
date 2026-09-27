@@ -1,0 +1,22 @@
+version: 1
+observations:
+  - id: observation.current-ledger-genesis-only
+    kind: observation
+    status: verified
+    statement: The current research ledger contains a genesis initialization event and no reconstructed historical timeline.
+    source: ledger/events.jsonl
+  - id: observation.lineage-count-discrepancy
+    kind: observation
+    status: verified
+    statement: Current lineage.yaml contains 27 explicit edges while README reports 31.
+    source: corpus/knowledge/lineage.yaml
+  - id: observation.protocol-version-unresolved
+    kind: observation
+    status: verified
+    statement: The three current protocol-version records retain unknown version values and unresolved status.
+    source: corpus/knowledge/protocol_versions.yaml
+  - id: observation.external-forensics-scale
+    kind: observation
+    status: verified
+    statement: The available Smart Contract Forensics dataset contains 226 imported records.
+    source: ../web3-smart-contract-forensics/datasets/reports.json

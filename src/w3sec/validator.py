@@ -27,6 +27,14 @@ SCHEMAS = {
     "regressions": "schemas/registry.schema.json",
     "protocol_versions": "schemas/registry.schema.json",
     "negative_results": "schemas/registry.schema.json",
+    "questions": "schemas/registry.schema.json",
+    "assumptions": "schemas/registry.schema.json",
+    "observations": "schemas/registry.schema.json",
+    "claims": "schemas/registry.schema.json",
+    "uncertainties": "schemas/registry.schema.json",
+    "contradictions": "schemas/registry.schema.json",
+    "promotions": "schemas/registry.schema.json",
+    "principles": "schemas/registry.schema.json",
     "lineage": "schemas/lineage.schema.json",
 }
 
@@ -88,7 +96,11 @@ def validate_repo(root: Path) -> list[str]:
             "experiments": "experiments", "evidence": "evidence",
             "hypotheses": "hypotheses", "sources": "source_repos",
             "regressions": "regressions", "protocol_versions": "protocol_versions",
-            "negative_results": "negative_results", "lineage": "edges",
+            "negative_results": "negative_results", "questions": "questions",
+            "assumptions": "assumptions", "observations": "observations",
+            "claims": "claims", "uncertainties": "uncertainties",
+            "contradictions": "contradictions", "promotions": "promotions",
+            "principles": "principles", "lineage": "edges",
         }.get(stem)
         if key is None:
             continue
@@ -125,7 +137,11 @@ def validate_repo(root: Path) -> list[str]:
         "experiment": "experiments", "evidence": "evidence",
         "hypothesis": "hypotheses", "source": "source_repos",
         "regression": "regressions", "protocol-version": "protocol_versions",
-        "negative_result": "negative_results",
+        "negative_result": "negative_results", "question": "questions",
+        "assumption": "assumptions", "observation": "observations",
+        "claim": "claims", "uncertainty": "uncertainties",
+        "contradiction": "contradictions", "promotion": "promotions",
+        "principle": "principles",
     }.items():
         known_nodes.update(f"{kind}:{value}" for value in registry_ids.get(field, set()))
 
@@ -157,7 +173,18 @@ def validate_repo(root: Path) -> list[str]:
         "regressions": [("case", "case")],
         "protocol_versions": [("protocol", "protocol"), ("cases", "case")],
         "negative_results": [("case", "case")],
+        "questions": [("cases", "case"), ("hypotheses", "hypothesis"), ("invariants", "invariant"), ("patterns", "pattern")],
+        "assumptions": [("cases", "case"), ("invariants", "invariant"), ("evidence", "evidence")],
+        "observations": [("cases", "case"), ("evidence", "evidence")],
+        "claims": [("cases", "case"), ("hypotheses", "hypothesis"), ("invariants", "invariant"), ("patterns", "pattern")],
+        "uncertainties": [],
+        "contradictions": [],
+        "promotions": [],
+        "principles": [],
     }
+    # Claims may cite either primary evidence records or lower-level observations.
+    claim_observations = {str(item.get("id")) for item in registry_items.get("observations", []) if item.get("id")}
+    claim_evidence = {str(item.get("id")) for item in registry_items.get("evidence", []) if item.get("id")}
     for field, rules in cross_fields.items():
         for item in registry_items.get(field, []):
             for attr, kind in rules:
@@ -167,6 +194,10 @@ def validate_repo(root: Path) -> list[str]:
                 if not isinstance(values, list):
                     continue
                 for value in values:
+                    if field == "claims" and attr == "evidence":
+                        if str(value) not in claim_evidence and str(value) not in claim_observations:
+                            errors.append(f"{field}:{item.get('id')}: unknown evidence or observation reference {value}")
+                        continue
                     if f"{kind}:{value}" not in known_nodes:
                         errors.append(f"{field}:{item.get('id')}: unknown {attr} reference {value}")
 

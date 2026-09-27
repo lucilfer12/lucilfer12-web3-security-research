@@ -1,0 +1,525 @@
+{
+  "historical_backfill": {
+    "objects": [
+      {
+        "historical_time_known": false,
+        "id": "europeum-didr-capability-invocation",
+        "kind": "case",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "case-studies/research/europeum-didr/case.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "near-neap-658",
+        "kind": "case",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "case-studies/research/near/neap-658/case.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "zeromark-145",
+        "kind": "case",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "zeromark-146",
+        "kind": "case",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "assumption.evidence.primary-required",
+        "kind": "assumption",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/assumptions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "assumption.unknown-version-is-not-version",
+        "kind": "assumption",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/assumptions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "assumption.heuristic-is-not-proof",
+        "kind": "assumption",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/assumptions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "assumption.historical-time-unknown",
+        "kind": "assumption",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/assumptions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "claim.model.evidence-first",
+        "kind": "claim",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/claims.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "claim.model.federation-is-normalization",
+        "kind": "claim",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/claims.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "claim.model.no-fabricated-history",
+        "kind": "claim",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/claims.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "contradiction.inventory.lineage",
+        "kind": "contradiction",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/contradictions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "contradiction.history.reconstructed-vs-observed",
+        "kind": "contradiction",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/contradictions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "cx.replay.key-readdition",
+        "kind": "counterexample",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/counterexamples.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "cx.lifecycle.final-capability-removal",
+        "kind": "counterexample",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/counterexamples.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "cx.accounting.bounded-shortfall",
+        "kind": "counterexample",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/counterexamples.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "cx.authorization.penalty-upper-bound",
+        "kind": "counterexample",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/counterexamples.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "evidence.case.europeum",
+        "kind": "evidence",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/evidence.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "evidence.case.near",
+        "kind": "evidence",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/evidence.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "evidence.case.zeromark-145",
+        "kind": "evidence",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/evidence.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "evidence.case.zeromark-146",
+        "kind": "evidence",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/evidence.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "experiment.repository-validation",
+        "kind": "experiment",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/experiments.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "experiment.inventory-consistency",
+        "kind": "experiment",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/experiments.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "hypothesis.lifecycle.final-authorization",
+        "kind": "hypothese",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/hypotheses.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "hypothesis.replay.lifecycle-reset",
+        "kind": "hypothese",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/hypotheses.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "hypothesis.accounting.sufficiency-boundary",
+        "kind": "hypothese",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/hypotheses.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "hypothesis.authorization.input-boundary",
+        "kind": "hypothese",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/hypotheses.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "invariant.replay.nonce-monotonicity",
+        "kind": "invariant",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/invariants.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "invariant.lifecycle.controller-reachability",
+        "kind": "invariant",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/invariants.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "invariant.authorization.critical-state",
+        "kind": "invariant",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/invariants.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "invariant.accounting.withdrawal-conservation",
+        "kind": "invariant",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/invariants.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "invariant.protocol.transition-closure",
+        "kind": "invariant",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/invariants.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "observation.current-ledger-genesis-only",
+        "kind": "observation",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/observations.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "observation.lineage-count-discrepancy",
+        "kind": "observation",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/observations.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "observation.protocol-version-unresolved",
+        "kind": "observation",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/observations.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "observation.external-forensics-scale",
+        "kind": "observation",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/observations.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "pattern.replay-state-reset",
+        "kind": "pattern",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/patterns.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "pattern.lifecycle-reachability-destruction",
+        "kind": "pattern",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/patterns.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "pattern.unbounded-privileged-input",
+        "kind": "pattern",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/patterns.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "pattern.silent-accounting-shortfall",
+        "kind": "pattern",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/patterns.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "principle.research.provenance",
+        "kind": "principle",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/principles.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "principle.research.reproduction",
+        "kind": "principle",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/principles.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "principle.research.scope",
+        "kind": "principle",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/principles.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "promotion.pattern.replay-state-reset",
+        "kind": "promotion",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/promotions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "promotion.pattern.lifecycle-reachability-destruction",
+        "kind": "promotion",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/promotions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "promotion.pattern.unbounded-privileged-input",
+        "kind": "promotion",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/promotions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "promotion.pattern.silent-accounting-shortfall",
+        "kind": "promotion",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/promotions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol-version.near.runtime",
+        "kind": "protocol_version",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocol_versions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol-version.europeum.didr",
+        "kind": "protocol_version",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocol_versions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol-version.0xmarkets.cartha",
+        "kind": "protocol_version",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocol_versions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol.near.runtime",
+        "kind": "protocol",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocols.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol.europeum.didr",
+        "kind": "protocol",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocols.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "protocol.0xmarkets.cartha",
+        "kind": "protocol",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/protocols.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "question.research.cross-repo-ingestion",
+        "kind": "question",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/questions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "question.research.cross-case-recurrence",
+        "kind": "question",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/questions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "question.research.version-intelligence",
+        "kind": "question",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/questions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "question.research.promotion-evidence",
+        "kind": "question",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/questions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "regression.europeum.final-capability",
+        "kind": "regression",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/regressions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "regression.near.nonce-monotonicity",
+        "kind": "regression",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/regressions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "regression.zeromark-145.withdrawal",
+        "kind": "regression",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/regressions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "regression.zeromark-146.penalty-bound",
+        "kind": "regression",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/regressions.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.central",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.forensics",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.invariants",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.smart-contract-lab",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.zeroday",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.private",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.boot-trading",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "source.repo.porsche-site",
+        "kind": "source_repo",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/sources.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "uncertainty.version.near",
+        "kind": "uncertaintie",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/uncertainties.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "uncertainty.version.europeum",
+        "kind": "uncertaintie",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/uncertainties.yaml"
+      },
+      {
+        "historical_time_known": false,
+        "id": "uncertainty.version.cartha",
+        "kind": "uncertaintie",
+        "note": "Current-state backfill only; no historical timestamp inferred.",
+        "path": "corpus/knowledge/uncertainties.yaml"
+      }
+    ],
+    "policy": "Do not invent historical timestamps; mark time unknown until source evidence supplies them."
+  },
+  "ledger": {
+    "event_count": 1,
+    "event_type_counts": {
+      "initialization": 1
+    },
+    "first_timestamp": "2026-09-26T15:40:45.172712+00:00",
+    "genesis_only": true,
+    "last_timestamp": "2026-09-26T15:40:45.172712+00:00",
+    "subject_counts": {
+      "ledger:research-ledger": 1
+    }
+  },
+  "report_kind": "security-research-chronicle",
+  "schema_version": 1
+}

@@ -1,0 +1,285 @@
+{
+  "cross_case": {
+    "cases": [
+      {
+        "case": "europeum-didr-capability-invocation",
+        "category": "lifecycle-controller-reachability",
+        "evidence": [
+          "evidence.case.europeum"
+        ],
+        "hypotheses": [
+          "hypothesis.lifecycle.final-authorization"
+        ],
+        "invariants": [
+          "invariant.lifecycle.controller-reachability",
+          "invariant.protocol.transition-closure"
+        ],
+        "patterns": [
+          "pattern.lifecycle-reachability-destruction"
+        ],
+        "protocols": [
+          "protocol.europeum.didr"
+        ],
+        "regressions": [
+          "regression.europeum.final-capability"
+        ],
+        "stages": [
+          "modeled",
+          "observed",
+          "reproduced"
+        ]
+      },
+      {
+        "case": "near-neap-658",
+        "category": "replay-protection",
+        "evidence": [
+          "evidence.case.near"
+        ],
+        "hypotheses": [
+          "hypothesis.replay.lifecycle-reset"
+        ],
+        "invariants": [
+          "invariant.protocol.transition-closure",
+          "invariant.replay.nonce-monotonicity"
+        ],
+        "patterns": [
+          "pattern.replay-state-reset"
+        ],
+        "protocols": [
+          "protocol.near.runtime"
+        ],
+        "regressions": [
+          "regression.near.nonce-monotonicity"
+        ],
+        "stages": [
+          "modeled",
+          "observed",
+          "reproduced"
+        ]
+      },
+      {
+        "case": "zeromark-145",
+        "category": "accounting-functional-correctness",
+        "evidence": [
+          "evidence.case.zeromark-145"
+        ],
+        "hypotheses": [
+          "hypothesis.accounting.sufficiency-boundary"
+        ],
+        "invariants": [
+          "invariant.accounting.withdrawal-conservation",
+          "invariant.protocol.transition-closure"
+        ],
+        "patterns": [
+          "pattern.silent-accounting-shortfall"
+        ],
+        "protocols": [
+          "protocol.0xmarkets.cartha"
+        ],
+        "regressions": [
+          "regression.zeromark-145.withdrawal"
+        ],
+        "stages": [
+          "mitigated",
+          "modeled",
+          "observed",
+          "reproduced"
+        ]
+      },
+      {
+        "case": "zeromark-146",
+        "category": "privileged-input-validation",
+        "evidence": [
+          "evidence.case.zeromark-146"
+        ],
+        "hypotheses": [
+          "hypothesis.authorization.input-boundary"
+        ],
+        "invariants": [
+          "invariant.authorization.critical-state",
+          "invariant.protocol.transition-closure"
+        ],
+        "patterns": [
+          "pattern.unbounded-privileged-input"
+        ],
+        "protocols": [
+          "protocol.0xmarkets.cartha"
+        ],
+        "regressions": [
+          "regression.zeromark-146.penalty-bound"
+        ],
+        "stages": [
+          "mitigated",
+          "modeled",
+          "observed",
+          "reproduced"
+        ]
+      }
+    ],
+    "recurrence": {
+      "category": [],
+      "hypothesis": [],
+      "invariant": [
+        {
+          "case_count": 4,
+          "id": "invariant.protocol.transition-closure"
+        }
+      ],
+      "pattern": [],
+      "protocol": [
+        {
+          "case_count": 2,
+          "id": "protocol.0xmarkets.cartha"
+        }
+      ],
+      "regression": []
+    },
+    "schema_version": 1
+  },
+  "pattern_leads": [
+    {
+      "cross_case_evidence": false,
+      "linked_case_count": 1,
+      "linked_cases": [
+        "near-neap-658"
+      ],
+      "pattern": "pattern.replay-state-reset",
+      "semantic_lead_cases": [
+        {
+          "case": "europeum-didr-capability-invocation",
+          "token_overlap": 1
+        },
+        {
+          "case": "near-neap-658",
+          "token_overlap": 1
+        }
+      ],
+      "status": "candidate"
+    },
+    {
+      "cross_case_evidence": false,
+      "linked_case_count": 1,
+      "linked_cases": [
+        "europeum-didr-capability-invocation"
+      ],
+      "pattern": "pattern.lifecycle-reachability-destruction",
+      "semantic_lead_cases": [],
+      "status": "candidate"
+    },
+    {
+      "cross_case_evidence": false,
+      "linked_case_count": 1,
+      "linked_cases": [
+        "zeromark-146"
+      ],
+      "pattern": "pattern.unbounded-privileged-input",
+      "semantic_lead_cases": [
+        {
+          "case": "zeromark-146",
+          "token_overlap": 1
+        }
+      ],
+      "status": "candidate"
+    },
+    {
+      "cross_case_evidence": false,
+      "linked_case_count": 1,
+      "linked_cases": [
+        "zeromark-145"
+      ],
+      "pattern": "pattern.silent-accounting-shortfall",
+      "semantic_lead_cases": [
+        {
+          "case": "zeromark-145",
+          "token_overlap": 2
+        }
+      ],
+      "status": "candidate"
+    }
+  ],
+  "promotion_readiness": [
+    {
+      "criteria": {
+        "counterexample_analysis": true,
+        "cross_case": false,
+        "cross_protocol": false,
+        "explicit_scope": true,
+        "independent_reproduction": false,
+        "regression_coverage": true
+      },
+      "criteria_passed": 3,
+      "criteria_total": 6,
+      "current_status": "candidate",
+      "pattern": "pattern.replay-state-reset",
+      "ready_for_validation": false
+    },
+    {
+      "criteria": {
+        "counterexample_analysis": true,
+        "cross_case": false,
+        "cross_protocol": false,
+        "explicit_scope": true,
+        "independent_reproduction": false,
+        "regression_coverage": true
+      },
+      "criteria_passed": 3,
+      "criteria_total": 6,
+      "current_status": "candidate",
+      "pattern": "pattern.lifecycle-reachability-destruction",
+      "ready_for_validation": false
+    },
+    {
+      "criteria": {
+        "counterexample_analysis": true,
+        "cross_case": false,
+        "cross_protocol": false,
+        "explicit_scope": true,
+        "independent_reproduction": false,
+        "regression_coverage": true
+      },
+      "criteria_passed": 3,
+      "criteria_total": 6,
+      "current_status": "candidate",
+      "pattern": "pattern.unbounded-privileged-input",
+      "ready_for_validation": false
+    },
+    {
+      "criteria": {
+        "counterexample_analysis": true,
+        "cross_case": false,
+        "cross_protocol": false,
+        "explicit_scope": true,
+        "independent_reproduction": false,
+        "regression_coverage": true
+      },
+      "criteria_passed": 3,
+      "criteria_total": 6,
+      "current_status": "candidate",
+      "pattern": "pattern.silent-accounting-shortfall",
+      "ready_for_validation": false
+    }
+  ],
+  "report_kind": "longitudinal-research",
+  "research_debt": {
+    "candidate_hypotheses": [
+      "hypothesis.accounting.sufficiency-boundary",
+      "hypothesis.authorization.input-boundary",
+      "hypothesis.lifecycle.final-authorization",
+      "hypothesis.replay.lifecycle-reset"
+    ],
+    "candidate_patterns": [
+      "pattern.lifecycle-reachability-destruction",
+      "pattern.replay-state-reset",
+      "pattern.silent-accounting-shortfall",
+      "pattern.unbounded-privileged-input"
+    ],
+    "history_reconstruction_required": true,
+    "ledger_event_count": 1,
+    "unresolved_protocol_versions": [
+      "protocol-version.0xmarkets.cartha",
+      "protocol-version.europeum.didr",
+      "protocol-version.near.runtime"
+    ]
+  },
+  "schema_version": 1
+}

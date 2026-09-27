@@ -1,0 +1,17 @@
+version: 1
+claims:
+  - id: claim.model.evidence-first
+    kind: security-research-claim
+    status: active
+    statement: Research promotion must preserve provenance and distinguish evidence from interpretation.
+    evidence: [observation.current-ledger-genesis-only]
+  - id: claim.model.federation-is-normalization
+    kind: security-research-claim
+    status: active
+    statement: Cross-repository integration should normalize external outputs into candidate knowledge without silently changing their evidentiary status.
+    evidence: [observation.external-forensics-scale]
+  - id: claim.model.no-fabricated-history
+    kind: security-research-claim
+    status: active
+    statement: Historical research memory must record unknown dates explicitly rather than inventing chronology.
+    evidence: [observation.current-ledger-genesis-only]

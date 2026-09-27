@@ -1,0 +1,26 @@
+version: 1
+questions:
+  - id: question.research.cross-repo-ingestion
+    kind: research-question
+    status: investigating
+    statement: Which external research records can be normalized without upgrading their evidence status?
+    sources: [source.repo.forensics, source.repo.zeroday]
+  - id: question.research.cross-case-recurrence
+    kind: research-question
+    status: open
+    statement: Which failure patterns recur across independent protocols and implementations?
+    cases: [near-neap-658, europeum-didr-capability-invocation, zeromark-145, zeromark-146]
+  - id: question.research.version-intelligence
+    kind: research-question
+    status: open
+    statement: Which security properties changed across protocol versions represented in the corpus?
+    protocols: [protocol.near.runtime, protocol.europeum.didr, protocol.0xmarkets.cartha]
+  - id: question.research.promotion-evidence
+    kind: research-question
+    status: open
+    statement: What minimum evidence path is sufficient for promotion from candidate pattern to validated pattern?
+    patterns:
+      - pattern.replay-state-reset
+      - pattern.lifecycle-reachability-destruction
+      - pattern.unbounded-privileged-input
+      - pattern.silent-accounting-shortfall

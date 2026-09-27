@@ -1,0 +1,99 @@
+{
+  "federation_health": "ok",
+  "missing_required_sources": [],
+  "root": "C:/Users/pc/lucilfer12-web3-security-research",
+  "schema_version": 1,
+  "snapshot_kind": "federation",
+  "sources": {
+    "source.repo.central": {
+      "adapter": "central",
+      "available": true,
+      "case_files": 4,
+      "knowledge_files": 21,
+      "ledger_events": 1,
+      "path": "C:/Users/pc/lucilfer12-web3-security-research",
+      "required": true
+    },
+    "source.repo.forensics": {
+      "adapter": "scf",
+      "available": true,
+      "evidence_levels": {
+        "secondary": 226
+      },
+      "path": "C:/Users/pc/web3-smart-contract-forensics/datasets/reports.json",
+      "record_count": 226,
+      "record_types": {
+        "audit_finding": 226
+      },
+      "required": false,
+      "status_counts": {
+        "candidate": 226
+      },
+      "unique_projects": 90
+    },
+    "source.repo.invariants": {
+      "adapter": "sil",
+      "available": true,
+      "finding_count": 6,
+      "finding_kinds": {
+        "reentrancy": 2,
+        "replay": 2,
+        "value-flow": 2
+      },
+      "finding_severities": {
+        "high": 2,
+        "medium": 4
+      },
+      "path": "C:/Users/pc/security-invariant-lab/.silab/final-scan/research-dataset.json",
+      "property_confidence": {
+        "high": 2
+      },
+      "property_count": 2,
+      "required": false
+    },
+    "source.repo.smart-contract-lab": {
+      "adapter": "scsl",
+      "available": true,
+      "finding_families": 4,
+      "finding_names": [
+        "access-control",
+        "bridge-accounting-underflow",
+        "defi-rounding",
+        "oracle-safety"
+      ],
+      "path": "C:/Users/pc/research-federation-work/smart-contract-security-lab/findings",
+      "regression_tests": 4,
+      "required": false,
+      "test_names": [
+        "AccessControl.t",
+        "BridgeAccounting.t",
+        "DefiRounding.t",
+        "OracleReadPattern.t"
+      ]
+    },
+    "source.repo.zeroday": {
+      "adapter": "zdf",
+      "available": true,
+      "bug_classes": 15,
+      "case_count": 20,
+      "classification_counts": {
+        "exploited_vulnerability_timeline_unknown": 18,
+        "publicly_disclosed_before_exploitation": 2
+      },
+      "evidence_grades": {
+        "A": 15,
+        "B": 5
+      },
+      "path": "C:/Users/pc/research-federation-work/web3-zeroday-forensics/corpus/cases.yaml",
+      "required": false,
+      "scope_counts": {
+        "bridge": 2,
+        "cross_chain": 1,
+        "defi": 13,
+        "governance": 1,
+        "oracle": 2,
+        "smart_contract": 1
+      }
+    }
+  }
+}

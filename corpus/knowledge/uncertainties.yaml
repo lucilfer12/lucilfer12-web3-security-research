@@ -1,0 +1,17 @@
+version: 1
+uncertainties:
+  - id: uncertainty.version.near
+    kind: research-uncertainty
+    status: open
+    statement: The exact protocol version associated with the current NEAR runtime case is unresolved.
+    missing_evidence: [protocol-version.near.runtime]
+  - id: uncertainty.version.europeum
+    kind: research-uncertainty
+    status: open
+    statement: The exact protocol version associated with the Europeum DIDR case is unresolved.
+    missing_evidence: [protocol-version.europeum.didr]
+  - id: uncertainty.version.cartha
+    kind: research-uncertainty
+    status: open
+    statement: The exact protocol version associated with the 0xMarkets Cartha case is unresolved.
+    missing_evidence: [protocol-version.0xmarkets.cartha]

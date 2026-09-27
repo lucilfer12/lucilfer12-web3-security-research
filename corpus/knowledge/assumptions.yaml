@@ -1,0 +1,18 @@
+version: 1
+assumptions:
+  - id: assumption.evidence.primary-required
+    kind: research-assumption
+    status: active
+    statement: Secondary imported findings remain leads until original evidence is reviewed.
+  - id: assumption.unknown-version-is-not-version
+    kind: research-assumption
+    status: active
+    statement: An unresolved protocol version must never be treated as an identified version.
+  - id: assumption.heuristic-is-not-proof
+    kind: research-assumption
+    status: active
+    statement: Heuristic detector output remains hypothesis-level until executable or independently verified evidence exists.
+  - id: assumption.historical-time-unknown
+    kind: research-assumption
+    status: active
+    statement: Backfilled research objects do not receive invented historical timestamps.

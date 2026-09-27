@@ -137,6 +137,14 @@ class ResearchGraph:
                 "regressions": ("regression", "regressions"),
                 "protocol_versions": ("protocol-version", "protocol_versions"),
                 "negative_results": ("negative_result", "negative_results"),
+                "questions": ("question", "questions"),
+                "assumptions": ("assumption", "assumptions"),
+                "observations": ("observation", "observations"),
+                "claims": ("claim", "claims"),
+                "uncertainties": ("uncertainty", "uncertainties"),
+                "contradictions": ("contradiction", "contradictions"),
+                "promotions": ("promotion", "promotions"),
+                "principles": ("principle", "principles"),
             }
             mapping = stem_map.get(path.stem)
             if mapping:

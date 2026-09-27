@@ -24,6 +24,8 @@ def build_inventory(root: Path) -> dict[str, Any]:
             "invariants", "patterns", "counterexamples", "experiments",
             "protocols", "evidence", "hypotheses", "source_repos",
             "regressions", "protocol_versions", "negative_results", "edges",
+            "questions", "assumptions", "observations", "claims", "uncertainties",
+            "contradictions", "promotions", "principles",
         ):
             items = data.get(key)
             if isinstance(items, list):

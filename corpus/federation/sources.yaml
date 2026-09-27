@@ -1,0 +1,27 @@
+version: 1
+description: Local federation map for reproducible research aggregation.
+sources:
+  - id: source.repo.central
+    path: .
+    required: true
+    adapter: central
+  - id: source.repo.forensics
+    path: ../web3-smart-contract-forensics
+    required: false
+    adapter: scf
+    dataset: datasets/reports.json
+  - id: source.repo.invariants
+    path: ../security-invariant-lab
+    required: false
+    adapter: sil
+    dataset: .silab/final-scan/research-dataset.json
+  - id: source.repo.zeroday
+    path: ../research-federation-work/web3-zeroday-forensics
+    required: false
+    adapter: zdf
+    dataset: corpus/cases.yaml
+  - id: source.repo.smart-contract-lab
+    path: ../research-federation-work/smart-contract-security-lab
+    required: false
+    adapter: scsl
+    dataset: findings

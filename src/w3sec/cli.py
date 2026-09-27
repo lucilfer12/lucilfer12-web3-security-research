@@ -9,6 +9,12 @@ from .audit import audit_repo
 from .coverage import build_coverage
 from .experiments import load_experiment, result_to_json, run_experiment
 from .export import graph_document
+from .federation import build_federation_snapshot, write_federation_snapshot
+from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
+from .research_intelligence import (
+    build_longitudinal_report, build_promotion_readiness, build_research_metrics,
+    write_longitudinal_report,
+)
 from .graph import ResearchGraph
 from .inventory import build_inventory
 from .ledger import append_event, verify_chain
@@ -46,6 +52,25 @@ def main() -> int:
     audit = sub.add_parser("audit")
     audit.add_argument("path", nargs="?", default=".")
     audit.add_argument("--json", action="store_true")
+
+    federate = sub.add_parser("federate")
+    federate.add_argument("path", nargs="?", default=".")
+    federate.add_argument("--write", action="store_true")
+
+    research = sub.add_parser("research")
+    research.add_argument("path", nargs="?", default=".")
+    research.add_argument("--json", action="store_true")
+    research.add_argument("--write", action="store_true")
+
+    chronicle = sub.add_parser("chronicle")
+    chronicle.add_argument("path", nargs="?", default=".")
+    chronicle.add_argument("--json", action="store_true")
+    chronicle.add_argument("--write", action="store_true")
+    chronicle.add_argument("--backfill-plan", action="store_true")
+
+    promotion = sub.add_parser("promotion")
+    promotion.add_argument("path", nargs="?", default=".")
+    promotion.add_argument("--json", action="store_true")
 
     query = sub.add_parser("query")
     query.add_argument("path", nargs="?", default=".")
@@ -138,6 +163,45 @@ def main() -> int:
                 f"edges={value['graph']['edge_count']}"
             )
         return 0 if value["ok"] else 1
+
+    if args.command == "federate":
+        value = build_federation_snapshot(_root(args.path))
+        if args.write:
+            write_federation_snapshot(_root(args.path))
+        _print_json(value)
+        return 0 if value["federation_health"] == "ok" else 1
+
+    if args.command == "research":
+        value = build_research_metrics(_root(args.path))
+        if args.write:
+            write_longitudinal_report(_root(args.path))
+        if args.json:
+            _print_json(value)
+        else:
+            print(json.dumps(value, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "chronicle":
+        root = _root(args.path)
+        value = build_chronicle(root)
+        if args.write:
+            write_chronicle(root)
+        if args.backfill_plan:
+            write_event_backfill_plan(root)
+        if args.json:
+            _print_json(value)
+        else:
+            print(json.dumps(value, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "promotion":
+        value = build_promotion_readiness(_root(args.path))
+        if args.json:
+            _print_json(value)
+        else:
+            for item in value:
+                print(f"{item['pattern']} ready={item['ready_for_validation']} {item['criteria_passed']}/{item['criteria_total']}")
+        return 0
 
     if args.command == "query":
         query = CaseQuery(

@@ -1,0 +1,14 @@
+version: 1
+contradictions:
+  - id: contradiction.inventory.lineage
+    kind: integrity-contradiction
+    status: open
+    left: README.md:31-lineage-edges
+    right: corpus/knowledge/lineage.yaml:27-edges
+    resolution: Recompute inventory from authoritative records and update generated documentation.
+  - id: contradiction.history.reconstructed-vs-observed
+    kind: methodology-boundary
+    status: resolved
+    left: historical event inference
+    right: current ledger state
+    resolution: Historical dates are unknown unless source evidence supplies them.

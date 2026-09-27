@@ -1,0 +1,727 @@
+{
+  "kind": "event-backfill-plan",
+  "plan": [
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "case:europeum-didr-capability-invocation",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "case:near-neap-658",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "case:zeromark-145",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "case:zeromark-146",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "assumption:assumption.evidence.primary-required",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "assumption:assumption.unknown-version-is-not-version",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "assumption:assumption.heuristic-is-not-proof",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "assumption:assumption.historical-time-unknown",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "claim:claim.model.evidence-first",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "claim:claim.model.federation-is-normalization",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "claim:claim.model.no-fabricated-history",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "contradiction:contradiction.inventory.lineage",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "contradiction:contradiction.history.reconstructed-vs-observed",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "counterexample:cx.replay.key-readdition",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "counterexample:cx.lifecycle.final-capability-removal",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "counterexample:cx.accounting.bounded-shortfall",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "counterexample:cx.authorization.penalty-upper-bound",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "evidence:evidence.case.europeum",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "evidence:evidence.case.near",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "evidence:evidence.case.zeromark-145",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "evidence:evidence.case.zeromark-146",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "experiment:experiment.repository-validation",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "experiment:experiment.inventory-consistency",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "hypothese:hypothesis.lifecycle.final-authorization",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "hypothese:hypothesis.replay.lifecycle-reset",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "hypothese:hypothesis.accounting.sufficiency-boundary",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "hypothese:hypothesis.authorization.input-boundary",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "invariant:invariant.replay.nonce-monotonicity",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "invariant:invariant.lifecycle.controller-reachability",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "invariant:invariant.authorization.critical-state",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "invariant:invariant.accounting.withdrawal-conservation",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "invariant:invariant.protocol.transition-closure",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "observation:observation.current-ledger-genesis-only",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "observation:observation.lineage-count-discrepancy",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "observation:observation.protocol-version-unresolved",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "observation:observation.external-forensics-scale",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "pattern:pattern.replay-state-reset",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "pattern:pattern.lifecycle-reachability-destruction",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "pattern:pattern.unbounded-privileged-input",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "pattern:pattern.silent-accounting-shortfall",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "principle:principle.research.provenance",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "principle:principle.research.reproduction",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "principle:principle.research.scope",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "promotion:promotion.pattern.replay-state-reset",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "promotion:promotion.pattern.lifecycle-reachability-destruction",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "promotion:promotion.pattern.unbounded-privileged-input",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "promotion:promotion.pattern.silent-accounting-shortfall",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol_version:protocol-version.near.runtime",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol_version:protocol-version.europeum.didr",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol_version:protocol-version.0xmarkets.cartha",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol:protocol.near.runtime",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol:protocol.europeum.didr",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "protocol:protocol.0xmarkets.cartha",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "question:question.research.cross-repo-ingestion",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "question:question.research.cross-case-recurrence",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "question:question.research.version-intelligence",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "question:question.research.promotion-evidence",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "regression:regression.europeum.final-capability",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "regression:regression.near.nonce-monotonicity",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "regression:regression.zeromark-145.withdrawal",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "regression:regression.zeromark-146.penalty-bound",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.central",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.forensics",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.invariants",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.smart-contract-lab",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.zeroday",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.private",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.boot-trading",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "source_repo:source.repo.porsche-site",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "uncertaintie:uncertainty.version.near",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "uncertaintie:uncertainty.version.europeum",
+      "timestamp_policy": "unknown-until-sourced"
+    },
+    {
+      "recommended_events": [
+        "record_discovered",
+        "source_attached",
+        "evidence_reviewed",
+        "current_state_snapshot"
+      ],
+      "subject": "uncertaintie:uncertainty.version.cartha",
+      "timestamp_policy": "unknown-until-sourced"
+    }
+  ],
+  "safe_to_apply_without_fabrication": true,
+  "schema_version": 1
+}

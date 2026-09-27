@@ -1,4 +1,3 @@
-name: research-ci
 on:
   push:
   pull_request:
@@ -22,5 +21,13 @@ jobs:
         run: python -m w3sec audit --json
       - name: Verify deterministic inventory
         run: python -m w3sec inventory --json
+      - name: Verify research intelligence
+        run: python -m w3sec research --json
+      - name: Verify research chronicle
+        run: python -m w3sec chronicle --json
+      - name: Verify promotion readiness
+        run: python -m w3sec promotion --json
+      - name: Verify federation snapshot
+        run: python -m w3sec federate
       - name: Verify executable research manifests
         run: python -m w3sec experiment run experiments/repository-validation.yaml --root . && python -m w3sec experiment run experiments/inventory-consistency.yaml --root .

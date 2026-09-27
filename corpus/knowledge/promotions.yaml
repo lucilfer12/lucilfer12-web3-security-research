@@ -1,0 +1,26 @@
+version: 1
+promotions:
+  - id: promotion.pattern.replay-state-reset
+    kind: promotion-candidate
+    status: blocked
+    from: pattern.replay-state-reset
+    to: validated-pattern
+    reason: Requires corroboration across independent cases and a regression contract.
+  - id: promotion.pattern.lifecycle-reachability-destruction
+    kind: promotion-candidate
+    status: blocked
+    from: pattern.lifecycle-reachability-destruction
+    to: validated-pattern
+    reason: Requires cross-case reproduction and explicit boundary conditions.
+  - id: promotion.pattern.unbounded-privileged-input
+    kind: promotion-candidate
+    status: blocked
+    from: pattern.unbounded-privileged-input
+    to: validated-pattern
+    reason: Requires independent reproduction and negative-evidence search.
+  - id: promotion.pattern.silent-accounting-shortfall
+    kind: promotion-candidate
+    status: blocked
+    from: pattern.silent-accounting-shortfall
+    to: validated-pattern
+    reason: Requires cross-protocol evidence and regression coverage.
