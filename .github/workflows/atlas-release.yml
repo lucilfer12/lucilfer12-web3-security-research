@@ -1,0 +1,37 @@
+name: ATLAS Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build ATLAS
+        shell: pwsh
+        run: .\scripts\build_windows_exe.ps1
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "dist/ATLAS-windows-x64.zip" `
+            "dist/ATLAS.exe.sha256" `
+            "dist/atlas-cli.exe.sha256" `
+            --title "ATLAS $env:GITHUB_REF_NAME" `
+            --generate-notes
