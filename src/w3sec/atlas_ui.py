@@ -127,9 +127,9 @@ class AtlasApp(tk.Tk):
         import sys
         candidates = [
             Path(__file__).resolve().parents[2] / "backgrounds" / "atlas_cathedral.png",
-            Path(__file__).resolve().parents[2] / "backgrounds" / "atlas_forest.png",
+            Path(__file__).resolve().parents[2] / "assets" / "atlas_forest.png",
             settings_path().parent / "backgrounds" / "atlas_cathedral.png",
-            settings_path().parent / "backgrounds" / "atlas_forest.png",
+            settings_path().parent / "assets" / "atlas_forest.png",
             Path.home() / "Downloads" / "atlas_cathedral.png",
             Path.home() / "Downloads" / "atlas_forest.png",
         ]
@@ -137,7 +137,7 @@ class AtlasApp(tk.Tk):
             exe_dir = Path(sys.executable).resolve().parent
             candidates.extend([
                 exe_dir / "backgrounds" / "atlas_cathedral.png",
-                exe_dir / "backgrounds" / "atlas_forest.png",
+                exe_dir / "assets" / "atlas_forest.png",
             ])
         for directory in [Path.home() / "Downloads", Path.home() / "Pictures"]:
             if directory.is_dir():
