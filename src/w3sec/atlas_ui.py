@@ -139,7 +139,7 @@ class AtlasApp(tk.Tk):
                  font=("Segoe UI", 8)).pack(side="bottom", padx=18, pady=(0, 16), anchor="w")
 
         self.main = tk.Frame(self, bg="#06121f")
-        self.main.place(x=250, y=16, relx=0, width=-266, relheight=1, height=-32)
+        self.main.place(x=250, y=16, relwidth=1, width=-266, relheight=1, height=-32)
         top = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
         top.pack(fill="x", pady=(0, 10))
         self.repo_var = tk.StringVar()
