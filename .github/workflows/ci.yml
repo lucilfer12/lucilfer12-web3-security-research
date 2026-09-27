@@ -7,8 +7,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Prepare federated source workspace
-        shell: powershell
-        run: New-Item -ItemType Directory -Force "$GITHUB_WORKSPACE/../research-federation-work" | Out-Null
+        shell: bash
+        run: mkdir -p "$GITHUB_WORKSPACE/../research-federation-work"
       - name: Checkout federated research sources
         run: |
           git clone --depth 1 https://github.com/lucilfer12/web3-smart-contract-forensics.git "$GITHUB_WORKSPACE/../web3-smart-contract-forensics"
