@@ -1,0 +1,3999 @@
+{
+  "generated_from": {
+    "candidate_policy": "External records are leads only; canonical promotion requires local review, provenance and explicit research events.",
+    "candidate_record_count": 262,
+    "federation_health": "ok",
+    "missing_required_sources": [],
+    "root": "C:/Users/pc/lucilfer12-web3-security-research",
+    "schema_version": 2,
+    "snapshot_kind": "federation",
+    "source_counts": {
+      "source.repo.forensics": 226,
+      "source.repo.invariants": 8,
+      "source.repo.smart-contract-lab": 8,
+      "source.repo.zeroday": 20
+    },
+    "sources": {
+      "source.repo.central": {
+        "adapter": "central",
+        "available": true,
+        "case_files": 4,
+        "git_head": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+        "knowledge_files": 21,
+        "ledger_events": 13,
+        "path": "C:/Users/pc/lucilfer12-web3-security-research",
+        "required": true
+      },
+      "source.repo.forensics": {
+        "adapter": "scf",
+        "available": true,
+        "evidence_levels": {
+          "secondary": 226
+        },
+        "git_head": "131d043d65017396f9389e35527e76401bc4c130",
+        "path": "C:/Users/pc/web3-smart-contract-forensics/datasets/reports.json",
+        "record_count": 226,
+        "record_types": {
+          "audit_finding": 226
+        },
+        "required": false,
+        "status_counts": {
+          "candidate": 226
+        },
+        "unique_projects": 90
+      },
+      "source.repo.invariants": {
+        "adapter": "sil",
+        "available": true,
+        "finding_count": 6,
+        "finding_kinds": {
+          "reentrancy": 2,
+          "replay": 2,
+          "value-flow": 2
+        },
+        "finding_severities": {
+          "high": 2,
+          "medium": 4
+        },
+        "git_head": "b5daf44cb2623ff68a3257223f9fe9d81567007b",
+        "path": "C:/Users/pc/security-invariant-lab/.silab/final-scan/research-dataset.json",
+        "property_confidence": {
+          "high": 2
+        },
+        "property_count": 2,
+        "required": false
+      },
+      "source.repo.smart-contract-lab": {
+        "adapter": "scsl",
+        "available": true,
+        "finding_families": 4,
+        "finding_names": [
+          "access-control",
+          "bridge-accounting-underflow",
+          "defi-rounding",
+          "oracle-safety"
+        ],
+        "git_head": "b6f7a0d8724715a07588bafcb76ccce999f8dae1",
+        "path": "C:/Users/pc/research-federation-work/smart-contract-security-lab/findings",
+        "regression_tests": 4,
+        "required": false,
+        "test_names": [
+          "AccessControl.t",
+          "BridgeAccounting.t",
+          "DefiRounding.t",
+          "OracleReadPattern.t"
+        ]
+      },
+      "source.repo.zeroday": {
+        "adapter": "zdf",
+        "available": true,
+        "bug_classes": 15,
+        "case_count": 20,
+        "classification_counts": {
+          "exploited_vulnerability_timeline_unknown": 18,
+          "publicly_disclosed_before_exploitation": 2
+        },
+        "evidence_grades": {
+          "A": 15,
+          "B": 5
+        },
+        "git_head": "f2dd4e4f2c282bc65d0e5e6556ed53087651ecba",
+        "path": "C:/Users/pc/research-federation-work/web3-zeroday-forensics/corpus/cases.yaml",
+        "required": false,
+        "scope_counts": {
+          "bridge": 2,
+          "cross_chain": 1,
+          "defi": 13,
+          "governance": 1,
+          "oracle": 2,
+          "smart_contract": 1
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0001",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/01/rocket-pool-atlas-v1.2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketNodeDistributorDelegate - Reentrancy in `distribute()` allows node owner to drain distributor funds",
+      "title": "RocketNodeDistributorDelegate - Reentrancy in `distribute()` allows node owner to drain distributor funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0002",
+      "locator": [
+        "https://consensys.net//diligence/audits/2022/11/forta-delegated-staking/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "didTransferShares function has no access control modifier",
+      "title": "didTransferShares function has no access control modifier"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0003",
+      "locator": [
+        "https://consensys.net//diligence/audits/2022/02/gamma/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "The `Hypervisor.deposit` function does not check the `msg.sender`",
+      "title": "The `Hypervisor.deposit` function does not check the `msg.sender`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0004",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/07/connext-nxtp-noncustodial-xchain-transfer-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "TransactionManager - User might steal router's locked funds",
+      "title": "TransactionManager - User might steal router's locked funds"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0005",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/07/fei-tribechief/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "TribalChief - A wrong `user.rewardDebt`  value is calculated during the `withdrawFromDeposit` function call",
+      "title": "TribalChief - A wrong `user.rewardDebt`  value is calculated during the `withdrawFromDeposit` function call"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0006",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/05/pooltogether-sushi-and-yearn-v2-yield-sources/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Yearn: Re-entrancy attack during deposit",
+      "title": "Yearn: Re-entrancy attack during deposit"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0007",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/05/zer0-zns/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "zNS - Domain bid might be approved by non owner account",
+      "title": "zNS - Domain bid might be approved by non owner account"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0008",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/04/rocketpool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketDaoNodeTrusted - DAO takeover during deployment/bootstrapping",
+      "title": "RocketDaoNodeTrusted - DAO takeover during deployment/bootstrapping"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0009",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/04/rocketpool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketTokenRETH - sandwiching opportunity on price updates",
+      "title": "RocketTokenRETH - sandwiching opportunity on price updates"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0010",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/04/rocketpool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketDaoNodeTrustedActions - Incomplete implementation of member challenge process",
+      "title": "RocketDaoNodeTrustedActions - Incomplete implementation of member challenge process"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0011",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/04/rocketpool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketDAOProtocolSettings/RocketDAONodeTrustedSettings - anyone can set/overwrite settings until contract is declared \"deployed\"",
+      "title": "RocketDAOProtocolSettings/RocketDAONodeTrustedSettings - anyone can set/overwrite settings until contract is declared \"deployed\""
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0012",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/04/rocketpool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RocketStorage - anyone can set/update values before the contract is initialized",
+      "title": "RocketStorage - anyone can set/update values before the contract is initialized"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0013",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/pooltogether-pods/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Winning pods can be frontrun with large deposits",
+      "title": "Winning pods can be frontrun with large deposits"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0014",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/pooltogether-pods/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Token transfers may return `false`",
+      "title": "Token transfers may return `false`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0015",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/pooltogether-pods/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`TokenDrop`: Unprotected `initialize()` function",
+      "title": "`TokenDrop`: Unprotected `initialize()` function"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0016",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/pooltogether-pods/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Pod: Re-entrancy during deposit or withdrawal can lead to stealing funds",
+      "title": "Pod: Re-entrancy during deposit or withdrawal can lead to stealing funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0017",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/defi-saver/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Random task execution",
+      "title": "Random task execution"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset",
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0018",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Anyone can win all the funds from the `LiquidityMining` without investing any DAI",
+      "title": "Anyone can win all the funds from the `LiquidityMining` without investing any DAI"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0019",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Anyone is able to mint NFTs by calling `mintNFTsForLM`",
+      "title": "Anyone is able to mint NFTs by calling `mintNFTsForLM`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0020",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Liquidity providers can create deficit of DAI tokens",
+      "title": "Liquidity providers can create deficit of DAI tokens"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0021",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Profit and loss distribution mechanism is not working",
+      "title": "Profit and loss distribution mechanism is not working"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0022",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "A liquidity provider can withdraw all his funds anytime",
+      "title": "A liquidity provider can withdraw all his funds anytime"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0023",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Re-entrancy issue for ERC1155",
+      "title": "Re-entrancy issue for ERC1155"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0024",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/03/bridge-mutual/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "The `buyPolicyFor`/`addLiquidityFor` should transfer funds from `msg.sender`",
+      "title": "The `buyPolicyFor`/`addLiquidityFor` should transfer funds from `msg.sender`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0025",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/02/daofi/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Token approvals can be stolen in `DAOfiV1Router01.addLiquidity()`",
+      "title": "Token approvals can be stolen in `DAOfiV1Router01.addLiquidity()`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0026",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/02/daofi/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "The deposit of a new pair can be stolen",
+      "title": "The deposit of a new pair can be stolen"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0027",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/02/definer/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Users can withdraw their funds immediately when they are over-leveraged",
+      "title": "Users can withdraw their funds immediately when they are over-leveraged"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0028",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/01/fei-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`GenesisGroup.commit` overwrites previously-committed values",
+      "title": "`GenesisGroup.commit` overwrites previously-committed values"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0029",
+      "locator": [
+        "https://consensys.net//diligence/audits/2021/01/fei-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Purchasing and committing still possible after launch",
+      "title": "Purchasing and committing still possible after launch"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0030",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/12/1inch-liquidity-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "[Out of Scope] ReferralFeeReceiver - anyone can steal all the funds that belong to ReferralFeeReceiver",
+      "title": "[Out of Scope] ReferralFeeReceiver - anyone can steal all the funds that belong to ReferralFeeReceiver"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0031",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/12/1inch-liquidity-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "GovernanceMothership - `notifyFor` allows to arbitrarily create new or override other users stake in governance modules",
+      "title": "GovernanceMothership - `notifyFor` allows to arbitrarily create new or override other users stake in governance modules"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0032",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/11/pooltogether-lootbox-and-multiplewinners-strategy/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "PeriodicPrizeStrategy - RNG failure can lock user funds",
+      "title": "PeriodicPrizeStrategy - RNG failure can lock user funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0033",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/11/pooltogether-lootbox-and-multiplewinners-strategy/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "LootBox - Unprotected selfdestruct in proxy implementation",
+      "title": "LootBox - Unprotected selfdestruct in proxy implementation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0034",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/11/paxos/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Owners can never be removed",
+      "title": "Owners can never be removed"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0035",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/06/bancor-v2-amm-security-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Oracle updates can be manipulated to perform atomic front-running attack",
+      "title": "Oracle updates can be manipulated to perform atomic front-running attack"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0036",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/06/codefi-erc1400-assessment/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`ERC1400ERC20` whitelist circumvents partition restrictions",
+      "title": "`ERC1400ERC20` whitelist circumvents partition restrictions"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0037",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/06/codefi-erc1400-assessment/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Certificate controllers do not always constrain the last argument",
+      "title": "Certificate controllers do not always constrain the last argument"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0038",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/06/codefi-erc1400-assessment/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Salt-based certificate controller is subject to signature replay",
+      "title": "Salt-based certificate controller is subject to signature replay"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0039",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/05/lien-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "A reverting fallback function will lock up all payouts",
+      "title": "A reverting fallback function will lock up all payouts"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0040",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/05/mcdex-mai-protocol-v2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Exchange - CancelOrder has no effect",
+      "title": "Exchange - CancelOrder has no effect"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0041",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/05/aave-cpm-price-provider/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "CPM token price is susceptible to manipulation",
+      "title": "CPM token price is susceptible to manipulation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0042",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/02/thesis-tbtc-and-keep/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`TokenStaking.recoverStake` allows instant stake undelegation",
+      "title": "`TokenStaking.recoverStake` allows instant stake undelegation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0043",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/02/thesis-tbtc-and-keep/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Improper length validation in BLS signature library allows RNG manipulation",
+      "title": "Improper length validation in BLS signature library allows RNG manipulation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0044",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/02/thesis-tbtc-and-keep/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "tbtc - the tecdsa keep is never closed, signer bonds are not released",
+      "title": "tbtc - the tecdsa keep is never closed, signer bonds are not released"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0045",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/02/thesis-tbtc-and-keep/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "tbtc - No access control in `TBTCSystem.requestNewKeep`",
+      "title": "tbtc - No access control in `TBTCSystem.requestNewKeep`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0046",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/skale-token/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Users can burn delegated tokens using re-entrancy attack",
+      "title": "Users can burn delegated tokens using re-entrancy attack"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0047",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/skale-token/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`uint` overflow may lead to stealing funds",
+      "title": "`uint` overflow may lead to stealing funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0048",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/omisego-morevp/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`Merkle.checkMembership` allows existence proofs for the same leaf in multiple locations in the tree",
+      "title": "`Merkle.checkMembership` allows existence proofs for the same leaf in multiple locations in the tree"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0049",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/the-lao/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`safeRagequit` makes you lose funds",
+      "title": "`safeRagequit` makes you lose funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0050",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/the-lao/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Creating proposal is not trustless",
+      "title": "Creating proposal is not trustless"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0051",
+      "locator": [
+        "https://consensys.net//diligence/audits/2020/01/the-lao/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Emergency processing can be blocked",
+      "title": "Emergency processing can be blocked"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0052",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/12/dandelion-organizations/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`TimeLock` spam prevention can be bypassed",
+      "title": "`TimeLock` spam prevention can be bypassed"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0053",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/11/fairmint-continuous-securities-offering/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "FAIR can be stolen using ERC-777 hooks",
+      "title": "FAIR can be stolen using ERC-777 hooks"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0054",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/11/orchid-network-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Staking node can be inappropriately removed from the tree",
+      "title": "Staking node can be inappropriately removed from the tree"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0055",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/09/slock.it-incubed3/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "in3-server - amplified DDoS on incubed requests on proof with signature",
+      "title": "in3-server - amplified DDoS on incubed requests on proof with signature"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0056",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/09/slock.it-incubed3/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "BlockProof - Node conviction race condition may trick all but one node into losing funds",
+      "title": "BlockProof - Node conviction race condition may trick all but one node into losing funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0057",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/09/slock.it-incubed3/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`NodeRegistry` Front-running attack on `convict()`",
+      "title": "`NodeRegistry` Front-running attack on `convict()`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0058",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/03/ens-permanent-registrar/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Memory corruption in `Buffer`",
+      "title": "Memory corruption in `Buffer`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0059",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/03/ens-permanent-registrar/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`SimplePriceOracle.price` is susceptible to integer overflow",
+      "title": "`SimplePriceOracle.price` is susceptible to integer overflow"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0060",
+      "locator": [
+        "https://consensys.net//diligence/audits/2019/03/ens-permanent-registrar/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`ETHRegistrarController.register` is vulnerable to front running",
+      "title": "`ETHRegistrarController.register` is vulnerable to front running"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0061",
+      "locator": [
+        "https://consensys.net//diligence/audits/2022/03/fuji-protocol/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "FlasherFTM - Unsolicited invocation of the callback (CREAM auth bypass)",
+      "title": "FlasherFTM - Unsolicited invocation of the callback (CREAM auth bypass)"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0062",
+      "locator": [
+        "https://consensys.net//diligence/audits/2024/01/linea-contracts-update/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Incorrect Final Block Number Can Be Finalized",
+      "title": "Incorrect Final Block Number Can Be Finalized"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0063",
+      "locator": [
+        "https://consensys.net//diligence/audits/2024/01/linea-contracts-update/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Finalization Fails for the First Batch of Data Submitted After Migration to the Updated Contract",
+      "title": "Finalization Fails for the First Batch of Data Submitted After Migration to the Updated Contract"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0064",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/12/web3-tickets/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "An Attacker Can Flood the Support by Creating Many Tickets for Arbitrary Addresses",
+      "title": "An Attacker Can Flood the Support by Creating Many Tickets for Arbitrary Addresses"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0065",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/12/web3-tickets/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Broken Authorization Scheme",
+      "title": "Broken Authorization Scheme"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0066",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/12/web3-tickets/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Any Website Connected to the Snap Can Access the Address and API Key and Impersonate the User",
+      "title": "Any Website Connected to the Snap Can Access the Address and API Key and Impersonate the User"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0067",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/08/metamask/partner-snaps-filsnap/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Markdown and Control Character Injection",
+      "title": "Markdown and Control Character Injection"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0068",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/08/metamask/partner-snaps-filsnap/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Directly Exposed Private Key Export",
+      "title": "Directly Exposed Private Key Export"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0069",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/07/metamask/partner-snaps-shapeshift-snap/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "RPC `eth_signMessage` Allows Linked Dapps to Sign Messages With Any Wallet Account and W/O Explicit User Consent",
+      "title": "RPC `eth_signMessage` Allows Linked Dapps to Sign Messages With Any Wallet Account and W/O Explicit User Consent"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0070",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-canonical-token-bridge/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Bridge Token Would Be Locked and Cannot Bridge to Native Token",
+      "title": "Bridge Token Would Be Locked and Cannot Bridge to Native Token"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0071",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-plonk-verifier/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "No Proper Trusted Setup",
+      "title": "No Proper Trusted Setup"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0072",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-plonk-verifier/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Broken Lagrange Polynomial Evaluation at Zeta",
+      "title": "Broken Lagrange Polynomial Evaluation at Zeta"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0073",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-plonk-verifier/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Broken Logic for Modular Multiplicative Inverse",
+      "title": "Broken Logic for Modular Multiplicative Inverse"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0074",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-plonk-verifier/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Missing Verifying Paring Check Result",
+      "title": "Missing Verifying Paring Check Result"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0075",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/06/linea-plonk-verifier/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Gas Greifing and Missing Return Status Check for `staticcall`(s), May Lead to Unexpected Outcomes",
+      "title": "Gas Greifing and Missing Return Status Check for `staticcall`(s), May Lead to Unexpected Outcomes"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0076",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/05/tidal/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`addPremium` – A Back Runner May Cause an Insurance Holder to Lose Their Refunds by Calling `addPremium` Right After the Original Call",
+      "title": "`addPremium` – A Back Runner May Cause an Insurance Holder to Lose Their Refunds by Calling `addPremium` Right After the Original Call"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0077",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/05/tidal/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`refund` – Attacker Can Lock Insurance Holder's Refunds by Calling `refund` Before a Refund Was Allocated",
+      "title": "`refund` – Attacker Can Lock Insurance Holder's Refunds by Calling `refund` Before a Refund Was Allocated"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0078",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/05/tidal/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "`addTidal`, `_updateUserTidal`, `withdrawTidal` – Wrong Arithmetic Calculations",
+      "title": "`addTidal`, `_updateUserTidal`, `withdrawTidal` – Wrong Arithmetic Calculations"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0079",
+      "locator": [
+        "https://consensys.net//diligence/audits/2023/04/glif-filecoin-infinitypool/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "InfinityPool Contract Authorization Bypass Attack",
+      "title": "InfinityPool Contract Authorization Bypass Attack"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0080",
+      "locator": [
+        "https://consensys.net//diligence/audits/2022/11/geodefi/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Oracle's `_sanityCheck` for prices will not work with slashing",
+      "title": "Oracle's `_sanityCheck` for prices will not work with slashing"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0081",
+      "locator": [
+        "https://consensys.net//diligence/audits/2022/11/geodefi/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Multiple calculation mistakes in the `_findPricesClearBuffer` function",
+      "title": "Multiple calculation mistakes in the `_findPricesClearBuffer` function"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0082",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2023/03/Smart-Contract-Audit_StakeDao_Bribe_Platform_-ChainSecurity.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Adjusted Bias Measured Possibly Too Late",
+      "title": "6.1 Adjusted Bias Measured Possibly Too Late"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0083",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2023/01/Polymarket-Exchange-Smart-Contract-audit-by-ChainSecurity-1.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Signatures Are Valid for Any Address",
+      "title": "6.1 Signatures Are Valid for Any Address"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0084",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2023/01/Polymarket-Exchange-Smart-Contract-audit-by-ChainSecurity-1.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.2 ORDER_TYPEHASH Is Incorrect",
+      "title": "6.2 ORDER_TYPEHASH Is Incorrect"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0085",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2022/10/ChainSecurity_Yearn_yCRV_and_ZapYCRV_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 LPYCRV Outputs Not Transferred to User",
+      "title": "6.1 LPYCRV Outputs Not Transferred to User"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0086",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2022/08/ChainSecurity_Mellow_Finance_Mellow_Vaults_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.2 Chainlink Oracle Returns Empty Prices",
+      "title": "6.2 Chainlink Oracle Returns Empty Prices"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0087",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2022/08/ChainSecurity_Mellow_Finance_Mellow_Vaults_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.4 Missing Access Control in UniV3Oracle",
+      "title": "6.4 Missing Access Control in UniV3Oracle"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0088",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2022/05/ChainSecurity_Angle_Angle_Borrowing_Module_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Unchecked VaultManager Address",
+      "title": "6.1 Unchecked VaultManager Address"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0089",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2022/03/ChainSecurity_Giry_Mangrove_audit_220511.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "7.1 Draining All Ether Provisions of Mangrove",
+      "title": "7.1 Draining All Ether Provisions of Mangrove"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0090",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2021/12/ChainSecurity_MakerDAO_StarkNet-DAI-Bridge_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Unprotected Escrow Funds",
+      "title": "6.1 Unprotected Escrow Funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0091",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2021/12/ChainSecurity_Compound_cToken_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Anyone Can Disable TUSD Market",
+      "title": "6.1 Anyone Can Disable TUSD Market"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0092",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2021/10/ChainSecurity_POA_Network_SBC_Deposit_Smart-Contract-audit_-October-1st-2021.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 onTokenTransfer Wrong Accounting",
+      "title": "6.1 onTokenTransfer Wrong Accounting"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0093",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2021/10/ChainSecurity_HOPRNet_Payment_Channel_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Reentrancy Can Drain Money",
+      "title": "6.1 Reentrancy Can Drain Money"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0094",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2023/04/Smart-Contract-Audit-Silo_Finance_Curve__Convex_Feature-ChainSecurity.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.2 CurvePriveProvider Uses the Spot Price",
+      "title": "6.2 CurvePriveProvider Uses the Spot Price"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0095",
+      "locator": [
+        "https://chainsecurity.com/wp-content/uploads/2023/08/ChainSecurity_MakerDAO_zkSync_DAI_Bridge_audit.pdf"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1 Outdated Interfaces",
+      "title": "6.1 Outdated Interfaces"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0096",
+      "locator": [
+        "https://blog.openzeppelin.com/uma-dvm-2-0-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Slashing mechanism grants exponentially more rewards than expected",
+      "title": "Slashing mechanism grants exponentially more rewards than expected"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0097",
+      "locator": [
+        "https://blog.openzeppelin.com/freeverse-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Operators are implicitly trusted",
+      "title": "Operators are implicitly trusted"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0098",
+      "locator": [
+        "https://blog.openzeppelin.com/uma-across-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Slow relays on multiple chains",
+      "title": "Slow relays on multiple chains"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0099",
+      "locator": [
+        "https://blog.openzeppelin.com/eth-foundation-account-abstraction-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Deposit manipulation \\[core\\]",
+      "title": "\\[C01\\] Deposit manipulation \\[core\\]"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0100",
+      "locator": [
+        "https://blog.openzeppelin.com/compound-comprehensive-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Anyone can steal money from other suppliers in TUSD market by creating negative interest rates",
+      "title": "Anyone can steal money from other suppliers in TUSD market by creating negative interest rates"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0101",
+      "locator": [
+        "https://blog.openzeppelin.com/compound-comprehensive-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Context",
+      "title": "Context"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0102",
+      "locator": [
+        "https://blog.openzeppelin.com/compound-comprehensive-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "The TUSD market case",
+      "title": "The TUSD market case"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0103",
+      "locator": [
+        "https://blog.openzeppelin.com/uma-audit-phase-6/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Cannot dispute invalid reward",
+      "title": "\\[C01\\] Cannot dispute invalid reward"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0104",
+      "locator": [
+        "https://blog.openzeppelin.com/uma-audit-phase-6/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Repeatedly resolve proposals",
+      "title": "\\[C02\\] Repeatedly resolve proposals"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0105",
+      "locator": [
+        "https://blog.openzeppelin.com/uma-audit-l2-bridges/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Trapped Proposer Reward",
+      "title": "\\[C01\\] Trapped Proposer Reward"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0106",
+      "locator": [
+        "https://blog.openzeppelin.com/optimism-smart-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "[](https://github.com/alexbehrens/optimismc01-possible-state-manipulation-after-execution-of-transactions-with-invalid-gas-limit)\\[C01\\] Possible state manipulation after execution of transactions with invalid gas limit",
+      "title": "[](https://github.com/alexbehrens/optimismc01-possible-state-manipulation-after-execution-of-transactions-with-invalid-gas-limit)\\[C01\\] Possible state manipulation after execution of transactions with invalid gas limit"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0107",
+      "locator": [
+        "https://blog.openzeppelin.com/optimism-smart-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "[](https://github.com/alexbehrens/optimismc02-partially-shared-keys-with-extension-nodes-mishandled)\\[C02\\] Partially shared keys with EXTENSION nodes mishandled",
+      "title": "[](https://github.com/alexbehrens/optimismc02-partially-shared-keys-with-extension-nodes-mishandled)\\[C02\\] Partially shared keys with EXTENSION nodes mishandled"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0108",
+      "locator": [
+        "https://blog.openzeppelin.com/optimism-smart-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "[](https://github.com/alexbehrens/optimismc03-unbounded-nuisance-gas)\\[C03\\] Unbounded nuisance gas",
+      "title": "[](https://github.com/alexbehrens/optimismc03-unbounded-nuisance-gas)\\[C03\\] Unbounded nuisance gas"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0109",
+      "locator": [
+        "https://blog.openzeppelin.com/optimism-smart-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "[](https://github.com/alexbehrens/optimismc04-valid-l1-to-l2-queue-transactions-may-be-proven-fraudulent-spoofing-queue-origin)\\[C04\\] Valid L1-to-L2 queue transactions may be proven fraudulent spoofing queue origin",
+      "title": "[](https://github.com/alexbehrens/optimismc04-valid-l1-to-l2-queue-transactions-may-be-proven-fraudulent-spoofing-queue-origin)\\[C04\\] Valid L1-to-L2 queue transactions may be proven fraudulent spoofing queue origin"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0110",
+      "locator": [
+        "https://blog.openzeppelin.com/origin-dollar-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Attacker can steal a portion of the reward tokens and accrued yield",
+      "title": "\\[C01\\] Attacker can steal a portion of the reward tokens and accrued yield"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0111",
+      "locator": [
+        "https://blog.openzeppelin.com/ribbon-finance-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Instant withdrawals can disable essential vault functionality",
+      "title": "\\[C01\\] Instant withdrawals can disable essential vault functionality"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0112",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-audit-2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Protocol does not support token decimals",
+      "title": "\\[C01\\] Protocol does not support token decimals"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0113",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-audit-2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Exchanging FEI on the `ReserveStabilizer`",
+      "title": "Exchanging FEI on the `ReserveStabilizer`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0114",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-audit-2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Purchasing on the `BondingCurve`",
+      "title": "Purchasing on the `BondingCurve`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0115",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-audit-2/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Other examples",
+      "title": "Other examples"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall",
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0116",
+      "locator": [
+        "https://blog.openzeppelin.com/barnbridge-smart-yield-bonds-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Protocol allows non-existent loanable value as Senior Bond gain",
+      "title": "\\[C01\\] Protocol allows non-existent loanable value as Senior Bond gain"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0117",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Anyone can steal all the `TRIBE` tokens from the reward pool",
+      "title": "\\[C01\\] Anyone can steal all the `TRIBE` tokens from the reward pool"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0118",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] ETH can get stuck in the `GenesisGroup` contract",
+      "title": "\\[C02\\] ETH can get stuck in the `GenesisGroup` contract"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0119",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C03\\] Anyone can partially bypass the `FEI` sell penalty to earn a profit",
+      "title": "\\[C03\\] Anyone can partially bypass the `FEI` sell penalty to earn a profit"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0120",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C04\\] Users can claim unreleased rewards or have their funds locked",
+      "title": "\\[C04\\] Users can claim unreleased rewards or have their funds locked"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0121",
+      "locator": [
+        "https://blog.openzeppelin.com/fei-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C05\\] Anyone with enough liquidity to reach the `maxGenesisPrice` can make profit from genesis",
+      "title": "\\[C05\\] Anyone with enough liquidity to reach the `maxGenesisPrice` can make profit from genesis"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0122",
+      "locator": [
+        "https://blog.openzeppelin.com/opyn-gamma-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\]\\[Fixed\\] An attacker can steal all the collateral assets",
+      "title": "\\[C01\\]\\[Fixed\\] An attacker can steal all the collateral assets"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0123",
+      "locator": [
+        "https://blog.openzeppelin.com/mcdex-mai-fund-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Miscalculation of payout in `settle`",
+      "title": "\\[C01\\] Miscalculation of payout in `settle`"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0124",
+      "locator": [
+        "https://blog.openzeppelin.com/endaoment-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Governance restrictions can be bypassed",
+      "title": "\\[C01\\] Governance restrictions can be bypassed"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0125",
+      "locator": [
+        "https://blog.openzeppelin.com/endaoment-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Fees are wrongly calculated",
+      "title": "\\[C02\\] Fees are wrongly calculated"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0126",
+      "locator": [
+        "https://blog.openzeppelin.com/audius-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] A malicious delegator can permanently lock all stake and rewards for a victim service provider and all of its honest delegators",
+      "title": "\\[C01\\] A malicious delegator can permanently lock all stake and rewards for a victim service provider and all of its honest delegators"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0127",
+      "locator": [
+        "https://blog.openzeppelin.com/audius-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Updating or removing a service type causes critical accounting errors",
+      "title": "\\[C02\\] Updating or removing a service type causes critical accounting errors"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0128",
+      "locator": [
+        "https://blog.openzeppelin.com/audius-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C03\\] Proxy admin doesn’t entirely cede upgrade control to governance address",
+      "title": "\\[C03\\] Proxy admin doesn’t entirely cede upgrade control to governance address"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0129",
+      "locator": [
+        "https://blog.openzeppelin.com/primitive-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Anyone can steal funds from the Option contract before they are used",
+      "title": "\\[C01\\] Anyone can steal funds from the Option contract before they are used"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0130",
+      "locator": [
+        "https://blog.openzeppelin.com/primitive-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Issued options might not be backed by underlying assets",
+      "title": "\\[C02\\] Issued options might not be backed by underlying assets"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0131",
+      "locator": [
+        "https://blog.openzeppelin.com/primitive-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C03\\] Deposited funds can be stolen or lost due to transaction ordering",
+      "title": "\\[C03\\] Deposited funds can be stolen or lost due to transaction ordering"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0132",
+      "locator": [
+        "https://blog.openzeppelin.com/mcdex-mai-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Anyone can liquidate on behalf of another account",
+      "title": "\\[C01\\] Anyone can liquidate on behalf of another account"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0133",
+      "locator": [
+        "https://blog.openzeppelin.com/mcdex-mai-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Orders cannot be cancelled",
+      "title": "\\[C02\\] Orders cannot be cancelled"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0134",
+      "locator": [
+        "https://blog.openzeppelin.com/pooltogether-pods-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Supply is manipulable",
+      "title": "\\[C01\\] Supply is manipulable"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0135",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit-components/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Anyone can register backdoored wallets for any owner in GnosisSafeRegistry contract",
+      "title": "\\[C01\\] Anyone can register backdoored wallets for any owner in GnosisSafeRegistry contract"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0136",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] All CASH tokens approved to Augur can be emptied",
+      "title": "\\[C01\\] All CASH tokens approved to Augur can be emptied"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0137",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**\\[C02\\] CASH tokens can be stolen from the Market contract**",
+      "title": "**\\[C02\\] CASH tokens can be stolen from the Market contract**"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0138",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C03\\] Anyone can remove all market’s dispute crowdsourcers",
+      "title": "\\[C03\\] Anyone can remove all market’s dispute crowdsourcers"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0139",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C04\\] DisputeCrowdsourcer contract does not allow for the purchase of overload tokens once its size is filled",
+      "title": "\\[C04\\] DisputeCrowdsourcer contract does not allow for the purchase of overload tokens once its size is filled"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0140",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C05\\] Unfillable orders can be placed to constrain or halt markets",
+      "title": "\\[C05\\] Unfillable orders can be placed to constrain or halt markets"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0141",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C06\\] Affiliate’s fees can be withdrawn in an invalid, finalized Market",
+      "title": "\\[C06\\] Affiliate’s fees can be withdrawn in an invalid, finalized Market"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0142",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C07\\] All dispute bonds can be held hostage or permanently frozen when a Market is in a forking universe",
+      "title": "\\[C07\\] All dispute bonds can be held hostage or permanently frozen when a Market is in a forking universe"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0143",
+      "locator": [
+        "https://blog.openzeppelin.com/augur-core-v2-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C08\\] Fork reputation goal threshold can be decreased during fork",
+      "title": "\\[C08\\] Fork reputation goal threshold can be decreased during fork"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0144",
+      "locator": [
+        "https://blog.openzeppelin.com/opyn-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\]\\[Fixed\\] Malicious users could steal from the OptionsContract contract",
+      "title": "\\[C01\\]\\[Fixed\\] Malicious users could steal from the OptionsContract contract"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0145",
+      "locator": [
+        "https://blog.openzeppelin.com/aave-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Users can steal funds",
+      "title": "\\[C01\\] Users can steal funds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0146",
+      "locator": [
+        "https://blog.openzeppelin.com/aave-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C02\\] Borrowers can avoid liquidation",
+      "title": "\\[C02\\] Borrowers can avoid liquidation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0147",
+      "locator": [
+        "https://blog.openzeppelin.com/aave-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C03\\] Deposits not marked as collateral can still be liquidated",
+      "title": "\\[C03\\] Deposits not marked as collateral can still be liquidated"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0148",
+      "locator": [
+        "https://blog.openzeppelin.com/aave-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C04\\] Rogue borrower can manipulate other account’s borrow balance",
+      "title": "\\[C04\\] Rogue borrower can manipulate other account’s borrow balance"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0149",
+      "locator": [
+        "https://blog.openzeppelin.com/aave-protocol-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C05\\] Loans of Ether cannot be repaid",
+      "title": "\\[C05\\] Loans of Ether cannot be repaid"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0150",
+      "locator": [
+        "https://blog.openzeppelin.com/eco-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Critical",
+      "title": "Critical"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0151",
+      "locator": [
+        "https://blog.openzeppelin.com/props-rewards-engine-contracts-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "\\[C01\\] Any Selected Validator can Permanently DoS Reward Payouts",
+      "title": "\\[C01\\] Any Selected Validator can Permanently DoS Reward Payouts"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0152",
+      "locator": [
+        "https://blog.openzeppelin.com/dharma-audit-2f1386455688/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Anybody can mint DebtToken",
+      "title": "Anybody can mint DebtToken"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0153",
+      "locator": [
+        "https://blog.openzeppelin.com/us-dollar-audit-90dbcbb0258f/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Centralized issuance, requires trust in US government",
+      "title": "Centralized issuance, requires trust in US government"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0154",
+      "locator": [
+        "https://blog.openzeppelin.com/us-dollar-audit-90dbcbb0258f/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Not backed by any physical asset",
+      "title": "Not backed by any physical asset"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0155",
+      "locator": [
+        "https://blog.openzeppelin.com/qiibee-token-audit-b19c03262f99/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Tokens burning breaks MigrationAgent contract",
+      "title": "Tokens burning breaks MigrationAgent contract"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0156",
+      "locator": [
+        "https://blog.openzeppelin.com/qiibee-token-audit-b19c03262f99/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Migration bypasses vesting restrictions",
+      "title": "Migration bypasses vesting restrictions"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0157",
+      "locator": [
+        "https://blog.openzeppelin.com/fiinu-token-audit-c62ecbf63ad1/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Unbounded loops",
+      "title": "Unbounded loops"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0158",
+      "locator": [
+        "https://blog.openzeppelin.com/fiinu-token-audit-c62ecbf63ad1/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Delayed price increase after target amount raised",
+      "title": "Delayed price increase after target amount raised"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0159",
+      "locator": [
+        "https://blog.openzeppelin.com/global-messaging-token-audit-865e6a821cd8/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Team can circumvent refund restriction",
+      "title": "Team can circumvent refund restriction"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0160",
+      "locator": [
+        "https://blog.openzeppelin.com/fuel-token-audit-30cc02f257f5/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Leftover presale supply can be left unrecoverable",
+      "title": "Leftover presale supply can be left unrecoverable"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0161",
+      "locator": [
+        "https://blog.openzeppelin.com/kin-token-audit-121788c06fe/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Revoking a vesting grant takes vested tokens away",
+      "title": "Revoking a vesting grant takes vested tokens away"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0162",
+      "locator": [
+        "https://blog.openzeppelin.com/zksync-bootloader-audit-report/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Useless Assertion Check",
+      "title": "Useless Assertion Check"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0163",
+      "locator": [
+        "https://blog.openzeppelin.com/zksync-layer-1-diff-audit/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Storage collision leads to failure of the system",
+      "title": "Storage collision leads to failure of the system"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0164",
+      "locator": [
+        "https://blog.openzeppelin.com/pods-finance-ethereum-volatility-vault-audit-1/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "DepositQueue can become permanently locked",
+      "title": "DepositQueue can become permanently locked"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0165",
+      "locator": [
+        "https://blog.openzeppelin.com/pods-finance-ethereum-volatility-vault-audit-1/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "Miscounted assets breaking system invariants",
+      "title": "Miscounted assets breaking system invariants"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0166",
+      "locator": [
+        "https://blog.openzeppelin.com/pods-finance-ethereum-volatility-vault-audit-1/"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "The vault can be drained one share at a time",
+      "title": "The vault can be drained one share at a time"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0167",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**6.1.1 An attacker can freeze all incoming deposits and brick the oracle members' reporting system with",
+      "title": "**6.1.1 An attacker can freeze all incoming deposits and brick the oracle members' reporting system with"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0168",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1.2 Operators._hasFundableKeysreturnstruefor operators that do not have fundable keys",
+      "title": "6.1.2 Operators._hasFundableKeysreturnstruefor operators that do not have fundable keys"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0169",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**6.1.3** OperatorsRegistry._getNextValidatorsFromActiveOperators **can DOS Alluvial staking if there's an",
+      "title": "**6.1.3** OperatorsRegistry._getNextValidatorsFromActiveOperators **can DOS Alluvial staking if there's an"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0170",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Lack oftransferIdVerification Allows an Attacker to Front-Run Bridge Transfers",
+      "title": "5.1.1 Lack oftransferIdVerification Allows an Attacker to Front-Run Bridge Transfers"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0171",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 Use of spot dex price when repay portal debt leads to sandwich attacks",
+      "title": "5.1.2 Use of spot dex price when repay portal debt leads to sandwich attacks"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0172",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 swapOutallows overwrite of token balance",
+      "title": "5.1.3 swapOutallows overwrite of token balance"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0173",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 Use of spot price inSponsorVaultleads to sandwich attack.",
+      "title": "5.1.4 Use of spot price inSponsorVaultleads to sandwich attack."
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0174",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Important Balancer fields can be overwritten byEndTime.",
+      "title": "5.1.1 Important Balancer fields can be overwritten byEndTime."
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0175",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 sweepfunction should prevent Treasury from withdrawing pool’s BPTs",
+      "title": "5.1.2 sweepfunction should prevent Treasury from withdrawing pool’s BPTs"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0176",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Wrong P2P exchange rate calculation",
+      "title": "5.1.1 Wrong P2P exchange rate calculation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0177",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 MatchingEngineForAave is using the wrong totalSupply in updateBorrowers",
+      "title": "5.1.2 MatchingEngineForAave is using the wrong totalSupply in updateBorrowers"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0178",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 RewardsManagerAave does not verify token addresses",
+      "title": "5.1.3 RewardsManagerAave does not verify token addresses"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0179",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**3.1.1 Clones with malicious** extradata **are also considered valid clones**",
+      "title": "**3.1.1 Clones with malicious** extradata **are also considered valid clones**"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0180",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 MintPerpetualYieldTokensfor free by self-transfer",
+      "title": "5.1.1 MintPerpetualYieldTokensfor free by self-transfer"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0181",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Pool token price is incorrect when there is more than one pending upkeep",
+      "title": "5.1.1 Pool token price is incorrect when there is more than one pending upkeep"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0182",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.1** LienToken.transferFrom **does not update a public vault's bookkeeping parameters when a lien is",
+      "title": "**5.1.1** LienToken.transferFrom **does not update a public vault's bookkeeping parameters when a lien is"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0183",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 Collateral owner can steal funds by taking liens while asset is listed for sale on Seaport",
+      "title": "5.1.3 Collateral owner can steal funds by taking liens while asset is listed for sale on Seaport"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0184",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 validateStack allows any stack to be used with collateral with no liens",
+      "title": "5.1.4 validateStack allows any stack to be used with collateral with no liens"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0185",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.6 Phony signatures can be used to forge any strategy",
+      "title": "5.1.6 Phony signatures can be used to forge any strategy"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0186",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 OrderBook Denial of Service leveraging blacklistable tokens like USDC",
+      "title": "5.1.1 OrderBook Denial of Service leveraging blacklistable tokens like USDC"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0187",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.2 Overflow in** SegmentedSegmentTree",
+      "title": "**5.1.2 Overflow in** SegmentedSegmentTree"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0188",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 OrderNFT theft due to controlling future and past tokens of same order index",
+      "title": "5.1.3 OrderNFT theft due to controlling future and past tokens of same order index"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0189",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 OrderNFT theft due to ambiguoustokenIdencoding/decoding scheme",
+      "title": "5.1.4 OrderNFT theft due to ambiguoustokenIdencoding/decoding scheme"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0190",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**7.1.1 A malicious user could DOS a vesting schedule by sending only** 1 wei **of** TLC **to the vesting escrow",
+      "title": "**7.1.1 A malicious user could DOS a vesting schedule by sending only** 1 wei **of** TLC **to the vesting escrow"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0191",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 The Protocol owner can drain users' currency tokens",
+      "title": "5.1.1 The Protocol owner can drain users' currency tokens"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0192",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.1 Side effects of LTV = 0 assets: Morpho's users will not be able to withdraw (collateral and \"pure\"",
+      "title": "**5.1.1 Side effects of LTV = 0 assets: Morpho's users will not be able to withdraw (collateral and \"pure\""
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0193",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.2 Morpho is vulnerable to attackers sending** LTV = 0 **collateral tokens, supply/supplyCollateral, bor-",
+      "title": "**5.1.2 Morpho is vulnerable to attackers sending** LTV = 0 **collateral tokens, supply/supplyCollateral, bor-"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0194",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.3 Morpho is not correctly handling the asset price in** _getAssetPrice **when** isInEMode == true **but**",
+      "title": "**5.1.3 Morpho is not correctly handling the asset price in** _getAssetPrice **when** isInEMode == true **but**"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0195",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 Isolated assets are treated as collateral in Morpho",
+      "title": "5.1.4 Isolated assets are treated as collateral in Morpho"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0196",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**6.1.1** _pickNextValidatorsToExitFromActiveOperators **uses the wrong index to query stopped validator",
+      "title": "**6.1.1** _pickNextValidatorsToExitFromActiveOperators **uses the wrong index to query stopped validator"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0197",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "6.1.2 Oracles' reports votes are not stored in storage",
+      "title": "6.1.2 Oracles' reports votes are not stored in storage"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0198",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 ThecastApprovalBySigandcastDisapprovalBySigfunctions can revert",
+      "title": "5.1.1 ThecastApprovalBySigandcastDisapprovalBySigfunctions can revert"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0199",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 ThecastApproval/castDisapprovaldoesn't check ifroleparameter is theapprovalRole",
+      "title": "5.1.2 ThecastApproval/castDisapprovaldoesn't check ifroleparameter is theapprovalRole"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0200",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "**5.1.1 The extra data (encoded** stack **) provided to advanced orders to** Seaport **are not validated properly",
+      "title": "**5.1.1 The extra data (encoded** stack **) provided to advanced orders to** Seaport **are not validated properly"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0201",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 AstariaRouter.liquidate(...)can be called multiple times for an expired lien/stack",
+      "title": "5.1.2 AstariaRouter.liquidate(...)can be called multiple times for an expired lien/stack"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0202",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Gas calculation frequently uses unchecked free variables",
+      "title": "5.1.1 Gas calculation frequently uses unchecked free variables"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0203",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 Memory alignment malleability",
+      "title": "5.1.2 Memory alignment malleability"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0204",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 IncorrectBYTEimplementation",
+      "title": "5.1.3 IncorrectBYTEimplementation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0205",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 Test failures inVMTests/vmPerformance/loopExp(potential issue inEXP)",
+      "title": "5.1.4 Test failures inVMTests/vmPerformance/loopExp(potential issue inEXP)"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0206",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.5 IncorrectSARimplementation",
+      "title": "5.1.5 IncorrectSARimplementation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0207",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.6 Insufficient check about division remainder",
+      "title": "5.1.6 Insufficient check about division remainder"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset",
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0208",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.7 Underconstrained carry value in the binary state machine",
+      "title": "5.1.7 Underconstrained carry value in the binary state machine"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0209",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 SENDALLzeroes out balance in case receiver equals sender",
+      "title": "5.1.1 SENDALLzeroes out balance in case receiver equals sender"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0210",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 opCALLDATALOAD/opCALLDATACOPYreading position out of calldata bounds",
+      "title": "5.1.2 opCALLDATALOAD/opCALLDATACOPYreading position out of calldata bounds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0211",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 opJUMP/opJUMPIreading position out of code bounds",
+      "title": "5.1.3 opJUMP/opJUMPIreading position out of code bounds"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0212",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Incorrect check for calldata overrun in CALLDATACOPY",
+      "title": "5.1.1 Incorrect check for calldata overrun in CALLDATACOPY"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0213",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 tradingFunctionreturns wrong invariant at bounds, allowing to steal all pool reserves",
+      "title": "5.1.1 tradingFunctionreturns wrong invariant at bounds, allowing to steal all pool reserves"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0214",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Protocol fees are double-counted as registry balance and pool reserve",
+      "title": "5.1.1 Protocol fees are double-counted as registry balance and pool reserve"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0215",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 LP fees are in WAD instead of token decimal units",
+      "title": "5.1.2 LP fees are in WAD instead of token decimal units"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0216",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 Swaps can be done for free and steal the reserve given large liquidity allocation",
+      "title": "5.1.3 Swaps can be done for free and steal the reserve given large liquidity allocation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0217",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Open ports to the internet",
+      "title": "5.1.1 Open ports to the internet"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0218",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 msg.senderhas to be un-aliased inL2BlastBridge.finalizeBridgeETHDirect().",
+      "title": "5.1.1 msg.senderhas to be un-aliased inL2BlastBridge.finalizeBridgeETHDirect()."
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0219",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.2 L1BlastBridgeuses wrong token order when bridging USD yield tokens",
+      "title": "5.1.2 L1BlastBridgeuses wrong token order when bridging USD yield tokens"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0220",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.3 _delegatecall_uint256_arr_arg_returns_uint256wrong calldata encoding",
+      "title": "5.1.3 _delegatecall_uint256_arr_arg_returns_uint256wrong calldata encoding"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0221",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.4 Changing yield fromClaimablecause fund loss",
+      "title": "5.1.4 Changing yield fromClaimablecause fund loss"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0222",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.5 CallingfindCheckpointHints()with_firstIndexas 0 will always revert",
+      "title": "5.1.5 CallingfindCheckpointHints()with_firstIndexas 0 will always revert"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0223",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.6 Withdrawing discounted ETH from L2 always fails",
+      "title": "5.1.6 Withdrawing discounted ETH from L2 always fails"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0224",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.7 Fund duplication via ERC20 self-transfer",
+      "title": "5.1.7 Fund duplication via ERC20 self-transfer"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0225",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.8 Message can be passed throughOptimismPortalto maliciously callethYieldManager",
+      "title": "5.1.8 Message can be passed throughOptimismPortalto maliciously callethYieldManager"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "secondary",
+      "id": "scf:SCF-0226",
+      "locator": [
+        "https://github.com/spearbit/portfolio"
+      ],
+      "promotion": "blocked-until-reviewed",
+      "record_type": "external-finding",
+      "severity": "Critical",
+      "source": "source.repo.forensics",
+      "status": "external-candidate",
+      "theme": "5.1.1 Rewardcalculatesearnedincorrectly on each epoch boundary",
+      "title": "5.1.1 Rewardcalculatesearnedincorrectly on each epoch boundary"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "medium",
+      "id": "sil:SIL-8F7550CD51",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:16",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "value-flow",
+      "title": "value-flow low-level value transfer is present"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "medium",
+      "id": "sil:SIL-F5E3390726",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:15",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "value-flow",
+      "title": "value-flow low-level value transfer is present"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "low",
+      "id": "sil:SIL-DFE150C147",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:6",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "reentrancy",
+      "title": "reentrancy External call in value-changing function execute"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "low",
+      "id": "sil:SIL-36C5A08597",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:6",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "reentrancy",
+      "title": "reentrancy External call in value-changing function execute"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset",
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "medium",
+      "id": "sil:SIL-CCAAE891E8",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:6",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "replay",
+      "title": "replay Replay-sensitive transition in execute"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset",
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "medium",
+      "id": "sil:SIL-C61EBA735B",
+      "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:6",
+      "promotion": "requires-linkage",
+      "record_type": "execution-finding",
+      "source": "source.repo.invariants",
+      "status": "external-observation",
+      "theme": "replay",
+      "title": "replay Replay-sensitive transition in execute"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset"
+      ],
+      "evidence_level": "high",
+      "id": "sil-property:BridgeAccountingFixed:message_replay",
+      "promotion": "requires-linkage",
+      "record_type": "execution-property",
+      "source": "source.repo.invariants",
+      "status": "external-property",
+      "theme": "property",
+      "title": "BridgeAccountingFixed:message_replay"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.replay-state-reset"
+      ],
+      "evidence_level": "high",
+      "id": "sil-property:BridgeAccountingVulnerable:message_replay",
+      "promotion": "requires-linkage",
+      "record_type": "execution-property",
+      "source": "source.repo.invariants",
+      "status": "external-property",
+      "theme": "property",
+      "title": "BridgeAccountingVulnerable:message_replay"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:euler-v1-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "insolvency_check_bypass",
+      "title": "Euler Finance V1 insolvency_check_bypass"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:beanstalk-governance-2022",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "governance",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "flash_loan_governance",
+      "title": "Beanstalk flash_loan_governance"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "B",
+      "id": "zdf:wormhole-2022",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "bridge",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "signature_verification_failure",
+      "title": "Wormhole signature_verification_failure"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:nomad-bridge-2022",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "bridge",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "initialization_failure",
+      "title": "Nomad Bridge initialization_failure"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "A",
+      "id": "zdf:poly-network-2021",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "cross_chain",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "authorization_bypass",
+      "title": "Poly Network authorization_bypass"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:harvest-fusdc-2020",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "oracle_manipulation",
+      "title": "Harvest Finance oracle_manipulation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:pickle-pdai-2020",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "unsafe_external_call",
+      "title": "Pickle Finance unsafe_external_call"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:pancakebunny-2021",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "oracle_manipulation",
+      "title": "PancakeBunny oracle_manipulation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "B",
+      "id": "zdf:uranium-2021",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "invariant_math_error",
+      "title": "Uranium Finance invariant_math_error"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "B",
+      "id": "zdf:curve-vyper-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "smart_contract",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "compiler_generated_lock_failure",
+      "title": "Curve pools compiled with affected Vyper versions compiler_generated_lock_failure"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:platypus-usp-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "insolvency_check_bypass",
+      "title": "Platypus Finance insolvency_check_bypass"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:conic-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "read_only_reentrancy",
+      "title": "Conic Finance read_only_reentrancy"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:kyberswap-elastic-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "rounding_or_precision",
+      "title": "KyberSwap Elastic rounding_or_precision"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.unbounded-privileged-input"
+      ],
+      "evidence_level": "A",
+      "id": "zdf:exactly-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "input_validation_failure",
+      "title": "Exactly Protocol input_validation_failure"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.lifecycle-reachability-destruction"
+      ],
+      "evidence_level": "A",
+      "id": "zdf:hedgey-2024",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "authorization_bypass",
+      "title": "Hedgey Finance authorization_bypass"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:radiant-2024",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "rounding_or_precision",
+      "title": "Radiant Capital rounding_or_precision"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "B",
+      "id": "zdf:hundred-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "donation_attack",
+      "title": "Hundred Finance donation_attack"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "A",
+      "id": "zdf:harvest-curve-y-2020",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "oracle",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "share_price_manipulation",
+      "title": "Harvest Finance share_price_manipulation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "B",
+      "id": "zdf:pancakebunny-oracle-variant",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "oracle",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "oracle_manipulation",
+      "title": "PancakeBunny oracle_manipulation"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "A",
+      "id": "zdf:kyberswap-legacy-2023",
+      "promotion": "requires-local-review",
+      "record_type": "forensic-case-lead",
+      "scope": "defi",
+      "source": "source.repo.zeroday",
+      "status": "external-curated",
+      "theme": "accounting_invariant_violation",
+      "title": "KyberSwap Elastic Legacy accounting_invariant_violation"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "repository-documented",
+      "id": "scsl:access-control",
+      "promotion": "requires-local-reproduction",
+      "record_type": "finding-family",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-pattern-lead",
+      "theme": "access-control",
+      "title": "access-control"
+    },
+    {
+      "candidate_pattern_links": [
+        "pattern.silent-accounting-shortfall"
+      ],
+      "evidence_level": "repository-documented",
+      "id": "scsl:bridge-accounting-underflow",
+      "promotion": "requires-local-reproduction",
+      "record_type": "finding-family",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-pattern-lead",
+      "theme": "bridge-accounting-underflow",
+      "title": "bridge-accounting-underflow"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "repository-documented",
+      "id": "scsl:defi-rounding",
+      "promotion": "requires-local-reproduction",
+      "record_type": "finding-family",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-pattern-lead",
+      "theme": "defi-rounding",
+      "title": "defi-rounding"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "repository-documented",
+      "id": "scsl:oracle-safety",
+      "promotion": "requires-local-reproduction",
+      "record_type": "finding-family",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-pattern-lead",
+      "theme": "oracle-safety",
+      "title": "oracle-safety"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "executable-source",
+      "id": "scsl-test:AccessControl.t",
+      "promotion": "requires-local-import",
+      "record_type": "regression-test-lead",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-regression-lead",
+      "theme": "AccessControl.t",
+      "title": "AccessControl.t"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "executable-source",
+      "id": "scsl-test:BridgeAccounting.t",
+      "promotion": "requires-local-import",
+      "record_type": "regression-test-lead",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-regression-lead",
+      "theme": "BridgeAccounting.t",
+      "title": "BridgeAccounting.t"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "executable-source",
+      "id": "scsl-test:DefiRounding.t",
+      "promotion": "requires-local-import",
+      "record_type": "regression-test-lead",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-regression-lead",
+      "theme": "DefiRounding.t",
+      "title": "DefiRounding.t"
+    },
+    {
+      "candidate_pattern_links": [],
+      "evidence_level": "executable-source",
+      "id": "scsl-test:OracleReadPattern.t",
+      "promotion": "requires-local-import",
+      "record_type": "regression-test-lead",
+      "source": "source.repo.smart-contract-lab",
+      "status": "external-regression-lead",
+      "theme": "OracleReadPattern.t",
+      "title": "OracleReadPattern.t"
+    }
+  ],
+  "schema_version": 1,
+  "snapshot_kind": "normalized-external-candidates"
+}

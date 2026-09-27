@@ -225,4 +225,26 @@ def validate_repo(root: Path) -> list[str]:
             except RecordLoadError as exc:
                 errors.append(str(exc))
 
+    report_schemas = {
+        "reports/federation/snapshot.json": "schemas/federation-report.schema.json",
+        "reports/longitudinal/promotion-decisions.json": "schemas/promotion-report.schema.json",
+        "reports/longitudinal/protocol-version-diffs.json": "schemas/version-diff.schema.json",
+        "reports/longitudinal/temporal-history.json": "schemas/history-report.schema.json",
+    }
+    for report_name, schema_name in report_schemas.items():
+        report_path = root / report_name
+        if not report_path.exists():
+            continue
+        schema, schema_errors = _load_schema(root / schema_name)
+        errors.extend(schema_errors)
+        if schema:
+            try:
+                data = json.loads(report_path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    errors.append(f"{report_path.relative_to(root)}: report must be an object")
+                else:
+                    errors.extend(_validate(report_path.relative_to(root), data, schema))
+            except (json.JSONDecodeError, OSError) as exc:
+                errors.append(f"{report_path.relative_to(root)}: invalid JSON: {exc}")
+
     return sorted(set(errors))

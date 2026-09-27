@@ -1,26 +1,40 @@
-version: 1
+version: 2
+engine: explicit-state-machine
+policy: Compute eligibility from evidence; never mutate canonical status automatically.
 promotions:
   - id: promotion.pattern.replay-state-reset
     kind: promotion-candidate
     status: blocked
+    computed_stage: reproduced
+    next_gate: corroborated
+    missing: [cross_case]
     from: pattern.replay-state-reset
     to: validated-pattern
-    reason: Requires corroboration across independent cases and a regression contract.
+    reason: One canonical case exists; independent case corroboration is still required.
   - id: promotion.pattern.lifecycle-reachability-destruction
     kind: promotion-candidate
     status: blocked
+    computed_stage: reproduced
+    next_gate: corroborated
+    missing: [cross_case]
     from: pattern.lifecycle-reachability-destruction
     to: validated-pattern
-    reason: Requires cross-case reproduction and explicit boundary conditions.
+    reason: One canonical case exists; independent case corroboration is still required.
   - id: promotion.pattern.unbounded-privileged-input
     kind: promotion-candidate
     status: blocked
+    computed_stage: reproduced
+    next_gate: corroborated
+    missing: [cross_case]
     from: pattern.unbounded-privileged-input
     to: validated-pattern
-    reason: Requires independent reproduction and negative-evidence search.
+    reason: One canonical case exists; independent case corroboration is still required.
   - id: promotion.pattern.silent-accounting-shortfall
     kind: promotion-candidate
     status: blocked
+    computed_stage: reproduced
+    next_gate: corroborated
+    missing: [cross_case]
     from: pattern.silent-accounting-shortfall
     to: validated-pattern
-    reason: Requires cross-protocol evidence and regression coverage.
+    reason: One canonical case exists; independent case corroboration is still required.

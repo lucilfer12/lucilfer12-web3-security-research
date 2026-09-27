@@ -1,0 +1,516 @@
+{
+  "event_count": 22,
+  "interpretation": {
+    "git": "Repository change history used only as temporal provenance; it is not treated as proof of a research conclusion.",
+    "ledger": "Explicit research events with hash-chain integrity."
+  },
+  "schema_version": 1,
+  "sources": {
+    "git_commit_count": 9,
+    "ledger_event_count": 13
+  },
+  "timeline": [
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_id": "a133e48a68d0174ebdf06a2c7ce4bfffa14d3726",
+      "event_type": "repository_commit",
+      "paths": [
+        "README.md"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "a133e48a68d0174ebdf06a2c7ce4bfffa14d3726",
+        "kind": "commit"
+      },
+      "subject_line": "Initial commit",
+      "timestamp": "2026-09-25T13:34:40Z"
+    },
+    {
+      "actor": "Moussa Moulay Ely",
+      "domains": [
+        "other"
+      ],
+      "event_id": "2dd9720bf6802364b7a6e441bad7a0cf7d75a532",
+      "event_type": "repository_commit",
+      "paths": [
+        "README.legacy.md"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "2dd9720bf6802364b7a6e441bad7a0cf7d75a532",
+        "kind": "commit"
+      },
+      "subject_line": "Merge research project into default branch while preserving legacy README",
+      "timestamp": "2026-09-25T14:44:39Z"
+    },
+    {
+      "actor": "Moussa Moulay Ely",
+      "domains": [
+        "cases",
+        "docs",
+        "experiments",
+        "ledger",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_id": "be988e6b4ccf4e97fa826c51cee185d490c00b20",
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "README.md",
+        "SECURITY.md",
+        "atlas/README.md",
+        "atlas/security-properties.md",
+        "case-studies/research/europeum-didr/README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/README.md",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/README.md",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/README.md",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/README.md",
+        "corpus/index.yaml",
+        "docs/architecture/research-record.md",
+        "docs/disclosure/classification.md",
+        "docs/invariants/README.md",
+        "docs/methodology/README.md",
+        "docs/methodology/attack-path.md",
+        "docs/methodology/doctrine.md",
+        "docs/operations/quality-gates.md",
+        "docs/operations/reproducibility.md",
+        "docs/threat-modeling/model.md",
+        "experiments/README.md",
+        "experiments/hypothesis-template.md",
+        "invariants/accounting/withdrawal.md",
+        "invariants/authorization/critical-state.md",
+        "invariants/lifecycle/reachability.md",
+        "invariants/protocol/state-transition.md",
+        "invariants/replay/nonce-monotonicity.md",
+        "labs/access-control/README.md",
+        "labs/accounting/README.md",
+        "labs/replay/README.md",
+        "labs/state-machine/README.md",
+        "ledger/README.md",
+        "ledger/lessons-learned.md",
+        "pyproject.toml",
+        "requirements.txt",
+        "schemas/case.schema.json",
+        "schemas/invariant.schema.json",
+        "scripts/validate.ps1",
+        "src/w3sec/__init__.py",
+        "src/w3sec/__main__.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/validator.py",
+        "templates/research-case.md",
+        "templates/vulnerability-report.md",
+        "tests/test_case_invariants.py",
+        "tests/test_graph.py",
+        "tests/test_validator.py"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "be988e6b4ccf4e97fa826c51cee185d490c00b20",
+        "kind": "commit"
+      },
+      "subject_line": "Populate default branch with complete research project",
+      "timestamp": "2026-09-25T14:45:00Z"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "other",
+        "tooling"
+      ],
+      "event_id": "c0a044766a96352dd195c07aa2cf163a6925e257",
+      "event_type": "repository_commit",
+      "paths": [
+        "corpus/index.yaml",
+        "pyproject.toml",
+        "requirements.txt",
+        "schemas/corpus-index.schema.json",
+        "schemas/evidence.schema.json",
+        "schemas/provenance.schema.json",
+        "src/w3sec/inventory.py",
+        "src/w3sec/provenance.py",
+        "src/w3sec/records.py",
+        "src/w3sec/validator.py"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "c0a044766a96352dd195c07aa2cf163a6925e257",
+        "kind": "commit"
+      },
+      "subject_line": "feat: establish research evidence and provenance foundation",
+      "timestamp": "2026-09-26T10:21:59Z"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_id": "9d56c6143a741961307699c1fdc06e5615afed22",
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "9d56c6143a741961307699c1fdc06e5615afed22",
+        "kind": "commit"
+      },
+      "subject_line": "ci: install research validation dependencies",
+      "timestamp": "2026-09-26T10:31:54Z"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "cases",
+        "docs",
+        "experiments",
+        "knowledge",
+        "ledger",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_id": "f040a66d717838ff4b2a34e79042902122c4669f",
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/knowledge/README.md",
+        "corpus/knowledge/counterexamples.yaml",
+        "corpus/knowledge/experiments.yaml",
+        "corpus/knowledge/invariants.yaml",
+        "corpus/knowledge/lineage.yaml",
+        "corpus/knowledge/patterns.yaml",
+        "corpus/knowledge/protocols.yaml",
+        "docs/architecture/system.md",
+        "docs/operations/research-lifecycle.md",
+        "experiments/inventory-consistency.yaml",
+        "experiments/repository-validation.yaml",
+        "ledger/README.md",
+        "ledger/events.jsonl",
+        "pyproject.toml",
+        "schemas/case.schema.json",
+        "schemas/corpus-index.schema.json",
+        "schemas/experiment.schema.json",
+        "schemas/lineage.schema.json",
+        "schemas/registry.schema.json",
+        "scripts/validate.ps1",
+        "src/w3sec/__init__.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/experiments.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/ledger.py",
+        "src/w3sec/model.py",
+        "src/w3sec/query.py",
+        "src/w3sec/records.py",
+        "src/w3sec/validator.py",
+        "templates/case.yaml",
+        "templates/counterexample.yaml",
+        "templates/invariant.yaml",
+        "templates/lineage.yaml",
+        "templates/pattern.yaml",
+        "templates/protocol.yaml",
+        "tests/test_case_invariants.py",
+        "tests/test_system.py"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "f040a66d717838ff4b2a34e79042902122c4669f",
+        "kind": "commit"
+      },
+      "subject_line": "feat: complete evidence-first research operating system",
+      "timestamp": "2026-09-26T10:45:16Z"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "cases",
+        "docs",
+        "knowledge",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_id": "2b46d4f6822432a2ddba83f88a8e4bd9ecba1825",
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/knowledge/README.md",
+        "corpus/knowledge/evidence.yaml",
+        "corpus/knowledge/hypotheses.yaml",
+        "corpus/knowledge/lineage.yaml",
+        "corpus/knowledge/negative_results.yaml",
+        "corpus/knowledge/protocol_versions.yaml",
+        "corpus/knowledge/regressions.yaml",
+        "corpus/knowledge/sources.yaml",
+        "docs/architecture/execution-engine.md",
+        "docs/architecture/federation.md",
+        "docs/architecture/system.md",
+        "schemas/case.schema.json",
+        "schemas/hypotheses.schema.json",
+        "schemas/registry.schema.json",
+        "src/w3sec/__main__.py",
+        "src/w3sec/audit.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/coverage.py",
+        "src/w3sec/differential.py",
+        "src/w3sec/export.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/query.py",
+        "src/w3sec/state_space.py",
+        "src/w3sec/validator.py",
+        "tests/test_audit.py",
+        "tests/test_differential.py",
+        "tests/test_state_space.py",
+        "tests/test_system.py"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "2b46d4f6822432a2ddba83f88a8e4bd9ecba1825",
+        "kind": "commit"
+      },
+      "subject_line": "feat: finalize cumulative security research operating system",
+      "timestamp": "2026-09-26T11:02:15Z"
+    },
+    {
+      "actor": "researcher",
+      "event_hash": "daf3c42b8482e155e4841e65d4a7820cedd463c36b725e706bccbcc469c10d98",
+      "event_id": "b8aa71c8870a735a",
+      "event_type": "ledger:initialization",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "research-ledger",
+        "kind": "ledger"
+      },
+      "timestamp": "2026-09-26T15:40:45.172712+00:00"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "ledger"
+      ],
+      "event_id": "bf4105efb53399c820bee73ba08fa6d2f3ecf0c0",
+      "event_type": "repository_commit",
+      "paths": [
+        "ledger/README.md",
+        "ledger/events.jsonl"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "bf4105efb53399c820bee73ba08fa6d2f3ecf0c0",
+        "kind": "commit"
+      },
+      "subject_line": "chore: anchor research ledger genesis",
+      "timestamp": "2026-09-26T15:41:39Z"
+    },
+    {
+      "actor": "lucilfer12",
+      "domains": [
+        "federation",
+        "knowledge",
+        "other",
+        "tooling"
+      ],
+      "event_id": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "corpus/federation/sources.yaml",
+        "corpus/knowledge/assumptions.yaml",
+        "corpus/knowledge/claims.yaml",
+        "corpus/knowledge/contradictions.yaml",
+        "corpus/knowledge/event_types.yaml",
+        "corpus/knowledge/observations.yaml",
+        "corpus/knowledge/principles.yaml",
+        "corpus/knowledge/promotions.yaml",
+        "corpus/knowledge/questions.yaml",
+        "corpus/knowledge/uncertainties.yaml",
+        "reports/federation/snapshot.json",
+        "reports/longitudinal/backfill-plan.json",
+        "reports/longitudinal/chronicle.json",
+        "reports/longitudinal/research-intelligence.json",
+        "src/w3sec/chronicle.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/federation.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/research_intelligence.py",
+        "src/w3sec/validator.py"
+      ],
+      "source": "git-history",
+      "subject": {
+        "id": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+        "kind": "commit"
+      },
+      "subject_line": "feat: establish longitudinal research intelligence foundation",
+      "timestamp": "2026-09-27T14:41:52Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "5f8a4e66b8eb99937f92991aa4c15dd87171e2cb0db76ebc744e588a04193d0c",
+      "event_id": "c9676699bc8b19d7",
+      "event_type": "ledger:research_started",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "longitudinal-intelligence",
+        "kind": "research"
+      },
+      "timestamp": "2026-09-27T17:14:46Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "564d8b473f62fc3ba60a8d241f3c304d38538f07aaaddbd81ca4712191b1223c",
+      "event_id": "9316391118d002d4",
+      "event_type": "ledger:source_added",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.forensics",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:14:46Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "0c089b3ea9cae885d3041280d9ef98f31eae04f239715b5064669b27f1e93e9b",
+      "event_id": "c7b6860946ed2c4e",
+      "event_type": "ledger:source_added",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.zeroday",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:14:46Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "acc6bdaf6655f9095dc5f6d1ce7ac8b81304edf96d0d4d120759a7e2dbe0432f",
+      "event_id": "6bff84af3b761f28",
+      "event_type": "ledger:source_added",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.invariants",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:14:46Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "e8b0559b02e5a41cf2596224a56b458e6bfbba5b2cbd7d5c03512989d23a0968",
+      "event_id": "668264c9a83c35a3",
+      "event_type": "ledger:source_added",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.smart-contract-lab",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:14:46Z"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "cacfbb946272cde1b7291534a4ff098b423ffdb07ccff05c5b968fca2580df5a",
+      "event_id": "a54d7d923b2c2b24",
+      "event_type": "ledger:source_verified",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.forensics",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "7280a7782f38902ad12e312c23131ddb4711be9d14a6c5e2e0f4f6bfed78865f",
+      "event_id": "bb079b8517a35c85",
+      "event_type": "ledger:source_verified",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.zeroday",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "2b06a47db7d8bd2ba704a0c70048dc8d9eea179c9bba2b6df69413bc94652a3e",
+      "event_id": "77c081c3302e91ec",
+      "event_type": "ledger:source_verified",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.invariants",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "25fe4c0d99d78b04a8df820ea7f953372f93518af186b6eb62b324ae2cc971e6",
+      "event_id": "032c3dc7ea84ec78",
+      "event_type": "ledger:source_verified",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "source.repo.smart-contract-lab",
+        "kind": "source"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "bea983d721186a3f50806d1865b517e8629cb68c62f7e689de7e169022d3cf47",
+      "event_id": "2234677bad88da6f",
+      "event_type": "ledger:federation_snapshot_built",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "federation-snapshot",
+        "kind": "report"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "b2e47296b92c1255e40d1334d084b365c372741597a98a5cd20e435bd6cfb357",
+      "event_id": "1691c2fd01a8c218",
+      "event_type": "ledger:promotion_evaluated",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "promotion-decisions",
+        "kind": "report"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    },
+    {
+      "actor": "longitudinal-engine",
+      "event_hash": "ea250a417c36247202ee1a4ceb01f97b3d160ae7b8c21d9d8c2595ac230f43b7",
+      "event_id": "f5dc469c2240dc45",
+      "event_type": "ledger:protocol_diff_evaluated",
+      "source": "hash-chained-ledger",
+      "subject": {
+        "id": "protocol-version-diffs",
+        "kind": "report"
+      },
+      "timestamp": "2026-09-27T17:23:51.441564+00:00"
+    }
+  ]
+}

@@ -11,15 +11,18 @@ Harden -> Regress -> Generalize
 
 ## System architecture
 
-The repository is now organized as seven cooperating layers:
+The repository is organized as cooperating research layers:
 
-1. Records: cases, invariants, counterexamples, patterns, protocols, evidence, hypotheses and experiments.
+1. Records: cases, invariants, counterexamples, patterns, protocols, evidence, hypotheses, claims, observations and experiments.
 2. Knowledge graph: typed nodes and explicit lineage edges.
 3. Provenance: source locators with optional commit, line range and content hash.
-4. Temporal memory: append-only hash-chained research events in the ledger.
-5. Deterministic tooling: schema validation, referential integrity, inventory and queries.
-6. Executable research: bounded experiment manifests with captured output and exit contracts.
-7. Human analysis: interpretation stays above the evidence layer and never replaces it.
+4. Temporal memory: hash-chained research events plus repository git chronology.
+5. Federation: reproducible adapters for the sibling forensic and invariant repositories.
+6. Research intelligence: cross-case intersections, candidate-network recurrence and research debt.
+7. Promotion engine: explicit Candidate -> Observed -> Reproduced -> Corroborated -> Generalized -> Pattern -> Validated Pattern gates.
+8. Protocol differential: source-backed security-model diffs across explicit protocol-version contexts.
+9. Deterministic tooling: schema validation, referential integrity, inventory, queries, reports and bounded experiments.
+10. Human analysis: interpretation stays above the evidence layer and never replaces it.
 ## Repository map
 
 | Area | Purpose |
@@ -42,6 +45,14 @@ Validate all record and reference contracts:
 Generate machine-readable inventory and research debt:
 
     python -m w3sec inventory --json
+
+Run the full longitudinal research engines:
+
+    python -m w3sec federate --write --candidates --network
+    python -m w3sec research --json --write
+    python -m w3sec history --json --write
+    python -m w3sec versions --json --write
+    python -m w3sec promotion --json --write
 
 Query cases and research state:
 
@@ -80,11 +91,12 @@ invented. Candidate patterns remain candidates until stronger evidence supports 
 
 ## Current corpus
 
-The integrated knowledge layer covers the existing four case studies and adds:
-5 canonical invariants, 4 sanitized counterexamples, 4 candidate hypotheses, 4 candidate
-patterns, 3 protocol entities, 4 evidence records, 8 repository sources, 4 regression
-contracts, 3 protocol-version contexts, 31 explicit lineage edges, and 2 executable
-experiment manifests. The graph currently materializes 43 typed nodes.
+The canonical layer covers 4 case studies, 5 invariants, 4 counterexamples, 4 hypotheses,
+4 patterns, 3 protocol entities, 4 evidence records, 4 regression contracts, 3 protocol-version
+contexts, 31 explicitly declared lineage edges, 4 questions, 3 claims, 4 observations and
+2 executable experiment manifests. The deterministic graph materializes 70 typed nodes and
+67 derived edges. Federation currently normalizes 262 external candidate records from the
+four sibling research repositories; these remain secondary research leads until reviewed.
 
 ## Responsible disclosure
 

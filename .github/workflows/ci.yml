@@ -6,6 +6,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout federated research sources
+        run: |
+          git clone --depth 1 https://github.com/lucilfer12/web3-smart-contract-forensics.git "$GITHUB_WORKSPACE/../web3-smart-contract-forensics"
+          git clone --depth 1 https://github.com/lucilfer12/security-invariant-lab.git "$GITHUB_WORKSPACE/../security-invariant-lab"
+          git clone --depth 1 https://github.com/lucilfer12/web3-zeroday-forensics.git "$GITHUB_WORKSPACE/../research-federation-work/web3-zeroday-forensics"
+          git clone --depth 1 https://github.com/lucilfer12/smart-contract-security-lab.git "$GITHUB_WORKSPACE/../research-federation-work/smart-contract-security-lab"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -21,13 +27,23 @@ jobs:
         run: python -m w3sec audit --json
       - name: Verify deterministic inventory
         run: python -m w3sec inventory --json
+      - name: Install Foundry for federated executable tests
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       - name: Verify research intelligence
         run: python -m w3sec research --json
       - name: Verify research chronicle
         run: python -m w3sec chronicle --json
+      - name: Verify repository temporal history
+        run: python -m w3sec history --json
+      - name: Verify protocol security-model diffs
+        run: python -m w3sec versions --json
       - name: Verify promotion readiness
         run: python -m w3sec promotion --json
       - name: Verify federation snapshot
         run: python -m w3sec federate
+      - name: Run Smart Contract Security Lab tests
+        run: forge test --root "$GITHUB_WORKSPACE/../research-federation-work/smart-contract-security-lab" -vv
       - name: Verify executable research manifests
         run: python -m w3sec experiment run experiments/repository-validation.yaml --root . && python -m w3sec experiment run experiments/inventory-consistency.yaml --root .

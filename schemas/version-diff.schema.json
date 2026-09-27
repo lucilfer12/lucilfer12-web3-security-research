@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Protocol Security Model Differential Report",
+  "type":"object",
+  "required":["schema_version","report_kind","context_count","protocol_count","diff_count","diffs","unresolved","policy"],
+  "properties":{
+    "schema_version":{"type":"integer"},
+    "report_kind":{"const":"protocol-security-model-diff"},
+    "context_count":{"type":"integer","minimum":0},
+    "protocol_count":{"type":"integer","minimum":0},
+    "diff_count":{"type":"integer","minimum":0},
+    "diffs":{"type":"array"},
+    "unresolved":{"type":"array"},
+    "policy":{"type":"string","minLength":1}
+  },
+  "additionalProperties":true
+}

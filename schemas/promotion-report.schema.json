@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Promotion Decision Report",
+  "type":"object",
+  "required":["schema_version","engine","state_machine","decisions","auto_mutation"],
+  "properties":{
+    "schema_version":{"type":"integer"},
+    "engine":{"const":"explicit-state-machine"},
+    "state_machine":{"type":"array","items":{"type":"object","required":["stage","requirements"]}},
+    "decisions":{"type":"array","items":{"type":"object","required":["pattern","computed_stage","criteria","decision"]}},
+    "promotable_count":{"type":"integer","minimum":0},
+    "blocked_count":{"type":"integer","minimum":0},
+    "auto_mutation":{"const":false}
+  },
+  "additionalProperties":true
+}

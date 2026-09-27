@@ -1,0 +1,32 @@
+{
+  "context_count": 3,
+  "diff_count": 0,
+  "diffs": [],
+  "policy": "No version is inferred from a filename, git date, or case title; differences require explicit source-backed version contexts.",
+  "protocol_count": 3,
+  "report_kind": "protocol-security-model-diff",
+  "schema_version": 1,
+  "unresolved": [
+    {
+      "contexts": [
+        "protocol-version.0xmarkets.cartha"
+      ],
+      "protocol": "protocol.0xmarkets.cartha",
+      "reason": "At least two source-backed protocol versions are required for a differential security model."
+    },
+    {
+      "contexts": [
+        "protocol-version.europeum.didr"
+      ],
+      "protocol": "protocol.europeum.didr",
+      "reason": "At least two source-backed protocol versions are required for a differential security model."
+    },
+    {
+      "contexts": [
+        "protocol-version.near.runtime"
+      ],
+      "protocol": "protocol.near.runtime",
+      "reason": "At least two source-backed protocol versions are required for a differential security model."
+    }
+  ]
+}

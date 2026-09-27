@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Federation Snapshot",
+  "type":"object",
+  "required":["schema_version","snapshot_kind","sources","candidate_record_count","federation_health","candidate_policy"],
+  "properties":{
+    "schema_version":{"type":"integer"},
+    "snapshot_kind":{"const":"federation"},
+    "sources":{"type":"object"},
+    "candidate_record_count":{"type":"integer","minimum":0},
+    "source_counts":{"type":"object"},
+    "missing_required_sources":{"type":"array"},
+    "federation_health":{"enum":["ok","blocked"]},
+    "candidate_policy":{"type":"string","minLength":1}
+  },
+  "additionalProperties":true
+}

@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Temporal History Report",
+  "type":"object",
+  "required":["schema_version","event_count","timeline","sources","interpretation"],
+  "properties":{
+    "schema_version":{"type":"integer"},
+    "event_count":{"type":"integer","minimum":0},
+    "timeline":{"type":"array"},
+    "sources":{"type":"object","required":["ledger_event_count","git_commit_count"]},
+    "interpretation":{"type":"object"}
+  },
+  "additionalProperties":true
+}

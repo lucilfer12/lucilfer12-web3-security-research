@@ -1,0 +1,189 @@
+{
+  "auto_mutation": false,
+  "blocked_count": 4,
+  "decisions": [
+    {
+      "case_count": 1,
+      "computed_stage": "reproduced",
+      "criteria": {
+        "case": true,
+        "counterexample_analysis": false,
+        "cross_case": false,
+        "cross_protocol": false,
+        "independent_reproduction": false,
+        "negative_evidence": false,
+        "observation_or_evidence": true,
+        "pattern_record": true,
+        "regression_passed": false,
+        "reproduction": true,
+        "scope": false,
+        "statement": true
+      },
+      "decision": "hold",
+      "declared_status": "candidate",
+      "external_corroborating_sources": [
+        "source.repo.forensics",
+        "source.repo.invariants"
+      ],
+      "missing_requirements": [
+        "cross_case"
+      ],
+      "pattern": "pattern.replay-state-reset",
+      "protocol_count": 1,
+      "reason": "One or more promotion gates remain unsatisfied."
+    },
+    {
+      "case_count": 1,
+      "computed_stage": "reproduced",
+      "criteria": {
+        "case": true,
+        "counterexample_analysis": false,
+        "cross_case": false,
+        "cross_protocol": false,
+        "independent_reproduction": false,
+        "negative_evidence": false,
+        "observation_or_evidence": true,
+        "pattern_record": true,
+        "regression_passed": false,
+        "reproduction": true,
+        "scope": false,
+        "statement": true
+      },
+      "decision": "hold",
+      "declared_status": "candidate",
+      "external_corroborating_sources": [
+        "source.repo.forensics",
+        "source.repo.zeroday"
+      ],
+      "missing_requirements": [
+        "cross_case"
+      ],
+      "pattern": "pattern.lifecycle-reachability-destruction",
+      "protocol_count": 1,
+      "reason": "One or more promotion gates remain unsatisfied."
+    },
+    {
+      "case_count": 1,
+      "computed_stage": "reproduced",
+      "criteria": {
+        "case": true,
+        "counterexample_analysis": false,
+        "cross_case": false,
+        "cross_protocol": false,
+        "independent_reproduction": false,
+        "negative_evidence": false,
+        "observation_or_evidence": true,
+        "pattern_record": true,
+        "regression_passed": false,
+        "reproduction": true,
+        "scope": false,
+        "statement": true
+      },
+      "decision": "hold",
+      "declared_status": "candidate",
+      "external_corroborating_sources": [
+        "source.repo.forensics",
+        "source.repo.invariants",
+        "source.repo.zeroday"
+      ],
+      "missing_requirements": [
+        "cross_case"
+      ],
+      "pattern": "pattern.unbounded-privileged-input",
+      "protocol_count": 1,
+      "reason": "One or more promotion gates remain unsatisfied."
+    },
+    {
+      "case_count": 1,
+      "computed_stage": "reproduced",
+      "criteria": {
+        "case": true,
+        "counterexample_analysis": false,
+        "cross_case": false,
+        "cross_protocol": false,
+        "independent_reproduction": false,
+        "negative_evidence": false,
+        "observation_or_evidence": true,
+        "pattern_record": true,
+        "regression_passed": false,
+        "reproduction": true,
+        "scope": false,
+        "statement": true
+      },
+      "decision": "hold",
+      "declared_status": "candidate",
+      "external_corroborating_sources": [
+        "source.repo.forensics",
+        "source.repo.invariants",
+        "source.repo.smart-contract-lab",
+        "source.repo.zeroday"
+      ],
+      "missing_requirements": [
+        "cross_case"
+      ],
+      "pattern": "pattern.silent-accounting-shortfall",
+      "protocol_count": 1,
+      "reason": "One or more promotion gates remain unsatisfied."
+    }
+  ],
+  "engine": "explicit-state-machine",
+  "policy": "The engine computes eligibility but never rewrites canonical status without an explicit research event.",
+  "promotable_count": 0,
+  "schema_version": 2,
+  "state_machine": [
+    {
+      "description": "A stated pattern hypothesis linked to a case.",
+      "requirements": [
+        "statement",
+        "case"
+      ],
+      "stage": "candidate"
+    },
+    {
+      "description": "The pattern has directly cited observation/evidence.",
+      "requirements": [
+        "observation_or_evidence"
+      ],
+      "stage": "observed"
+    },
+    {
+      "description": "The failure or security property is reproduced.",
+      "requirements": [
+        "reproduction"
+      ],
+      "stage": "reproduced"
+    },
+    {
+      "description": "Independent cases or sources corroborate the pattern.",
+      "requirements": [
+        "cross_case"
+      ],
+      "stage": "corroborated"
+    },
+    {
+      "description": "Scope and boundary conditions are explicit across protocols.",
+      "requirements": [
+        "scope",
+        "cross_protocol",
+        "counterexample_analysis"
+      ],
+      "stage": "generalized"
+    },
+    {
+      "description": "A named pattern is represented as a first-class registry object.",
+      "requirements": [
+        "pattern_record"
+      ],
+      "stage": "pattern"
+    },
+    {
+      "description": "Independent reproduction, passed regression, and negative-evidence review exist.",
+      "requirements": [
+        "independent_reproduction",
+        "regression_passed",
+        "negative_evidence"
+      ],
+      "stage": "validated-pattern"
+    }
+  ]
+}

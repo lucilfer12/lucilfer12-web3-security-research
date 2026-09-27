@@ -36,3 +36,8 @@ event_types:
   - knowledge_promoted
   - knowledge_demoted
   - knowledge_superseded
+  - federation_snapshot_built
+  - promotion_evaluated
+  - protocol_diff_evaluated
+  - history_reconstructed
+  - source_verification_failed

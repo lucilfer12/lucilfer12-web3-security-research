@@ -1,16 +1,25 @@
 {
+  "candidate_policy": "External records are leads only; canonical promotion requires local review, provenance and explicit research events.",
+  "candidate_record_count": 262,
   "federation_health": "ok",
   "missing_required_sources": [],
   "root": "C:/Users/pc/lucilfer12-web3-security-research",
-  "schema_version": 1,
+  "schema_version": 2,
   "snapshot_kind": "federation",
+  "source_counts": {
+    "source.repo.forensics": 226,
+    "source.repo.invariants": 8,
+    "source.repo.smart-contract-lab": 8,
+    "source.repo.zeroday": 20
+  },
   "sources": {
     "source.repo.central": {
       "adapter": "central",
       "available": true,
       "case_files": 4,
+      "git_head": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
       "knowledge_files": 21,
-      "ledger_events": 1,
+      "ledger_events": 13,
       "path": "C:/Users/pc/lucilfer12-web3-security-research",
       "required": true
     },
@@ -20,6 +29,7 @@
       "evidence_levels": {
         "secondary": 226
       },
+      "git_head": "131d043d65017396f9389e35527e76401bc4c130",
       "path": "C:/Users/pc/web3-smart-contract-forensics/datasets/reports.json",
       "record_count": 226,
       "record_types": {
@@ -44,6 +54,7 @@
         "high": 2,
         "medium": 4
       },
+      "git_head": "b5daf44cb2623ff68a3257223f9fe9d81567007b",
       "path": "C:/Users/pc/security-invariant-lab/.silab/final-scan/research-dataset.json",
       "property_confidence": {
         "high": 2
@@ -61,6 +72,7 @@
         "defi-rounding",
         "oracle-safety"
       ],
+      "git_head": "b6f7a0d8724715a07588bafcb76ccce999f8dae1",
       "path": "C:/Users/pc/research-federation-work/smart-contract-security-lab/findings",
       "regression_tests": 4,
       "required": false,
@@ -84,6 +96,7 @@
         "A": 15,
         "B": 5
       },
+      "git_head": "f2dd4e4f2c282bc65d0e5e6556ed53087651ecba",
       "path": "C:/Users/pc/research-federation-work/web3-zeroday-forensics/corpus/cases.yaml",
       "required": false,
       "scope_counts": {
