@@ -23,7 +23,7 @@ $Gui = Get-Item "dist\w3sec.exe"
 $Cli = Get-Item "dist\w3sec-cli.exe"
 $GuiHash = (Get-FileHash $Gui.FullName -Algorithm SHA256).Hash
 $CliHash = (Get-FileHash $Cli.FullName -Algorithm SHA256).Hash
-$Version = (& python -c "from w3sec.gui import APP_VERSION; print(APP_VERSION)").Trim()
+$Version = (& python -c "import sys; sys.path.insert(0, 'src'); from w3sec.gui import APP_VERSION; print(APP_VERSION)").Trim()
 $Commit = (git rev-parse HEAD).Trim()
 $BuiltAt = (Get-Date).ToUniversalTime().ToString("o")
 
