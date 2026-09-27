@@ -103,24 +103,35 @@ four sibling research repositories; these remain secondary research leads until 
 Do not publish private reports, client information, credentials, KYC data, unreleased
 exploit details, or confidential triage material.
 
-## Windows executable
+## Windows desktop application
 
-The research OS can run as a portable Windows x64 executable without a local Python
-installation. Build it from a Windows checkout with:
+W3Sec is distributed as a real Windows desktop application. Double-clicking w3sec.exe opens the persistent graphical research workspace; it does not require Python.
+The application automatically discovers the repository beside the executable when it is
+run from a checkout, remembers the selected repository under %APPDATA%\\W3Sec, and
+provides a repository chooser for portable/downloaded copies.
+
+The desktop UI exposes the operational layers directly: dashboard metrics, case search,
+knowledge-graph nodes/edges, longitudinal research intelligence, temporal history,
+promotion decisions, protocol-version reports, audit/validation actions, federation refresh,
+and report-folder access. Long-running research actions execute in a worker thread so the
+window remains responsive. Startup failures are persisted to %APPDATA%\\W3Sec\\crash.log.
+
+The companion w3sec-cli.exe preserves the complete command-line interface for scripting,
+CI and deterministic automation.
+
+Build both binaries from Windows:
 
     powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
 
-The resulting files are written to dist/:
+The resulting dist/ bundle contains w3sec.exe, w3sec-cli.exe, both SHA-256 files,
+BUILD-MANIFEST.txt, and w3sec-windows-x64.zip.
 
-    w3sec.exe
-    w3sec.exe.sha256
-    BUILD-MANIFEST.txt
-
-The executable can be smoke-tested with:
+Run the packaging test suite with:
 
     powershell -ExecutionPolicy Bypass -File scripts/test_windows_exe.ps1
 
-GitHub Actions also builds and uploads the same artifact through
+The test suite validates the CLI, runs the packaged GUI self-test, and verifies the GUI
+self-test log. GitHub Actions builds and uploads the same portable Windows bundle through
 .github/workflows/windows-exe.yml.
 
 ## Verification

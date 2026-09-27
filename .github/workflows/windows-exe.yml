@@ -26,12 +26,15 @@ jobs:
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File scripts/test_windows_exe.ps1
 
-      - name: Upload Windows executable artifact
+      - name: Upload Windows desktop bundle
         uses: actions/upload-artifact@v4
         with:
           name: w3sec-windows-x64
           path: |
             dist/w3sec.exe
+            dist/w3sec-cli.exe
             dist/w3sec.exe.sha256
+            dist/w3sec-cli.exe.sha256
             dist/BUILD-MANIFEST.txt
+            dist/w3sec-windows-x64.zip
           if-no-files-found: error

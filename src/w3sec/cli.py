@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import __version__
 from .audit import audit_repo
 from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
 from .coverage import build_coverage
@@ -38,9 +39,12 @@ def _print_json(value: object) -> None:
 
 def main() -> int:
     try:
-        app_version = package_version("web3-security-research")
-    except PackageNotFoundError:
-        app_version = "1.0.0"
+        app_version = __version__
+    except Exception:
+        try:
+            app_version = package_version("web3-security-research")
+        except PackageNotFoundError:
+            app_version = "1.1.0"
     parser = argparse.ArgumentParser(prog="w3sec", description="Web3 security research OS")
     parser.add_argument("--version", action="version", version=f"%(prog)s {app_version}")
     sub = parser.add_subparsers(dest="command", required=True)

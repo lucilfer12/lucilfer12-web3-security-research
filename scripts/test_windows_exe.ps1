@@ -1,22 +1,35 @@
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
-$Exe = Join-Path $Root "dist\w3sec.exe"
-if (-not (Test-Path $Exe)) { throw "Missing $Exe. Run build_windows_exe.ps1 first." }
+$Gui = Join-Path $Root "dist\w3sec.exe"
+$Cli = Join-Path $Root "dist\w3sec-cli.exe"
+if (-not (Test-Path $Gui)) { throw "Missing $Gui" }
+if (-not (Test-Path $Cli)) { throw "Missing $Cli" }
 
-Write-Host "== EXE version =="
-& $Exe --version
+Write-Host "== CLI version =="
+& $Cli --version
+if ($LASTEXITCODE -ne 0) { throw "CLI version failed" }
 
-Write-Host "== EXE help =="
-& $Exe --help | Select-Object -First 20
+Write-Host "== CLI validation =="
+& $Cli validate $Root
+if ($LASTEXITCODE -ne 0) { throw "CLI validation failed" }
 
-Write-Host "== EXE validation against repository =="
-& $Exe validate $Root
-
-if ($LASTEXITCODE -ne 0) { throw "w3sec.exe validation failed with exit code $LASTEXITCODE" }
-
-Write-Host "== EXE audit smoke test =="
-$audit = & $Exe audit $Root --json | ConvertFrom-Json
-if (-not $audit.ok) { throw "w3sec.exe audit is not green" }
+Write-Host "== CLI audit =="
+$audit = & $Cli audit $Root --json | ConvertFrom-Json
+if (-not $audit.ok) { throw "CLI audit is not green" }
 Write-Host "audit.ok=$($audit.ok)"
 Write-Host "nodes=$($audit.graph.node_count) edges=$($audit.graph.edge_count)"
 Write-Host "federation_candidates=$($audit.federation.candidate_record_count)"
+Write-Host "== GUI packaged self-test =="
+& $Gui --self-test
+if ($LASTEXITCODE -ne 0) { throw "GUI self-test failed with exit code $LASTEXITCODE" }
+
+$log = Join-Path $env:APPDATA "W3Sec\self-test.log"
+if (-not (Test-Path $log)) { throw "GUI self-test log missing: $log" }
+$logText = Get-Content $log -Raw
+if ($logText -notmatch "SELF-TEST: OK") { throw "GUI self-test log does not report OK" }
+Write-Host $logText
+
+$guiHash=(Get-FileHash $Gui -Algorithm SHA256).Hash
+$cliHash=(Get-FileHash $Cli -Algorithm SHA256).Hash
+Write-Host "GUI SHA256=$guiHash"
+Write-Host "CLI SHA256=$cliHash"
