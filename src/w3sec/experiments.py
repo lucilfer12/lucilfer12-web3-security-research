@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import time
+from .runtime import hidden_run
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -53,9 +54,8 @@ def load_experiment(path: Path) -> ExperimentSpec:
 def run_experiment(spec: ExperimentSpec, cwd: Path) -> ExperimentResult:
     started = time.perf_counter()
     env = os.environ.copy()
-    completed = subprocess.run(
-        list(spec.command), cwd=cwd, capture_output=True, text=True,
-        timeout=spec.timeout_seconds, env=env, check=False,
+    completed = hidden_run(
+        list(spec.command), cwd=cwd, timeout=spec.timeout_seconds, check=False, env=env,
     )
     return ExperimentResult(
         id=spec.id,

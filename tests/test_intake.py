@@ -1,8 +1,10 @@
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
+from w3sec.contract_audit import build_contract_audit
 from w3sec.graph import ResearchGraph
 from w3sec.intake import build_intake, write_intake_report
 
@@ -29,6 +31,62 @@ class IntakeTests(unittest.TestCase):
             self.assertEqual(1, value["summary"]["function_count"])
             self.assertIn("low_level_call", value["summary"]["security_signal_kinds"])
             self.assertEqual(["./IERC20.sol"], value["files"][0]["imports"])
+
+    def test_zip_bundle_supports_multiple_contract_languages(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            bundle_root = root / "bundle"
+            (bundle_root / "contracts").mkdir(parents=True)
+            samples = {
+                "A.sol": "pragma solidity ^0.8.20; contract A { function ping() external {} }",
+                "B.vy": "def ping():\n    pass\n",
+                "C.move": "module 0x1::c { public fun ping() {} }",
+                "D.rs": "pub fn ping() {}\n",
+                "E.cairo": "fn ping() {}\n",
+            }
+            for name, content in samples.items():
+                (bundle_root / "contracts" / name).write_text(content, encoding="utf-8")
+            archive = root / "protocol.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                for path in (bundle_root / "contracts").glob("*"):
+                    zf.write(path, arcname=f"contracts/{path.name}")
+            value = build_intake(archive)
+            self.assertEqual("archive", value["target"]["kind"])
+            self.assertEqual("zip", value["target"]["archive_format"])
+            self.assertEqual(5, value["summary"]["source_file_count"])
+            self.assertEqual({"Solidity", "Vyper", "Move", "Rust (Solana/CosmWasm/ink!/generic)", "Cairo"}, set(value["summary"]["languages"]))
+            self.assertGreaterEqual(value["summary"]["contract_count"], 5)
+
+    def test_archive_path_traversal_is_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            archive = root / "evil.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.writestr("../outside.sol", "contract Outside {}")
+            with self.assertRaises(ValueError):
+                build_intake(archive)
+
+    def test_contract_audit_writes_findings_and_graph_lineage(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            research = root / "research"
+            (research / "corpus" / "knowledge").mkdir(parents=True)
+            target = root / "Risky.sol"
+            target.write_text(
+                "pragma solidity ^0.8.20;\n"
+                "contract Risky {\n"
+                " function run(address target) external {\n"
+                "   target.call{value: 1}(\"\");\n"
+                " }\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            report = build_contract_audit(target, research)
+            self.assertGreaterEqual(report["summary"]["finding_count"], 1)
+            self.assertTrue(any(x["signal"] == "low_level_call" for x in report["findings"]))
+            graph = ResearchGraph.from_repo(research)
+            self.assertTrue(any(key.startswith("contract-audit:") for key in graph.nodes))
+            self.assertTrue(any(key.startswith("audit-finding:") for key in graph.nodes))
 
     def test_written_intake_is_visible_to_graph(self):
         with tempfile.TemporaryDirectory() as td:

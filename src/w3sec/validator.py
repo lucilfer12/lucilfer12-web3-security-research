@@ -239,6 +239,20 @@ def validate_repo(root: Path) -> list[str]:
             except (json.JSONDecodeError, OSError) as exc:
                 errors.append(f"{report_path.relative_to(root)}: invalid JSON: {exc}")
 
+    audit_dir = root / "reports" / "contract-audits"
+    audit_schema, audit_schema_errors = _load_schema(root / "schemas" / "contract-audit-report.schema.json")
+    errors.extend(audit_schema_errors)
+    if audit_schema and audit_dir.exists():
+        for report_path in sorted(audit_dir.glob("*.json")):
+            try:
+                data = json.loads(report_path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    errors.append(f"{report_path.relative_to(root)}: contract audit report must be an object")
+                else:
+                    errors.extend(_validate(report_path.relative_to(root), data, audit_schema))
+            except (json.JSONDecodeError, OSError) as exc:
+                errors.append(f"{report_path.relative_to(root)}: invalid JSON: {exc}")
+
     report_schemas = {
         "reports/federation/snapshot.json": "schemas/federation-report.schema.json",
         "reports/longitudinal/promotion-decisions.json": "schemas/promotion-report.schema.json",

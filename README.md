@@ -105,35 +105,37 @@ exploit details, or confidential triage material.
 
 ## Windows desktop application
 
-W3Sec is distributed as a real Windows desktop application. Double-clicking w3sec.exe opens the persistent graphical research workspace; it does not require Python.
+ATLAS is distributed as a real Windows desktop application. Double-clicking ATLAS.exe opens the persistent graphical research workspace; it does not require Python.
 The application automatically discovers the repository beside the executable when it is
-run from a checkout, remembers the selected repository under %APPDATA%\\W3Sec, and
+run from a checkout, remembers the selected repository under %APPDATA%\\ATLAS, and
 provides a repository chooser for portable/downloaded copies.
 
 The desktop UI exposes the operational layers directly: dashboard metrics, case search,
 Import / Intake for a single contract file or a whole contract repository, knowledge-graph
 nodes/edges, longitudinal research intelligence, temporal history, promotion decisions,
 protocol-version reports, audit/validation actions, federation refresh, and report-folder
-access. Intake creates a content-hashed structural snapshot of source files, contracts,
-functions, imports, compiler pragmas, project configuration and security-relevant syntax
-signals; it is evidence inventory, not an automatic vulnerability verdict. Long-running
-research and intake actions execute in worker threads so the window remains responsive.
-Startup failures are persisted to %APPDATA%\\W3Sec\\crash.log.
+access. Intake accepts individual files, folders, ZIP/TAR archives and optional 7z/RAR/gzip
+inputs. Known contract languages receive structural parsing; unknown/binary files are
+retained as hashed inventory evidence rather than guessed. Contract audit findings remain
+explicit review leads, not automatic proof of exploitability. Long-running research, intake,
+and audit actions execute in a single background worker so the window remains responsive.
+Startup failures are persisted to %APPDATA%\\ATLAS\\crash.log.
 
 CLI intake example:
 
     python -m w3sec intake C:\\path\\to\\Contract.sol --os-root C:\\path\\to\\w3sec --write --json
     python -m w3sec intake C:\\path\\to\\protocol-repo --os-root C:\\path\\to\\w3sec --write --json
 
-The companion w3sec-cli.exe preserves the complete command-line interface for scripting,
-CI and deterministic automation.
+The companion atlas-cli.exe preserves the command-line interface for scripting, CI and
+deterministic automation. GUI-triggered git/toolchain processes use hidden Windows
+subprocess flags, so ATLAS actions do not open a separate Console window.
 
 Build both binaries from Windows:
 
     powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
 
-The resulting dist/ bundle contains w3sec.exe, w3sec-cli.exe, both SHA-256 files,
-BUILD-MANIFEST.txt, and w3sec-windows-x64.zip.
+The resulting dist/ bundle contains ATLAS.exe, atlas-cli.exe, both SHA-256 files,
+BUILD-MANIFEST.txt, and ATLAS-windows-x64.zip.
 
 Run the packaging test suite with:
 

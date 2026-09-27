@@ -11,7 +11,7 @@
       "type": "object",
       "required": ["kind", "path", "name", "source_hash"],
       "properties": {
-        "kind": {"enum": ["file", "repository"]},
+        "kind": {"enum": ["file", "repository", "archive"]},
         "path": {"type": "string"},
         "name": {"type": "string"},
         "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
@@ -21,8 +21,9 @@
     "toolchain": {"type": "object", "required": ["project_files", "local_tools"]},
     "summary": {
       "type": "object",
-      "required": ["source_file_count", "contract_count", "function_count", "total_bytes", "security_signal_kinds"],
+      "required": ["file_count", "source_file_count", "contract_count", "function_count", "total_bytes", "security_signal_kinds"],
       "properties": {
+        "file_count": {"type": "integer", "minimum": 0},
         "source_file_count": {"type": "integer", "minimum": 0},
         "contract_count": {"type": "integer", "minimum": 0},
         "function_count": {"type": "integer", "minimum": 0},

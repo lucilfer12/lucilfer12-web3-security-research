@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ATLAS contract audit report",
+  "type": "object",
+  "required": ["schema_version","captured_at","id","target","intake_report","analysis_pipeline","summary","controls_observed","findings","intake"],
+  "properties": {
+    "schema_version": {"type":"integer","minimum":1},
+    "captured_at": {"type":"string","minLength":1},
+    "id": {"type":"string","minLength":1},
+    "target": {"type":"object","required":["kind","path","name","source_hash"]},
+    "intake_report": {"type":"string"},
+    "analysis_pipeline": {"type":"array","items":{"type":"string"}},
+    "summary": {
+      "type":"object",
+      "required":["finding_count","critical","high","medium","low","control_observation_count","source_file_count","contract_count","function_count"],
+      "properties":{
+        "finding_count":{"type":"integer","minimum":0},"critical":{"type":"integer","minimum":0},
+        "high":{"type":"integer","minimum":0},"medium":{"type":"integer","minimum":0},"low":{"type":"integer","minimum":0},
+        "control_observation_count":{"type":"integer","minimum":0},"source_file_count":{"type":"integer","minimum":0},
+        "contract_count":{"type":"integer","minimum":0},"function_count":{"type":"integer","minimum":0}
+      }
+    },
+    "controls_observed":{"type":"array"},
+    "findings":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["id","priority","status","evidence_type","signal","title","file","line","limitation"],
+        "properties":{
+          "id":{"type":"string"},"priority":{"enum":["critical","high","medium","low"]},
+          "status":{"type":"string"},"evidence_type":{"type":"string"},"signal":{"type":"string"},
+          "title":{"type":"string"},"file":{"type":"string"},"line":{"type":"integer","minimum":1},
+          "contract_or_unit":{"type":["string","null"]},"snippet":{"type":["string","null"]},
+          "related_research_patterns":{"type":"array","items":{"type":"string"}},
+          "limitation":{"type":"string","minLength":1}
+        }
+      }
+    },
+    "intake":{"type":"object"}
+  }
+}

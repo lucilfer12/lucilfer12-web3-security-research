@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .audit import audit_repo
+from .contract_audit import build_contract_audit, write_contract_audit
 from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
 from .coverage import build_coverage
 from .experiments import load_experiment, result_to_json, run_experiment
@@ -45,9 +46,9 @@ def main() -> int:
         try:
             app_version = package_version("web3-security-research")
         except PackageNotFoundError:
-            app_version = "1.1.0"
-    parser = argparse.ArgumentParser(prog="w3sec", description="Web3 security research OS")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {app_version}")
+            app_version = "development"
+    parser = argparse.ArgumentParser(prog="atlas", description="ATLAS Web3 security research OS")
+    parser.add_argument("--version", action="version", version="ATLAS — perpetual development build")
     sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate")
     validate.add_argument("path", nargs="?", default=".")
@@ -63,6 +64,11 @@ def main() -> int:
     audit = sub.add_parser("audit")
     audit.add_argument("path", nargs="?", default=".")
     audit.add_argument("--json", action="store_true")
+
+    contract_audit = sub.add_parser("audit-contract", help="audit a contract file, archive, or repository")
+    contract_audit.add_argument("target")
+    contract_audit.add_argument("--os-root", default=".")
+    contract_audit.add_argument("--json", action="store_true")
     federate = sub.add_parser("federate")
     federate.add_argument("path", nargs="?", default=".")
     federate.add_argument("--write", action="store_true")
@@ -287,6 +293,16 @@ def main() -> int:
             actor=args.actor, stage=stage, payload=payload,
         )
         print(event.event_hash)
+        return 0
+
+    if args.command == "audit-contract":
+        report = build_contract_audit(_root(args.target), _root(args.os_root))
+        write_contract_audit(_root(args.os_root), report)
+        if args.json:
+            _print_json(report)
+        else:
+            s = report["summary"]
+            print(f"findings={s['finding_count']} critical={s['critical']} high={s['high']} medium={s['medium']} low={s['low']}")
         return 0
 
     if args.command == "intake":

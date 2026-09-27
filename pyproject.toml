@@ -4,17 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web3-security-research"
-version = "1.2.0"
+version = "0.0.0"
 description = "A durable, evidence-first operating system for web3 security research"
 requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6.0",
   "jsonschema>=4.20",
+  "Pillow>=11.0",
 ]
 
 [project.scripts]
-w3sec = "w3sec.cli:main"
-w3sec-gui = "w3sec.gui:main"
+atlas = "w3sec.cli:main"
+atlas-gui = "w3sec.gui:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

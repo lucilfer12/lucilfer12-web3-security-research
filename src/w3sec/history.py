@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from .chronicle import read_ledger
+from .runtime import hidden_run
 
 
 def _git_output(root: Path, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(root), *args],
-        check=True, capture_output=True, text=True,
+    result = hidden_run(
+        ["git", "-C", str(root), *args], check=True,
     )
     return result.stdout
 

@@ -8,6 +8,7 @@ from typing import Any
 from .model import LineageEdge, NodeRef
 from .records import discover_case_records, discover_knowledge_files, load_yaml_mapping
 from .intake import list_intakes
+from .contract_audit import list_contract_audits
 
 
 @dataclass
@@ -167,6 +168,19 @@ class ResearchGraph:
                 file_id = str(file_info.get("sha256", ""))[:16]
                 if file_id:
                     graph.add_edge(LineageEdge(intake_ref, "contains-source-file", NodeRef("source-file", file_id)))
+
+        for report in list_contract_audits(root):
+            audit_ref = NodeRef("contract-audit", str(report["id"]))
+            graph.add_node(audit_ref)
+            intake_id = Path(str(report.get("intake_report", ""))).stem
+            if intake_id:
+                graph.add_edge(LineageEdge(NodeRef("intake", intake_id), "produced-audit", audit_ref))
+            for finding in report.get("findings", []) or []:
+                if not isinstance(finding, dict) or not finding.get("id"):
+                    continue
+                finding_ref = NodeRef("audit-finding", str(finding["id"]))
+                graph.add_node(finding_ref)
+                graph.add_edge(LineageEdge(audit_ref, "contains-finding", finding_ref))
 
         lineage = root / "corpus" / "knowledge" / "lineage.yaml"
         if lineage.exists():

@@ -1,11 +1,11 @@
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
-$Gui = Join-Path $Root "dist\w3sec.exe"
-$Cli = Join-Path $Root "dist\w3sec-cli.exe"
+$Gui = Join-Path $Root "dist\ATLAS.exe"
+$Cli = Join-Path $Root "dist\atlas-cli.exe"
 if (-not (Test-Path $Gui)) { throw "Missing $Gui" }
 if (-not (Test-Path $Cli)) { throw "Missing $Cli" }
 
-Write-Host "== CLI version =="
+Write-Host "== ATLAS CLI =="
 & $Cli --version
 if ($LASTEXITCODE -ne 0) { throw "CLI version failed" }
 
@@ -31,7 +31,7 @@ $self = Start-Process -FilePath $Gui -WorkingDirectory $Root -ArgumentList "--se
 if ($self.ExitCode -ne 0) { throw "GUI self-test failed with exit code $($self.ExitCode)" }
 
 Write-Host "== GUI packaged live-process smoke test =="
-$CrashLog = Join-Path $env:APPDATA "W3Sec\crash.log"
+$CrashLog = Join-Path $env:APPDATA "ATLAS\crash.log"
 Remove-Item $CrashLog -Force -ErrorAction SilentlyContinue
 $live = Start-Process -FilePath $Gui -WorkingDirectory $Root -PassThru
 Start-Sleep -Seconds 5
@@ -43,7 +43,7 @@ if (Test-Path $CrashLog) {
     if ($crashText.Trim()) { throw "GUI crash log is non-empty after live-process smoke test: $crashText" }
 }
 
-$log = Join-Path $env:APPDATA "W3Sec\self-test.log"
+$log = Join-Path $env:APPDATA "ATLAS\self-test.log"
 if (-not (Test-Path $log)) { throw "GUI self-test log missing: $log" }
 $logText = Get-Content $log -Raw
 if ($logText -notmatch "SELF-TEST: OK") { throw "GUI self-test log does not report OK" }

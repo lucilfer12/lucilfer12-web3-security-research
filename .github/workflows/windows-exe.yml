@@ -1,4 +1,4 @@
-name: Windows executable
+name: ATLAS Windows desktop
 
 on:
   workflow_dispatch:
@@ -29,12 +29,12 @@ jobs:
       - name: Upload Windows desktop bundle
         uses: actions/upload-artifact@v4
         with:
-          name: w3sec-windows-x64
+          name: ATLAS-windows-x64
           path: |
-            dist/w3sec.exe
-            dist/w3sec-cli.exe
-            dist/w3sec.exe.sha256
-            dist/w3sec-cli.exe.sha256
+            dist/ATLAS.exe
+            dist/atlas-cli.exe
+            dist/ATLAS.exe.sha256
+            dist/atlas-cli.exe.sha256
             dist/BUILD-MANIFEST.txt
-            dist/w3sec-windows-x64.zip
+            dist/ATLAS-windows-x64.zip
           if-no-files-found: error

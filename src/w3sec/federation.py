@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from .records import load_yaml_mapping
+from .runtime import hidden_run
 
 
 @dataclass(frozen=True)
@@ -73,9 +74,8 @@ def _git_head(path: Path) -> str | None:
     if not (path / ".git").exists():
         return None
     try:
-        result = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
-            check=True, capture_output=True, text=True,
+        result = hidden_run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"], check=True,
         )
     except (OSError, subprocess.CalledProcessError):
         return None
