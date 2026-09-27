@@ -17,6 +17,7 @@ from .federation import build_federation_snapshot, write_candidate_snapshot, wri
 from .graph import ResearchGraph
 from .history import build_domain_evolution, build_temporal_timeline, write_domain_evolution, write_temporal_history
 from .inventory import build_inventory
+from .intake import build_intake, list_intakes, write_intake_report
 from .ledger import verify_chain
 from .promotion import build_promotion_engine, write_promotion_report
 from .query import CaseQuery, query_cases, summarize_cases
@@ -25,7 +26,7 @@ from .validator import validate_repo
 from .versions import build_version_diff_report, write_version_diff_report
 
 APP_NAME = "W3Sec Research OS"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 def settings_path() -> Path:
     base = Path(os.environ.get("APPDATA", Path.home()))
@@ -73,6 +74,18 @@ class W3SecApp(tk.Tk):
         self._set_repo(self.repo)
         self.after(150, self.refresh)
 
+    def report_callback_exception(self, exc, val, tb):
+        detail = "".join(traceback.format_exception(exc, val, tb))
+        crash = settings_path().parent / "crash.log"
+        crash.parent.mkdir(parents=True, exist_ok=True)
+        crash.write_text(detail, encoding="utf-8")
+        self.status.set("UI callback failed — details saved to %APPDATA%\\W3Sec\\crash.log")
+        try:
+            self.dash_log.delete("1.0", "end")
+            self.dash_log.insert("end", detail)
+        except Exception:
+            pass
+
     def _style(self) -> None:
         s = ttk.Style(self)
         try:
@@ -107,16 +120,19 @@ class W3SecApp(tk.Tk):
         return f
 
     def _tabs(self) -> None:
-        self.dash, self.cases, self.intel = self.tab("Dashboard"), self.tab("Cases"), self.tab("Research Intelligence")
+        self.dash = self.tab("Dashboard")
+        self.cases = self.tab("Cases")
+        self.intake = self.tab("Import / Intake")
+        self.intel = self.tab("Research Intelligence")
         self.graph, self.ledger, self.promo = self.tab("Knowledge Graph"), self.tab("Temporal Ledger"), self.tab("Promotion")
         self.versions, self.reports = self.tab("Protocol Versions"), self.tab("Reports")
-        self._dashboard(); self._cases(); self._text_tab(self.intel); self._graph(); self._text_tab(self.ledger)
+        self._dashboard(); self._cases(); self._intake(); self._text_tab(self.intel); self._graph(); self._text_tab(self.ledger)
         self._promotion(); self._text_tab(self.versions); self._reports()
 
     def _dashboard(self) -> None:
         cards = ttk.Frame(self.dash); cards.pack(fill="x", pady=(0, 12))
         self.card: dict[str, ttk.Label] = {}
-        for i, key in enumerate(("cases", "nodes", "edges", "candidates", "evidence", "invariants")):
+        for i, key in enumerate(("cases", "intakes", "contracts", "nodes", "edges", "candidates", "evidence", "invariants")):
             cards.columnconfigure(i, weight=1)
             box = ttk.Frame(cards, style="Card.TFrame"); box.grid(row=0, column=i, padx=4, sticky="nsew")
             ttk.Label(box, text=key.upper()).pack(anchor="w")
@@ -148,6 +164,26 @@ class W3SecApp(tk.Tk):
         self.node_tree.pack(fill="both", expand=True)
         self.edge_text = ScrolledText(down, font=("Consolas", 9)); self.edge_text.pack(fill="both", expand=True)
 
+    def _intake(self) -> None:
+        top = ttk.Frame(self.intake); top.pack(fill="x", pady=(0, 8))
+        self.intake_target = tk.StringVar()
+        ttk.Label(top, text="Contract file or repository").pack(side="left")
+        ttk.Entry(top, textvariable=self.intake_target).pack(side="left", fill="x", expand=True, padx=8)
+        ttk.Button(top, text="Choose File", command=self.choose_target_file).pack(side="left", padx=2)
+        ttk.Button(top, text="Choose Repository", command=self.choose_target_repo).pack(side="left", padx=2)
+        ttk.Button(top, text="Analyze / Register", command=self.analyze_target).pack(side="left", padx=6)
+        ttk.Button(top, text="Open Target", command=self.open_target).pack(side="left")
+        self.intake_status = tk.StringVar(value="Select a .sol/.yul/.vy file or a source repository.")
+        ttk.Label(self.intake, textvariable=self.intake_status).pack(fill="x", pady=(0, 8))
+        pane = ttk.Panedwindow(self.intake, orient="vertical"); pane.pack(fill="both", expand=True)
+        up, down = ttk.Frame(pane), ttk.Frame(pane); pane.add(up, weight=2); pane.add(down, weight=4)
+        self.intake_tree = ttk.Treeview(up, columns=("id","kind","name","files","contracts","hash"), show="headings")
+        for c,w in (("id",300),("kind",120),("name",280),("files",90),("contracts",100),("hash",360)):
+            self.intake_tree.heading(c,text=c.upper()); self.intake_tree.column(c,width=w,anchor="w")
+        self.intake_tree.pack(fill="both",expand=True)
+        self.intake_tree.bind("<<TreeviewSelect>>", self._show_selected_intake)
+        self.intake_detail = ScrolledText(down,font=("Consolas",9)); self.intake_detail.pack(fill="both",expand=True)
+
     def _promotion(self) -> None:
         self.promo_tree = ttk.Treeview(self.promo, columns=("pattern","stage","decision","missing"), show="headings")
         for c,w in (("pattern",380),("stage",180),("decision",180),("missing",650)):
@@ -167,6 +203,45 @@ class W3SecApp(tk.Tk):
     def choose_repo(self) -> None:
         p=filedialog.askdirectory(title="Select W3Sec repository")
         if p: self._set_repo(Path(p))
+
+    def choose_target_file(self) -> None:
+        p=filedialog.askopenfilename(title="Select contract source", filetypes=[("Solidity / Vyper", "*.sol *.yul *.vy"), ("All files", "*.*")])
+        if p: self.intake_target.set(p); self.intake_status.set(f"Target selected: {p}")
+
+    def choose_target_repo(self) -> None:
+        p=filedialog.askdirectory(title="Select contract repository")
+        if p: self.intake_target.set(p); self.intake_status.set(f"Repository selected: {p}")
+
+    def analyze_target(self) -> None:
+        target=Path(self.intake_target.get().strip()).expanduser()
+        if not target.exists():
+            self.intake_status.set("Intake failed: target does not exist.")
+            messagebox.showerror(f"{APP_NAME}: Import / Intake", str(target))
+            return
+        self.intake_status.set(f"Analyzing {target}…")
+        def task():
+            report=build_intake(target)
+            write_intake_report(self._root(), report)
+            return report
+        self.run("INTAKE", task)
+
+    def open_target(self) -> None:
+        target=Path(self.intake_target.get().strip()).expanduser()
+        if target.exists(): os.startfile(target)
+        else: messagebox.showwarning(APP_NAME,"Select an existing contract file or repository first.")
+
+    def _load_intakes(self):
+        for x in self.intake_tree.get_children(): self.intake_tree.delete(x)
+        for item in list_intakes(self.repo):
+            t=item.get("target",{}); s=item.get("summary",{})
+            self.intake_tree.insert("", "end", iid=str(item["id"]), values=(item["id"],t.get("kind"),t.get("name"),s.get("source_file_count"),s.get("contract_count"),t.get("source_hash","")[:24]))
+
+    def _show_selected_intake(self, _event=None) -> None:
+        sel=self.intake_tree.selection()
+        if not sel: return
+        item=next((x for x in list_intakes(self.repo) if str(x.get("id"))==sel[0]), None)
+        if item:
+            self.intake_detail.delete("1.0","end"); self.intake_detail.insert("end",dump(item))
 
     def _set_repo(self,p:Path|None)->None:
         self.repo=p.resolve() if p else None; self.repo_var.set(str(self.repo) if self.repo else "")
@@ -201,7 +276,12 @@ class W3SecApp(tk.Tk):
     def done(self,name,result):
         self.busy=False; self.status.set(f"{name} completed")
         self.dash_log.delete("1.0","end"); self.dash_log.insert("end",dump(result))
-        self.report_text.delete("1.0","end"); self.report_text.insert("end",dump(result)); self.refresh()
+        self.report_text.delete("1.0","end"); self.report_text.insert("end",dump(result))
+        if name == "INTAKE":
+            self.intake_detail.delete("1.0","end"); self.intake_detail.insert("end",dump(result))
+            self.intake_status.set(f"Registered {result['target']['kind']}: {result['target']['path']} | files={result['summary']['source_file_count']} contracts={result['summary']['contract_count']}")
+            self.nb.select(self.intake)
+        self.refresh()
 
     def fail(self,name,e,detail):
         self.busy=False; self.status.set(f"{name} failed"); self.dash_log.delete("1.0","end"); self.dash_log.insert("end",detail)
@@ -217,10 +297,15 @@ class W3SecApp(tk.Tk):
 
     def _load(self,data):
         audit,inv,cov,intel,temporal,promo,versions=data
-        self.card["cases"].configure(text=str(inv.get("case_count","—"))); self.card["nodes"].configure(text=str(audit.get("graph",{}).get("node_count","—")))
+        intake_items = list_intakes(self.repo)
+        intake_contracts = sum(int(x.get("summary",{}).get("contract_count",0)) for x in intake_items)
+        self.card["cases"].configure(text=str(inv.get("case_count","—")))
+        self.card["intakes"].configure(text=str(len(intake_items)))
+        self.card["contracts"].configure(text=str(intake_contracts))
+        self.card["nodes"].configure(text=str(audit.get("graph",{}).get("node_count","—")))
         self.card["edges"].configure(text=str(audit.get("graph",{}).get("edge_count","—"))); self.card["candidates"].configure(text=str(audit.get("federation",{}).get("candidate_record_count","—")))
         self.card["evidence"].configure(text=str(cov.get("evidence_count","—"))); self.card["invariants"].configure(text=str(inv.get("knowledge_registry_counts",{}).get("invariants","—")))
-        self._set_text(self.intel,intel); self._set_text(self.ledger,temporal); self._set_text(self.versions,versions); self._load_cases(); self._load_graph(); self._load_promo(promo)
+        self._set_text(self.intel,intel); self._set_text(self.ledger,temporal); self._set_text(self.versions,versions); self._load_cases(); self._load_graph(); self._load_promo(promo); self._load_intakes()
         self.status.set(f"Loaded {self.repo}")
 
     def _set_text(self,frame,value): frame._w3_text.delete("1.0","end"); frame._w3_text.insert("end",dump(value))
@@ -234,9 +319,9 @@ class W3SecApp(tk.Tk):
     def _load_graph(self):
         g=ResearchGraph.from_repo(self.repo)
         for x in self.node_tree.get_children(): self.node_tree.delete(x)
-        for k,n in g.nodes.items(): self.node_tree.insert("","end",values=(k,n.type.value,n.label))
+        for k,n in g.nodes.items(): self.node_tree.insert("","end",values=(k,n.kind,n.id))
         self.edge_text.delete("1.0","end")
-        self.edge_text.insert("end",dump([{"from":e.source.key,"to":e.target.key,"type":e.type} for e in g.edges]))
+        self.edge_text.insert("end",dump([{"from":e.source.key,"to":e.target.key,"relation":e.relation,"evidence":list(e.evidence)} for e in g.edges]))
     def _load_promo(self,v):
         for x in self.promo_tree.get_children(): self.promo_tree.delete(x)
         for d in v.get("decisions",[]): self.promo_tree.insert("","end",values=(d.get("pattern"),d.get("computed_stage"),d.get("decision"),", ".join(d.get("missing_requirements",[]))))
@@ -255,6 +340,7 @@ def run_self_test()->int:
     audit=audit_repo(root)
     if not audit.get("ok"):
         log_file.write_text("SELF-TEST: audit failed\n"+dump(audit),encoding="utf-8"); return 1
+    ResearchGraph.from_repo(root)
     inv=build_inventory(root)
     text=f"SELF-TEST: OK\ncases={inv['case_count']} nodes={audit['graph']['node_count']} edges={audit['graph']['edge_count']}\n"
     log_file.write_text(text,encoding="utf-8")
@@ -265,9 +351,17 @@ def run_self_test()->int:
 def main()->int:
     if "--self-test" in sys.argv: return run_self_test()
     try:
-        app=W3SecApp(); app.mainloop(); return 0
+        app=W3SecApp()
+        app.mainloop()
+        return 0
     except Exception:
-        crash=settings_path().parent/"crash.log"; crash.parent.mkdir(parents=True,exist_ok=True); crash.write_text(traceback.format_exc(),encoding="utf-8")
-        try: messagebox.showerror(APP_NAME,"Startup failed. See %APPDATA%\\W3Sec\\crash.log")
-        except Exception: pass
+        crash=settings_path().parent/"crash.log"
+        crash.parent.mkdir(parents=True,exist_ok=True)
+        detail=traceback.format_exc()
+        crash.write_text(detail,encoding="utf-8")
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, "W3Sec failed to start.\\nSee %APPDATA%\\W3Sec\\crash.log", APP_NAME, 0x10)
+        except Exception:
+            pass
         return 1

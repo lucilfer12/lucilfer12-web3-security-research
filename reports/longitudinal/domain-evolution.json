@@ -1,0 +1,477 @@
+{
+  "commit_count": 17,
+  "commits": [
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "sha": "972ff1263007db0659a32558836de8bc6f8d619f",
+      "subject": "fix: preserve full git history for longitudinal CI",
+      "timestamp": "2026-09-27T18:43:52Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "scripts/build_windows_exe.ps1"
+      ],
+      "sha": "1cb49ba39649f5837a773142a7fb545c5eae9ed9",
+      "subject": "fix: prevent Windows bundle zip recursion",
+      "timestamp": "2026-09-27T18:39:05Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "sha": "6fdcaf552b96e03c10129ae0e2df80df9394b588",
+      "subject": "fix: use native Linux shell in CI federation setup",
+      "timestamp": "2026-09-27T18:36:57Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "scripts/test_windows_exe.ps1"
+      ],
+      "sha": "224596eeae416232af5c5d2e2bd5f9ebc6866d0e",
+      "subject": "fix: wait for GUI self-test process in CI",
+      "timestamp": "2026-09-27T18:36:04Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "scripts/build_windows_exe.ps1"
+      ],
+      "sha": "d499226ff6e07576c845e0ba8899c8498a86bbd4",
+      "subject": "fix: make Windows bundle manifest reproducible in CI",
+      "timestamp": "2026-09-27T18:32:20Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/windows-exe.yml",
+        "README.md",
+        "pyproject.toml",
+        "scripts/build_windows_exe.ps1",
+        "scripts/test_windows_exe.ps1",
+        "src/w3sec/__init__.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/gui.py",
+        "w3sec-cli.spec",
+        "w3sec-gui.spec",
+        "w3sec.spec",
+        "w3sec_cli_entry.py",
+        "w3sec_gui_entry.py"
+      ],
+      "sha": "42dba13f9a150150bc4f54d01174bca05c5d6119",
+      "subject": "feat: ship full Windows desktop research application",
+      "timestamp": "2026-09-27T18:29:51Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/windows-exe.yml",
+        "README.md",
+        "requirements-build.txt",
+        "scripts/build_windows_exe.ps1",
+        "scripts/test_windows_exe.ps1",
+        "src/w3sec/cli.py",
+        "w3sec.spec",
+        "w3sec_entry.py"
+      ],
+      "sha": "ea9108af70ad9be076401612f93f7bffd9b3e20a",
+      "subject": "build: package w3sec as portable Windows executable",
+      "timestamp": "2026-09-27T17:55:22Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "docs",
+        "knowledge",
+        "ledger",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "corpus/knowledge/event_types.yaml",
+        "corpus/knowledge/promotions.yaml",
+        "docs/architecture/federation.md",
+        "docs/architecture/longitudinal-intelligence.md",
+        "docs/operations/research-intelligence.md",
+        "ledger/events.jsonl",
+        "reports/federation/candidate-records.json",
+        "reports/federation/snapshot.json",
+        "reports/longitudinal/chronicle.json",
+        "reports/longitudinal/promotion-decisions.json",
+        "reports/longitudinal/protocol-version-diffs.json",
+        "reports/longitudinal/research-intelligence.json",
+        "reports/longitudinal/temporal-history.json",
+        "schemas/federation-report.schema.json",
+        "schemas/history-report.schema.json",
+        "schemas/promotion-report.schema.json",
+        "schemas/version-diff.schema.json",
+        "scripts/record_longitudinal_run.py",
+        "src/w3sec/audit.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/federation.py",
+        "src/w3sec/history.py",
+        "src/w3sec/promotion.py",
+        "src/w3sec/research_intelligence.py",
+        "src/w3sec/validator.py",
+        "src/w3sec/versions.py",
+        "tests/test_longitudinal.py"
+      ],
+      "sha": "82eebc46fcf09ffcc09c3ecd9e18b6609138e966",
+      "subject": "feat: complete longitudinal research federation and audit loop",
+      "timestamp": "2026-09-27T17:32:41Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "federation",
+        "knowledge",
+        "other",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "corpus/federation/sources.yaml",
+        "corpus/knowledge/assumptions.yaml",
+        "corpus/knowledge/claims.yaml",
+        "corpus/knowledge/contradictions.yaml",
+        "corpus/knowledge/event_types.yaml",
+        "corpus/knowledge/observations.yaml",
+        "corpus/knowledge/principles.yaml",
+        "corpus/knowledge/promotions.yaml",
+        "corpus/knowledge/questions.yaml",
+        "corpus/knowledge/uncertainties.yaml",
+        "reports/federation/snapshot.json",
+        "reports/longitudinal/backfill-plan.json",
+        "reports/longitudinal/chronicle.json",
+        "reports/longitudinal/research-intelligence.json",
+        "src/w3sec/chronicle.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/federation.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/research_intelligence.py",
+        "src/w3sec/validator.py"
+      ],
+      "sha": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+      "subject": "feat: establish longitudinal research intelligence foundation",
+      "timestamp": "2026-09-27T14:41:52Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "ledger"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "ledger/README.md",
+        "ledger/events.jsonl"
+      ],
+      "sha": "bf4105efb53399c820bee73ba08fa6d2f3ecf0c0",
+      "subject": "chore: anchor research ledger genesis",
+      "timestamp": "2026-09-26T15:41:39Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "cases",
+        "docs",
+        "knowledge",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/knowledge/README.md",
+        "corpus/knowledge/evidence.yaml",
+        "corpus/knowledge/hypotheses.yaml",
+        "corpus/knowledge/lineage.yaml",
+        "corpus/knowledge/negative_results.yaml",
+        "corpus/knowledge/protocol_versions.yaml",
+        "corpus/knowledge/regressions.yaml",
+        "corpus/knowledge/sources.yaml",
+        "docs/architecture/execution-engine.md",
+        "docs/architecture/federation.md",
+        "docs/architecture/system.md",
+        "schemas/case.schema.json",
+        "schemas/hypotheses.schema.json",
+        "schemas/registry.schema.json",
+        "src/w3sec/__main__.py",
+        "src/w3sec/audit.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/coverage.py",
+        "src/w3sec/differential.py",
+        "src/w3sec/export.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/query.py",
+        "src/w3sec/state_space.py",
+        "src/w3sec/validator.py",
+        "tests/test_audit.py",
+        "tests/test_differential.py",
+        "tests/test_state_space.py",
+        "tests/test_system.py"
+      ],
+      "sha": "2b46d4f6822432a2ddba83f88a8e4bd9ecba1825",
+      "subject": "feat: finalize cumulative security research operating system",
+      "timestamp": "2026-09-26T11:02:15Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "cases",
+        "docs",
+        "experiments",
+        "knowledge",
+        "ledger",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/knowledge/README.md",
+        "corpus/knowledge/counterexamples.yaml",
+        "corpus/knowledge/experiments.yaml",
+        "corpus/knowledge/invariants.yaml",
+        "corpus/knowledge/lineage.yaml",
+        "corpus/knowledge/patterns.yaml",
+        "corpus/knowledge/protocols.yaml",
+        "docs/architecture/system.md",
+        "docs/operations/research-lifecycle.md",
+        "experiments/inventory-consistency.yaml",
+        "experiments/repository-validation.yaml",
+        "ledger/README.md",
+        "ledger/events.jsonl",
+        "pyproject.toml",
+        "schemas/case.schema.json",
+        "schemas/corpus-index.schema.json",
+        "schemas/experiment.schema.json",
+        "schemas/lineage.schema.json",
+        "schemas/registry.schema.json",
+        "scripts/validate.ps1",
+        "src/w3sec/__init__.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/experiments.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/inventory.py",
+        "src/w3sec/ledger.py",
+        "src/w3sec/model.py",
+        "src/w3sec/query.py",
+        "src/w3sec/records.py",
+        "src/w3sec/validator.py",
+        "templates/case.yaml",
+        "templates/counterexample.yaml",
+        "templates/invariant.yaml",
+        "templates/lineage.yaml",
+        "templates/pattern.yaml",
+        "templates/protocol.yaml",
+        "tests/test_case_invariants.py",
+        "tests/test_system.py"
+      ],
+      "sha": "f040a66d717838ff4b2a34e79042902122c4669f",
+      "subject": "feat: complete evidence-first research operating system",
+      "timestamp": "2026-09-26T10:45:16Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "sha": "9d56c6143a741961307699c1fdc06e5615afed22",
+      "subject": "ci: install research validation dependencies",
+      "timestamp": "2026-09-26T10:31:54Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "corpus/index.yaml",
+        "pyproject.toml",
+        "requirements.txt",
+        "schemas/corpus-index.schema.json",
+        "schemas/evidence.schema.json",
+        "schemas/provenance.schema.json",
+        "src/w3sec/inventory.py",
+        "src/w3sec/provenance.py",
+        "src/w3sec/records.py",
+        "src/w3sec/validator.py"
+      ],
+      "sha": "c0a044766a96352dd195c07aa2cf163a6925e257",
+      "subject": "feat: establish research evidence and provenance foundation",
+      "timestamp": "2026-09-26T10:21:59Z"
+    },
+    {
+      "author": "Moussa Moulay Ely",
+      "domains": [
+        "cases",
+        "docs",
+        "experiments",
+        "ledger",
+        "other",
+        "tests",
+        "tooling"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "README.md",
+        "SECURITY.md",
+        "atlas/README.md",
+        "atlas/security-properties.md",
+        "case-studies/research/europeum-didr/README.md",
+        "case-studies/research/europeum-didr/case.yaml",
+        "case-studies/research/near/neap-658/README.md",
+        "case-studies/research/near/neap-658/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/README.md",
+        "case-studies/validated-findings/0xmarkets/zeromark-145/case.yaml",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/README.md",
+        "case-studies/validated-findings/0xmarkets/zeromark-146/case.yaml",
+        "corpus/README.md",
+        "corpus/index.yaml",
+        "docs/architecture/research-record.md",
+        "docs/disclosure/classification.md",
+        "docs/invariants/README.md",
+        "docs/methodology/README.md",
+        "docs/methodology/attack-path.md",
+        "docs/methodology/doctrine.md",
+        "docs/operations/quality-gates.md",
+        "docs/operations/reproducibility.md",
+        "docs/threat-modeling/model.md",
+        "experiments/README.md",
+        "experiments/hypothesis-template.md",
+        "invariants/accounting/withdrawal.md",
+        "invariants/authorization/critical-state.md",
+        "invariants/lifecycle/reachability.md",
+        "invariants/protocol/state-transition.md",
+        "invariants/replay/nonce-monotonicity.md",
+        "labs/access-control/README.md",
+        "labs/accounting/README.md",
+        "labs/replay/README.md",
+        "labs/state-machine/README.md",
+        "ledger/README.md",
+        "ledger/lessons-learned.md",
+        "pyproject.toml",
+        "requirements.txt",
+        "schemas/case.schema.json",
+        "schemas/invariant.schema.json",
+        "scripts/validate.ps1",
+        "src/w3sec/__init__.py",
+        "src/w3sec/__main__.py",
+        "src/w3sec/cli.py",
+        "src/w3sec/graph.py",
+        "src/w3sec/validator.py",
+        "templates/research-case.md",
+        "templates/vulnerability-report.md",
+        "tests/test_case_invariants.py",
+        "tests/test_graph.py",
+        "tests/test_validator.py"
+      ],
+      "sha": "be988e6b4ccf4e97fa826c51cee185d490c00b20",
+      "subject": "Populate default branch with complete research project",
+      "timestamp": "2026-09-25T14:45:00Z"
+    },
+    {
+      "author": "Moussa Moulay Ely",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "README.legacy.md"
+      ],
+      "sha": "2dd9720bf6802364b7a6e441bad7a0cf7d75a532",
+      "subject": "Merge research project into default branch while preserving legacy README",
+      "timestamp": "2026-09-25T14:44:39Z"
+    },
+    {
+      "author": "lucilfer12",
+      "domains": [
+        "other"
+      ],
+      "event_type": "repository_commit",
+      "paths": [
+        "README.md"
+      ],
+      "sha": "a133e48a68d0174ebdf06a2c7ce4bfffa14d3726",
+      "subject": "Initial commit",
+      "timestamp": "2026-09-25T13:34:40Z"
+    }
+  ],
+  "domain_change_counts": {
+    "cases": 3,
+    "docs": 4,
+    "experiments": 2,
+    "federation": 1,
+    "knowledge": 4,
+    "ledger": 4,
+    "other": 16,
+    "tests": 4,
+    "tooling": 8
+  },
+  "schema_version": 1
+}

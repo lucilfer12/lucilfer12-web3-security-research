@@ -111,10 +111,19 @@ run from a checkout, remembers the selected repository under %APPDATA%\\W3Sec, a
 provides a repository chooser for portable/downloaded copies.
 
 The desktop UI exposes the operational layers directly: dashboard metrics, case search,
-knowledge-graph nodes/edges, longitudinal research intelligence, temporal history,
-promotion decisions, protocol-version reports, audit/validation actions, federation refresh,
-and report-folder access. Long-running research actions execute in a worker thread so the
-window remains responsive. Startup failures are persisted to %APPDATA%\\W3Sec\\crash.log.
+Import / Intake for a single contract file or a whole contract repository, knowledge-graph
+nodes/edges, longitudinal research intelligence, temporal history, promotion decisions,
+protocol-version reports, audit/validation actions, federation refresh, and report-folder
+access. Intake creates a content-hashed structural snapshot of source files, contracts,
+functions, imports, compiler pragmas, project configuration and security-relevant syntax
+signals; it is evidence inventory, not an automatic vulnerability verdict. Long-running
+research and intake actions execute in worker threads so the window remains responsive.
+Startup failures are persisted to %APPDATA%\\W3Sec\\crash.log.
+
+CLI intake example:
+
+    python -m w3sec intake C:\\path\\to\\Contract.sol --os-root C:\\path\\to\\w3sec --write --json
+    python -m w3sec intake C:\\path\\to\\protocol-repo --os-root C:\\path\\to\\w3sec --write --json
 
 The companion w3sec-cli.exe preserves the complete command-line interface for scripting,
 CI and deterministic automation.

@@ -215,24 +215,7 @@
   "cross_protocol": {
     "candidate_network": {
       "candidate_count": 262,
-      "pattern_link_leads": [
-        {
-          "candidate_count": 13,
-          "pattern": "pattern.silent-accounting-shortfall"
-        },
-        {
-          "candidate_count": 10,
-          "pattern": "pattern.unbounded-privileged-input"
-        },
-        {
-          "candidate_count": 8,
-          "pattern": "pattern.replay-state-reset"
-        },
-        {
-          "candidate_count": 6,
-          "pattern": "pattern.lifecycle-reachability-destruction"
-        }
-      ],
+      "pattern_link_leads": [],
       "policy": "Candidate network is a research queue, not canonical evidence.",
       "schema_version": 1,
       "theme_recurrence": [
@@ -276,55 +259,40 @@
         "canonical_protocols": [
           "protocol.near.runtime"
         ],
-        "external_candidate_count": 8,
-        "external_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants"
-        ],
+        "external_candidate_count": 0,
+        "external_sources": [],
         "pattern": "pattern.replay-state-reset",
-        "status": "lead"
+        "status": "unresolved"
       },
       {
         "canonical_case_count": 1,
         "canonical_protocols": [
           "protocol.europeum.didr"
         ],
-        "external_candidate_count": 6,
-        "external_sources": [
-          "source.repo.forensics",
-          "source.repo.zeroday"
-        ],
+        "external_candidate_count": 0,
+        "external_sources": [],
         "pattern": "pattern.lifecycle-reachability-destruction",
-        "status": "lead"
+        "status": "unresolved"
       },
       {
         "canonical_case_count": 1,
         "canonical_protocols": [
           "protocol.0xmarkets.cartha"
         ],
-        "external_candidate_count": 10,
-        "external_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants",
-          "source.repo.zeroday"
-        ],
+        "external_candidate_count": 0,
+        "external_sources": [],
         "pattern": "pattern.unbounded-privileged-input",
-        "status": "lead"
+        "status": "unresolved"
       },
       {
         "canonical_case_count": 1,
         "canonical_protocols": [
           "protocol.0xmarkets.cartha"
         ],
-        "external_candidate_count": 13,
-        "external_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants",
-          "source.repo.smart-contract-lab",
-          "source.repo.zeroday"
-        ],
+        "external_candidate_count": 0,
+        "external_sources": [],
         "pattern": "pattern.silent-accounting-shortfall",
-        "status": "lead"
+        "status": "unresolved"
       }
     ],
     "policy": "Cross-protocol links are leads until independently reviewed and attached to source-backed evidence.",
@@ -333,11 +301,8 @@
   "pattern_leads": [
     {
       "cross_case_evidence": false,
-      "external_candidate_count": 8,
-      "external_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants"
-      ],
+      "external_candidate_count": 0,
+      "external_sources": [],
       "linked_cases": [
         "near-neap-658"
       ],
@@ -356,11 +321,8 @@
     },
     {
       "cross_case_evidence": false,
-      "external_candidate_count": 6,
-      "external_sources": [
-        "source.repo.forensics",
-        "source.repo.zeroday"
-      ],
+      "external_candidate_count": 0,
+      "external_sources": [],
       "linked_cases": [
         "europeum-didr-capability-invocation"
       ],
@@ -370,12 +332,8 @@
     },
     {
       "cross_case_evidence": false,
-      "external_candidate_count": 10,
-      "external_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants",
-        "source.repo.zeroday"
-      ],
+      "external_candidate_count": 0,
+      "external_sources": [],
       "linked_cases": [
         "zeromark-146"
       ],
@@ -390,13 +348,8 @@
     },
     {
       "cross_case_evidence": false,
-      "external_candidate_count": 13,
-      "external_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants",
-        "source.repo.smart-contract-lab",
-        "source.repo.zeroday"
-      ],
+      "external_candidate_count": 0,
+      "external_sources": [],
       "linked_cases": [
         "zeromark-145"
       ],
@@ -433,10 +386,7 @@
         },
         "decision": "hold",
         "declared_status": "candidate",
-        "external_corroborating_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants"
-        ],
+        "external_corroborating_sources": [],
         "missing_requirements": [
           "cross_case"
         ],
@@ -463,10 +413,7 @@
         },
         "decision": "hold",
         "declared_status": "candidate",
-        "external_corroborating_sources": [
-          "source.repo.forensics",
-          "source.repo.zeroday"
-        ],
+        "external_corroborating_sources": [],
         "missing_requirements": [
           "cross_case"
         ],
@@ -493,11 +440,7 @@
         },
         "decision": "hold",
         "declared_status": "candidate",
-        "external_corroborating_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants",
-          "source.repo.zeroday"
-        ],
+        "external_corroborating_sources": [],
         "missing_requirements": [
           "cross_case"
         ],
@@ -524,12 +467,7 @@
         },
         "decision": "hold",
         "declared_status": "candidate",
-        "external_corroborating_sources": [
-          "source.repo.forensics",
-          "source.repo.invariants",
-          "source.repo.smart-contract-lab",
-          "source.repo.zeroday"
-        ],
+        "external_corroborating_sources": [],
         "missing_requirements": [
           "cross_case"
         ],
@@ -625,14 +563,14 @@
   },
   "schema_version": 2,
   "temporal": {
-    "event_count": 22,
+    "event_count": 30,
     "interpretation": {
       "git": "Repository change history used only as temporal provenance; it is not treated as proof of a research conclusion.",
       "ledger": "Explicit research events with hash-chain integrity."
     },
     "schema_version": 1,
     "sources": {
-      "git_commit_count": 9,
+      "git_commit_count": 17,
       "ledger_event_count": 13
     },
     "timeline": [
@@ -1137,6 +1075,205 @@
           "kind": "report"
         },
         "timestamp": "2026-09-27T17:23:51.441564+00:00"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "docs",
+          "knowledge",
+          "ledger",
+          "other",
+          "tests",
+          "tooling"
+        ],
+        "event_id": "82eebc46fcf09ffcc09c3ecd9e18b6609138e966",
+        "event_type": "repository_commit",
+        "paths": [
+          ".github/workflows/ci.yml",
+          "README.md",
+          "corpus/knowledge/event_types.yaml",
+          "corpus/knowledge/promotions.yaml",
+          "docs/architecture/federation.md",
+          "docs/architecture/longitudinal-intelligence.md",
+          "docs/operations/research-intelligence.md",
+          "ledger/events.jsonl",
+          "reports/federation/candidate-records.json",
+          "reports/federation/snapshot.json",
+          "reports/longitudinal/chronicle.json",
+          "reports/longitudinal/promotion-decisions.json",
+          "reports/longitudinal/protocol-version-diffs.json",
+          "reports/longitudinal/research-intelligence.json",
+          "reports/longitudinal/temporal-history.json",
+          "schemas/federation-report.schema.json",
+          "schemas/history-report.schema.json",
+          "schemas/promotion-report.schema.json",
+          "schemas/version-diff.schema.json",
+          "scripts/record_longitudinal_run.py",
+          "src/w3sec/audit.py",
+          "src/w3sec/cli.py",
+          "src/w3sec/federation.py",
+          "src/w3sec/history.py",
+          "src/w3sec/promotion.py",
+          "src/w3sec/research_intelligence.py",
+          "src/w3sec/validator.py",
+          "src/w3sec/versions.py",
+          "tests/test_longitudinal.py"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "82eebc46fcf09ffcc09c3ecd9e18b6609138e966",
+          "kind": "commit"
+        },
+        "subject_line": "feat: complete longitudinal research federation and audit loop",
+        "timestamp": "2026-09-27T17:32:41Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other",
+          "tooling"
+        ],
+        "event_id": "ea9108af70ad9be076401612f93f7bffd9b3e20a",
+        "event_type": "repository_commit",
+        "paths": [
+          ".github/workflows/ci.yml",
+          ".github/workflows/windows-exe.yml",
+          "README.md",
+          "requirements-build.txt",
+          "scripts/build_windows_exe.ps1",
+          "scripts/test_windows_exe.ps1",
+          "src/w3sec/cli.py",
+          "w3sec.spec",
+          "w3sec_entry.py"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "ea9108af70ad9be076401612f93f7bffd9b3e20a",
+          "kind": "commit"
+        },
+        "subject_line": "build: package w3sec as portable Windows executable",
+        "timestamp": "2026-09-27T17:55:22Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other",
+          "tooling"
+        ],
+        "event_id": "42dba13f9a150150bc4f54d01174bca05c5d6119",
+        "event_type": "repository_commit",
+        "paths": [
+          ".github/workflows/windows-exe.yml",
+          "README.md",
+          "pyproject.toml",
+          "scripts/build_windows_exe.ps1",
+          "scripts/test_windows_exe.ps1",
+          "src/w3sec/__init__.py",
+          "src/w3sec/cli.py",
+          "src/w3sec/gui.py",
+          "w3sec-cli.spec",
+          "w3sec-gui.spec",
+          "w3sec.spec",
+          "w3sec_cli_entry.py",
+          "w3sec_gui_entry.py"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "42dba13f9a150150bc4f54d01174bca05c5d6119",
+          "kind": "commit"
+        },
+        "subject_line": "feat: ship full Windows desktop research application",
+        "timestamp": "2026-09-27T18:29:51Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other"
+        ],
+        "event_id": "d499226ff6e07576c845e0ba8899c8498a86bbd4",
+        "event_type": "repository_commit",
+        "paths": [
+          "scripts/build_windows_exe.ps1"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "d499226ff6e07576c845e0ba8899c8498a86bbd4",
+          "kind": "commit"
+        },
+        "subject_line": "fix: make Windows bundle manifest reproducible in CI",
+        "timestamp": "2026-09-27T18:32:20Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other"
+        ],
+        "event_id": "224596eeae416232af5c5d2e2bd5f9ebc6866d0e",
+        "event_type": "repository_commit",
+        "paths": [
+          "scripts/test_windows_exe.ps1"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "224596eeae416232af5c5d2e2bd5f9ebc6866d0e",
+          "kind": "commit"
+        },
+        "subject_line": "fix: wait for GUI self-test process in CI",
+        "timestamp": "2026-09-27T18:36:04Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other"
+        ],
+        "event_id": "6fdcaf552b96e03c10129ae0e2df80df9394b588",
+        "event_type": "repository_commit",
+        "paths": [
+          ".github/workflows/ci.yml"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "6fdcaf552b96e03c10129ae0e2df80df9394b588",
+          "kind": "commit"
+        },
+        "subject_line": "fix: use native Linux shell in CI federation setup",
+        "timestamp": "2026-09-27T18:36:57Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other"
+        ],
+        "event_id": "1cb49ba39649f5837a773142a7fb545c5eae9ed9",
+        "event_type": "repository_commit",
+        "paths": [
+          "scripts/build_windows_exe.ps1"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "1cb49ba39649f5837a773142a7fb545c5eae9ed9",
+          "kind": "commit"
+        },
+        "subject_line": "fix: prevent Windows bundle zip recursion",
+        "timestamp": "2026-09-27T18:39:05Z"
+      },
+      {
+        "actor": "lucilfer12",
+        "domains": [
+          "other"
+        ],
+        "event_id": "972ff1263007db0659a32558836de8bc6f8d619f",
+        "event_type": "repository_commit",
+        "paths": [
+          ".github/workflows/ci.yml"
+        ],
+        "source": "git-history",
+        "subject": {
+          "id": "972ff1263007db0659a32558836de8bc6f8d619f",
+          "kind": "commit"
+        },
+        "subject_line": "fix: preserve full git history for longitudinal CI",
+        "timestamp": "2026-09-27T18:43:52Z"
       }
     ]
   },

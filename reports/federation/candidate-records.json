@@ -18,7 +18,7 @@
         "adapter": "central",
         "available": true,
         "case_files": 4,
-        "git_head": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+        "git_head": "972ff1263007db0659a32558836de8bc6f8d619f",
         "knowledge_files": 21,
         "ledger_events": 13,
         "path": "C:/Users/pc/lucilfer12-web3-security-research",
@@ -73,6 +73,8 @@
           "defi-rounding",
           "oracle-safety"
         ],
+        "forge_available": false,
+        "forge_command": "forge test --root <smart-contract-security-lab> -vv",
         "git_head": "b6f7a0d8724715a07588bafcb76ccce999f8dae1",
         "path": "C:/Users/pc/research-federation-work/smart-contract-security-lab/findings",
         "regression_tests": 4,
@@ -173,9 +175,7 @@
       "title": "TransactionManager - User might steal router's locked funds"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0005",
       "locator": [
@@ -370,10 +370,7 @@
       "title": "Random task execution"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset",
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0018",
       "locator": [
@@ -673,9 +670,7 @@
       "title": "Certificate controllers do not always constrain the last argument"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0038",
       "locator": [
@@ -1035,9 +1030,7 @@
       "title": "FlasherFTM - Unsolicited invocation of the callback (CREAM auth bypass)"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0062",
       "locator": [
@@ -1082,9 +1075,7 @@
       "title": "An Attacker Can Flood the Support by Creating Many Tickets for Arbitrary Addresses"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0065",
       "locator": [
@@ -1294,9 +1285,7 @@
       "title": "`addTidal`, `_updateUserTidal`, `withdrawTidal` – Wrong Arithmetic Calculations"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0079",
       "locator": [
@@ -1491,9 +1480,7 @@
       "title": "6.1 Anyone Can Disable TUSD Market"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0092",
       "locator": [
@@ -1703,9 +1690,7 @@
       "title": "\\[C01\\] Trapped Proposer Reward"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0106",
       "locator": [
@@ -1735,9 +1720,7 @@
       "title": "[](https://github.com/alexbehrens/optimismc02-partially-shared-keys-with-extension-nodes-mishandled)\\[C02\\] Partially shared keys with EXTENSION nodes mishandled"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0108",
       "locator": [
@@ -1797,9 +1780,7 @@
       "title": "\\[C01\\] Instant withdrawals can disable essential vault functionality"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0112",
       "locator": [
@@ -1859,10 +1840,7 @@
       "title": "Other examples"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall",
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0116",
       "locator": [
@@ -2027,9 +2005,7 @@
       "title": "\\[C01\\] A malicious delegator can permanently lock all stake and rewards for a victim service provider and all of its honest delegators"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0127",
       "locator": [
@@ -2194,9 +2170,7 @@
       "title": "**\\[C02\\] CASH tokens can be stolen from the Market contract**"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0138",
       "locator": [
@@ -2481,9 +2455,7 @@
       "title": "Migration bypasses vesting restrictions"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0157",
       "locator": [
@@ -2873,9 +2845,7 @@
       "title": "**5.1.1** LienToken.transferFrom **does not update a public vault's bookkeeping parameters when a lien is"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0183",
       "locator": [
@@ -2995,9 +2965,7 @@
       "title": "**7.1.1 A malicious user could DOS a vesting schedule by sending only** 1 wei **of** TLC **to the vesting escrow"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0191",
       "locator": [
@@ -3087,9 +3055,7 @@
       "title": "**6.1.1** _pickNextValidatorsToExitFromActiveOperators **uses the wrong index to query stopped validator"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0197",
       "locator": [
@@ -3254,10 +3220,7 @@
       "title": "5.1.6 Insufficient check about division remainder"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset",
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0208",
       "locator": [
@@ -3347,9 +3310,7 @@
       "title": "5.1.1 tradingFunctionreturns wrong invariant at bounds, allowing to steal all pool reserves"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "secondary",
       "id": "scf:SCF-0214",
       "locator": [
@@ -3544,9 +3505,7 @@
       "title": "5.1.1 Rewardcalculatesearnedincorrectly on each epoch boundary"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "medium",
       "id": "sil:SIL-8F7550CD51",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:16",
@@ -3558,9 +3517,7 @@
       "title": "value-flow low-level value transfer is present"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "medium",
       "id": "sil:SIL-F5E3390726",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:15",
@@ -3572,9 +3529,7 @@
       "title": "value-flow low-level value transfer is present"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "low",
       "id": "sil:SIL-DFE150C147",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:6",
@@ -3586,9 +3541,7 @@
       "title": "reentrancy External call in value-changing function execute"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "low",
       "id": "sil:SIL-36C5A08597",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:6",
@@ -3600,10 +3553,7 @@
       "title": "reentrancy External call in value-changing function execute"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset",
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "medium",
       "id": "sil:SIL-CCAAE891E8",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingFixed.sol:6",
@@ -3615,10 +3565,7 @@
       "title": "replay Replay-sensitive transition in execute"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset",
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "medium",
       "id": "sil:SIL-C61EBA735B",
       "locator": "C:\\Users\\pc\\security-invariant-lab\\targets\\bridge-lab\\src\\BridgeAccountingVulnerable.sol:6",
@@ -3630,9 +3577,7 @@
       "title": "replay Replay-sensitive transition in execute"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "high",
       "id": "sil-property:BridgeAccountingFixed:message_replay",
       "promotion": "requires-linkage",
@@ -3643,9 +3588,7 @@
       "title": "BridgeAccountingFixed:message_replay"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.replay-state-reset"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "high",
       "id": "sil-property:BridgeAccountingVulnerable:message_replay",
       "promotion": "requires-linkage",
@@ -3704,9 +3647,7 @@
       "title": "Nomad Bridge initialization_failure"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "A",
       "id": "zdf:poly-network-2021",
       "promotion": "requires-local-review",
@@ -3814,9 +3755,7 @@
       "title": "KyberSwap Elastic rounding_or_precision"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.unbounded-privileged-input"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "A",
       "id": "zdf:exactly-2023",
       "promotion": "requires-local-review",
@@ -3828,9 +3767,7 @@
       "title": "Exactly Protocol input_validation_failure"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.lifecycle-reachability-destruction"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "A",
       "id": "zdf:hedgey-2024",
       "promotion": "requires-local-review",
@@ -3890,9 +3827,7 @@
       "title": "PancakeBunny oracle_manipulation"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "A",
       "id": "zdf:kyberswap-legacy-2023",
       "promotion": "requires-local-review",
@@ -3915,9 +3850,7 @@
       "title": "access-control"
     },
     {
-      "candidate_pattern_links": [
-        "pattern.silent-accounting-shortfall"
-      ],
+      "candidate_pattern_links": [],
       "evidence_level": "repository-documented",
       "id": "scsl:bridge-accounting-underflow",
       "promotion": "requires-local-reproduction",

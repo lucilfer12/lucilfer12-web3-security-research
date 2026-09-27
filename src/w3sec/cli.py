@@ -18,6 +18,7 @@ from .federation import (
 from .graph import ResearchGraph
 from .history import build_domain_evolution, build_temporal_timeline, write_domain_evolution, write_temporal_history
 from .inventory import build_inventory
+from .intake import build_intake, write_intake_report
 from .ledger import append_event, verify_chain
 from .model import NodeRef, ResearchStage
 from .promotion import build_promotion_engine, write_promotion_report
@@ -130,6 +131,12 @@ def main() -> int:
     la.add_argument("--timestamp")
     la.add_argument("--payload", default="{}")
     la.add_argument("--path", default="ledger/events.jsonl")
+
+    intake = sub.add_parser("intake", help="register and structurally analyze a contract file or repository")
+    intake.add_argument("target")
+    intake.add_argument("--os-root", default=".")
+    intake.add_argument("--json", action="store_true")
+    intake.add_argument("--write", action="store_true")
 
     exp = sub.add_parser("experiment")
     exp_sub = exp.add_subparsers(dest="experiment_command", required=True)
@@ -280,6 +287,20 @@ def main() -> int:
             actor=args.actor, stage=stage, payload=payload,
         )
         print(event.event_hash)
+        return 0
+
+    if args.command == "intake":
+        target = _root(args.target)
+        os_root = _root(args.os_root)
+        value = build_intake(target)
+        if args.write:
+            path = write_intake_report(os_root, value)
+            print(f"intake_report={path}")
+        _print_json(value) if args.json else print(
+            f"intake={value['id']} kind={value['target']['kind']} "
+            f"files={value['summary']['source_file_count']} contracts={value['summary']['contract_count']} "
+            f"functions={value['summary']['function_count']} hash={value['target']['source_hash']}"
+        )
         return 0
 
     if args.command == "experiment":

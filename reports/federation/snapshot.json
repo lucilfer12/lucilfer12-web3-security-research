@@ -17,7 +17,7 @@
       "adapter": "central",
       "available": true,
       "case_files": 4,
-      "git_head": "e34a2054ea5b3bec6bcd4218eee7417ff17b035f",
+      "git_head": "972ff1263007db0659a32558836de8bc6f8d619f",
       "knowledge_files": 21,
       "ledger_events": 13,
       "path": "C:/Users/pc/lucilfer12-web3-security-research",
@@ -72,6 +72,8 @@
         "defi-rounding",
         "oracle-safety"
       ],
+      "forge_available": false,
+      "forge_command": "forge test --root <smart-contract-security-lab> -vv",
       "git_head": "b6f7a0d8724715a07588bafcb76ccce999f8dae1",
       "path": "C:/Users/pc/research-federation-work/smart-contract-security-lab/findings",
       "regression_tests": 4,

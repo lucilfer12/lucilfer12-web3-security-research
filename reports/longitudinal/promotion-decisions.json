@@ -21,10 +21,7 @@
       },
       "decision": "hold",
       "declared_status": "candidate",
-      "external_corroborating_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants"
-      ],
+      "external_corroborating_sources": [],
       "missing_requirements": [
         "cross_case"
       ],
@@ -51,10 +48,7 @@
       },
       "decision": "hold",
       "declared_status": "candidate",
-      "external_corroborating_sources": [
-        "source.repo.forensics",
-        "source.repo.zeroday"
-      ],
+      "external_corroborating_sources": [],
       "missing_requirements": [
         "cross_case"
       ],
@@ -81,11 +75,7 @@
       },
       "decision": "hold",
       "declared_status": "candidate",
-      "external_corroborating_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants",
-        "source.repo.zeroday"
-      ],
+      "external_corroborating_sources": [],
       "missing_requirements": [
         "cross_case"
       ],
@@ -112,12 +102,7 @@
       },
       "decision": "hold",
       "declared_status": "candidate",
-      "external_corroborating_sources": [
-        "source.repo.forensics",
-        "source.repo.invariants",
-        "source.repo.smart-contract-lab",
-        "source.repo.zeroday"
-      ],
+      "external_corroborating_sources": [],
       "missing_requirements": [
         "cross_case"
       ],

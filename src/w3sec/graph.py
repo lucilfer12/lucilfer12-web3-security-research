@@ -7,6 +7,7 @@ from typing import Any
 
 from .model import LineageEdge, NodeRef
 from .records import discover_case_records, discover_knowledge_files, load_yaml_mapping
+from .intake import list_intakes
 
 
 @dataclass
@@ -152,6 +153,20 @@ class ResearchGraph:
                 for item in data.get(field, []) or []:
                     if isinstance(item, dict) and item.get("id"):
                         graph.add_node(NodeRef(kind, str(item["id"])))
+
+        for intake in list_intakes(root):
+            intake_ref = NodeRef("intake", str(intake["id"]))
+            graph.add_node(intake_ref)
+            for contract in intake.get("contracts", []) or []:
+                contract_id = str(contract.get("id", ""))
+                if not contract_id:
+                    continue
+                contract_ref = NodeRef("contract", contract_id)
+                graph.add_edge(LineageEdge(intake_ref, "contains-contract", contract_ref))
+            for file_info in intake.get("files", []) or []:
+                file_id = str(file_info.get("sha256", ""))[:16]
+                if file_id:
+                    graph.add_edge(LineageEdge(intake_ref, "contains-source-file", NodeRef("source-file", file_id)))
 
         lineage = root / "corpus" / "knowledge" / "lineage.yaml"
         if lineage.exists():
