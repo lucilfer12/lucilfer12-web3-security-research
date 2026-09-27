@@ -49,5 +49,8 @@ Write-Host "CLI bytes: $($Cli.Length)"
 Write-Host "CLI SHA256: $CliHash"
 Write-Host "Version: $Version"
 
-Compress-Archive -Path @("dist\w3sec.exe","dist\w3sec-cli.exe","dist\w3sec.exe.sha256","dist\w3sec-cli.exe.sha256","dist\BUILD-MANIFEST.txt") -DestinationPath "dist\w3sec-windows-x64.zip" -Force
+$Bundle = Join-Path $Root "w3sec-windows-x64.zip"
+if (Test-Path $Bundle) { Remove-Item $Bundle -Force }
+Compress-Archive -Path @("dist\w3sec.exe","dist\w3sec-cli.exe","dist\w3sec.exe.sha256","dist\w3sec-cli.exe.sha256","dist\BUILD-MANIFEST.txt") -DestinationPath $Bundle -Force
+Move-Item $Bundle "dist\w3sec-windows-x64.zip" -Force
 Write-Host "Bundle: $((Get-Item 'dist\w3sec-windows-x64.zip').FullName)"
