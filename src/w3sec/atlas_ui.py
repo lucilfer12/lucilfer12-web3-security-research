@@ -200,11 +200,13 @@ class AtlasApp(tk.Tk):
     def _build_shell(self) -> None:
         self.bg = tk.Canvas(self, highlightthickness=0, bd=0, bg="#06121f")
         self.bg.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.tk.call("lower", self.bg._w)
         self.bg.bind("<Configure>", self._resize_background)
         self.sidebar = tk.Frame(self, bg="#071522", highlightthickness=1, highlightbackground="#46677b")
         self.sidebar.place(x=16, y=16, width=220, relheight=1, height=-32)
         self.sidebar_glass = tk.Label(self.sidebar, bd=0, highlightthickness=0, bg="#071522")
         self.sidebar_glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.sidebar_glass.lower()
         self.sidebar.bind("<Configure>", lambda _e: self._refresh_glass(self.sidebar, self.sidebar_glass))
         self.glass_widgets.append((self.sidebar, self.sidebar_glass))
         self.brand = tk.Label(self.sidebar, text="◈  ATLAS", fg="#eef7ff", bg="#101f2a",
@@ -238,6 +240,7 @@ class AtlasApp(tk.Tk):
         self.main.place(x=250, y=16, relx=0, width=-266, relheight=1, height=-32)
         self.main_glass = tk.Label(self.main, bd=0, highlightthickness=0, bg="#06121f")
         self.main_glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.main_glass.lower()
         self.main.bind("<Configure>", lambda _e: self._refresh_glass(self.main, self.main_glass))
         self.glass_widgets.append((self.main, self.main_glass))
         top = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
@@ -335,6 +338,7 @@ class AtlasApp(tk.Tk):
     def _page_background(self, frame: tk.Frame) -> None:
         label = tk.Label(frame, bg="#06121f", bd=0, highlightthickness=0)
         label.place(relx=0, rely=0, relwidth=1, relheight=1)
+        label.lower()
         if self.bg_photo:
             label.configure(image=self.bg_photo)
             label.image = self.bg_photo
@@ -360,6 +364,7 @@ class AtlasApp(tk.Tk):
             panel.pack(**layout)
         glass = tk.Label(panel, bd=0, highlightthickness=0, bg="#0a1825")
         glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        glass.lower()
         self.glass_widgets.append((panel, glass))
         panel.bind("<Configure>", lambda _e, p=panel, g=glass: self._refresh_glass(p, g))
         head = tk.Frame(panel, bg="#101f2a")
