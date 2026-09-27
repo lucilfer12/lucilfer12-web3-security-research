@@ -20,8 +20,8 @@ Write-Host "audit.ok=$($audit.ok)"
 Write-Host "nodes=$($audit.graph.node_count) edges=$($audit.graph.edge_count)"
 Write-Host "federation_candidates=$($audit.federation.candidate_record_count)"
 Write-Host "== GUI packaged self-test =="
-& $Gui --self-test
-if ($LASTEXITCODE -ne 0) { throw "GUI self-test failed with exit code $LASTEXITCODE" }
+$self = Start-Process -FilePath $Gui -WorkingDirectory $Root -ArgumentList "--self-test" -Wait -PassThru
+if ($self.ExitCode -ne 0) { throw "GUI self-test failed with exit code $($self.ExitCode)" }
 
 $log = Join-Path $env:APPDATA "W3Sec\self-test.log"
 if (-not (Test-Path $log)) { throw "GUI self-test log missing: $log" }
