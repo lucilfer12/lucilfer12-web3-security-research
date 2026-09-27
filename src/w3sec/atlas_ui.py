@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import queue
 import shutil
 import threading
 import traceback
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,7 +94,7 @@ class AtlasApp(tk.Tk):
         self.minsize(1180, 740)
         self.configure(bg="#06121f")
         try:
-            self.attributes("-alpha", 0.98)
+            self.attributes("-alpha", 0.995)
         except tk.TclError:
             pass
         self.repo = discover_repo()
@@ -103,12 +105,16 @@ class AtlasApp(tk.Tk):
         self.last_audit: dict[str, object] = {}
         self.task_started: float | None = None
         self.job_history: list[dict[str, object]] = []
+        self.bg_images: list[Image.Image] = []
+        self.bg_index = 0
         self.bg_image: Image.Image | None = None
         self.bg_photo: ImageTk.PhotoImage | None = None
         self.page_backgrounds: list[tk.Label] = []
-        self._load_background()
+        self.glass_widgets: list[tuple[tk.Frame, tk.Label]] = []
+        self._load_backgrounds()
         self._build_shell()
         self._build_pages()
+        self.after(30000, self._rotate_background)
         self._set_repo(self.repo)
         self.show_page("Dashboard")
         self.protocol("WM_DELETE_WINDOW", self._close)
@@ -117,21 +123,91 @@ class AtlasApp(tk.Tk):
             self.after(500, lambda: self.start_target_import(self.initial_target))
 
 
-    def _load_background(self) -> None:
+    def _background_candidates(self) -> list[Path]:
+        import sys
+        candidates = [
+            Path(__file__).resolve().parents[2] / "backgrounds" / "atlas_cathedral.png",
+            Path(__file__).resolve().parents[2] / "backgrounds" / "atlas_forest.png",
+            settings_path().parent / "backgrounds" / "atlas_cathedral.png",
+            settings_path().parent / "backgrounds" / "atlas_forest.png",
+            Path.home() / "Downloads" / "atlas_cathedral.png",
+            Path.home() / "Downloads" / "atlas_forest.png",
+        ]
+        if getattr(sys, "frozen", False):
+            exe_dir = Path(sys.executable).resolve().parent
+            candidates.extend([
+                exe_dir / "backgrounds" / "atlas_cathedral.png",
+                exe_dir / "backgrounds" / "atlas_forest.png",
+            ])
+        for directory in [Path.home() / "Downloads", Path.home() / "Pictures"]:
+            if directory.is_dir():
+                candidates.extend(sorted(directory.glob("*.png")))
+                candidates.extend(sorted(directory.glob("*.jpg")))
+                candidates.extend(sorted(directory.glob("*.jpeg")))
+        return candidates
+
+
+    @staticmethod
+    def _file_sha256(path: Path) -> str | None:
         try:
-            image = Image.open(resource_path("assets/atlas_bg.jpg")).convert("RGB")
-            self.bg_image = ImageEnhance.Brightness(image).enhance(0.48)
-        except Exception:
-            self.bg_image = None
+            h = hashlib.sha256()
+            with path.open("rb") as fh:
+                for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                    h.update(chunk)
+            return h.hexdigest()
+        except OSError:
+            return None
+
+
+    def _load_backgrounds(self) -> None:
+        self.bg_images = []
+        seen: set[str] = set()
+        for path in self._background_candidates():
+            key = str(path.resolve()) if path.exists() else str(path)
+            if key in seen or not path.is_file():
+                continue
+            seen.add(key)
+            try:
+                digest = self._file_sha256(path)
+                allowed = {
+                    "fa9e3e874f135df37fd8671d1d98f2e91b1767001f083f8bb46c9cd6f59d3fae",
+                    "ed964f55beaa36b958981ab75aad1eb9e4e53339a591cabfdd3e013bc70423e8",
+                }
+                accepted_jpeg_hashes = {
+                    "1c7190f45c3c676f9b4e13059e0e7b583ab1716f376cc56b418e9cf79125a08c",
+                    "f255d179ba89489e252409ecb1b8f86db13fc4a678ad8c4e0736d4888c88c2f6",
+                }
+                if path.suffix.lower() == ".png" and digest not in allowed:
+                    continue
+                if path.suffix.lower() in {".jpg", ".jpeg"} and digest not in accepted_jpeg_hashes:
+                    continue
+                self.bg_images.append(Image.open(path).convert("RGB"))
+            except Exception:
+                continue
+        # No generated or legacy fallback image: the user-supplied originals are the background sources.
+        self.bg_index = min(self.bg_index, max(0, len(self.bg_images) - 1))
+        self.bg_image = self.bg_images[self.bg_index] if self.bg_images else None
+
+
+    def _rotate_background(self) -> None:
+        if len(self.bg_images) > 1:
+            self.bg_index = (self.bg_index + 1) % len(self.bg_images)
+            self.bg_image = self.bg_images[self.bg_index]
+            self._redraw_backgrounds()
+        self.after(30000, self._rotate_background)
 
 
     def _build_shell(self) -> None:
         self.bg = tk.Canvas(self, highlightthickness=0, bd=0, bg="#06121f")
         self.bg.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.bg.bind("<Configure>", self._resize_background)
-        self.sidebar = tk.Frame(self, bg="#071522", highlightthickness=1, highlightbackground="#23445b")
+        self.sidebar = tk.Frame(self, bg="#071522", highlightthickness=1, highlightbackground="#46677b")
         self.sidebar.place(x=16, y=16, width=220, relheight=1, height=-32)
-        self.brand = tk.Label(self.sidebar, text="◈  ATLAS", fg="#eef7ff", bg="#071522",
+        self.sidebar_glass = tk.Label(self.sidebar, bd=0, highlightthickness=0, bg="#071522")
+        self.sidebar_glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.sidebar.bind("<Configure>", lambda _e: self._refresh_glass(self.sidebar, self.sidebar_glass))
+        self.glass_widgets.append((self.sidebar, self.sidebar_glass))
+        self.brand = tk.Label(self.sidebar, text="◈  ATLAS", fg="#eef7ff", bg="#101f2a",
                               font=("Segoe UI", 24, "bold"), anchor="w")
         self.brand.pack(fill="x", padx=18, pady=(18, 0))
         tk.Label(self.sidebar, text=APP_TAGLINE, fg="#83a5b9", bg="#071522",
@@ -160,7 +236,11 @@ class AtlasApp(tk.Tk):
 
         self.main = tk.Frame(self, bg="#06121f")
         self.main.place(x=250, y=16, relx=0, width=-266, relheight=1, height=-32)
-        top = tk.Frame(self.main, bg="#081826", highlightthickness=1, highlightbackground="#24475e")
+        self.main_glass = tk.Label(self.main, bd=0, highlightthickness=0, bg="#06121f")
+        self.main_glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.main.bind("<Configure>", lambda _e: self._refresh_glass(self.main, self.main_glass))
+        self.glass_widgets.append((self.main, self.main_glass))
+        top = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
         top.pack(fill="x", pady=(0, 10))
         self.repo_var = tk.StringVar()
         tk.Label(top, text="REPOSITORY", fg="#7193a7", bg="#081826", font=("Segoe UI", 8, "bold")).pack(side="left", padx=(14, 6), pady=13)
@@ -170,15 +250,16 @@ class AtlasApp(tk.Tk):
         self._top_button(top, "CHOOSE", self.choose_repo)
         self._top_button(top, "AUDIT", self.audit_repo)
         self._top_button(top, "FULL REFRESH", self.full_refresh)
+        self._top_button(top, "BACKGROUND", self.toggle_background)
         self._top_button(top, "SETTINGS", lambda: self.show_page("Settings"))
-        self.status_bar = tk.Frame(self.main, bg="#071522", highlightthickness=1, highlightbackground="#203d50")
+        self.status_bar = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
         self.status_bar.pack(fill="x", pady=(0, 10))
         self.status = tk.StringVar(value="ATLAS ready")
         tk.Label(self.status_bar, textvariable=self.status, fg="#b9d2df", bg="#071522",
                  font=("Segoe UI", 9), anchor="w").pack(side="left", padx=12, pady=8)
         self.spinner = tk.Label(self.status_bar, text="●", fg="#5de1ff", bg="#071522", font=("Segoe UI", 10))
         self.spinner.pack(side="right", padx=10)
-        self.progress = tk.Canvas(self.main, height=3, bg="#06121f", highlightthickness=0)
+        self.progress = tk.Canvas(self.main, height=3, bg="#071823", highlightthickness=0)
         self.progress.pack(fill="x", pady=(0, 6))
         self.progress_id = self.progress.create_rectangle(0, 0, 0, 3, fill="#33bfff", outline="")
 
@@ -201,9 +282,40 @@ class AtlasApp(tk.Tk):
         self.bg_photo = ImageTk.PhotoImage(image)
         self.bg.delete("all")
         self.bg.create_image(width // 2, height // 2, image=self.bg_photo, anchor="center")
+        self._redraw_backgrounds()
+
+
+    def _redraw_backgrounds(self) -> None:
         for label in getattr(self, "page_backgrounds", []):
-            label.configure(image=self.bg_photo)
+            label.configure(image=self.bg_photo if self.bg_photo else "", bg="#06121f")
             label.image = self.bg_photo
+        for panel, label in getattr(self, "glass_widgets", []):
+            self._refresh_glass(panel, label)
+
+
+    def _glass_photo(self, width: int, height: int) -> ImageTk.PhotoImage | None:
+        if not self.bg_image or width < 2 or height < 2:
+            return None
+        source = self.bg_image
+        scale = max(width / source.width, height / source.height)
+        size = (max(2, int(source.width * scale)), max(2, int(source.height * scale)))
+        image = source.resize(size, Image.Resampling.LANCZOS)
+        left = max(0, (image.width - width) // 2)
+        top = max(0, (image.height - height) // 2)
+        image = image.crop((left, top, left + width, top + height))
+        tint = Image.new("RGB", image.size, "#081725")
+        image = Image.blend(image, tint, 0.58)
+        return ImageTk.PhotoImage(image)
+
+
+    def _refresh_glass(self, panel: tk.Frame, label: tk.Label) -> None:
+        try:
+            photo = self._glass_photo(panel.winfo_width(), panel.winfo_height())
+            if photo:
+                label.configure(image=photo)
+                label.image = photo
+        except tk.TclError:
+            return
 
 
     def _build_pages(self) -> None:
@@ -223,7 +335,6 @@ class AtlasApp(tk.Tk):
     def _page_background(self, frame: tk.Frame) -> None:
         label = tk.Label(frame, bg="#06121f", bd=0, highlightthickness=0)
         label.place(relx=0, rely=0, relwidth=1, relheight=1)
-        label.lower()
         if self.bg_photo:
             label.configure(image=self.bg_photo)
             label.image = self.bg_photo
@@ -242,12 +353,16 @@ class AtlasApp(tk.Tk):
 
 
     def _panel(self, parent: tk.Frame, title: str, subtitle: str | None = None, **layout) -> tk.Frame:
-        panel = tk.Frame(parent, bg="#0a1825", highlightthickness=1, highlightbackground="#244b62")
+        panel = tk.Frame(parent, bg="#0a1825", highlightthickness=1, highlightbackground="#46677b")
         if "row" in layout or "column" in layout or "sticky" in layout:
             panel.grid(**layout)
         else:
             panel.pack(**layout)
-        head = tk.Frame(panel, bg="#0a1825")
+        glass = tk.Label(panel, bd=0, highlightthickness=0, bg="#0a1825")
+        glass.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.glass_widgets.append((panel, glass))
+        panel.bind("<Configure>", lambda _e, p=panel, g=glass: self._refresh_glass(p, g))
+        head = tk.Frame(panel, bg="#101f2a")
         head.pack(fill="x", padx=14, pady=(12, 4))
         tk.Label(head, text=title.upper(), fg="#dceef7", bg="#0a1825",
                  font=("Segoe UI", 10, "bold")).pack(side="left")
@@ -522,10 +637,35 @@ class AtlasApp(tk.Tk):
         tk.Label(panel, text="Repository is stored locally in %APPDATA%\\ATLAS\\settings.json.",
                  fg="#88a7b7", bg="#0a1825", font=("Segoe UI", 9)).pack(anchor="w", padx=14, pady=14)
         self._action_button(panel, "CHOOSE REPOSITORY", self.choose_repo).pack(anchor="w", padx=14, pady=5)
+        self._action_button(panel, "CHOOSE CATHEDRAL BACKGROUND", lambda: self.choose_background("fa9e3e874f135df37fd8671d1d98f2e91b1767001f083f8bb46c9cd6f59d3fae")).pack(anchor="w", padx=14, pady=5)
+        self._action_button(panel, "CHOOSE FOREST BACKGROUND", lambda: self.choose_background("ed964f55beaa36b958981ab75aad1eb9e4e53339a591cabfdd3e013bc70423e8")).pack(anchor="w", padx=14, pady=5)
         self._action_button(panel, "OPEN ATLAS DATA FOLDER",
                             lambda: os.startfile(settings_path().parent)).pack(anchor="w", padx=14, pady=5)
         self._action_button(panel, "OPEN CRASH LOG",
                             lambda: os.startfile(crash_path())).pack(anchor="w", padx=14, pady=5)
+
+
+    def toggle_background(self) -> None:
+        if len(self.bg_images) < 2:
+            self.status.set("Add the two original ATLAS background images to Downloads or Settings.")
+            return
+        self.bg_index = (self.bg_index + 1) % len(self.bg_images)
+        self.bg_image = self.bg_images[self.bg_index]
+        self._redraw_backgrounds()
+        self.status.set(f"Background changed · {self.bg_index + 1}/{len(self.bg_images)}")
+
+
+    def choose_background(self, preferred_hash: str | None = None) -> None:
+        path = filedialog.askopenfilename(title="Choose ATLAS original background", filetypes=[("Images", "*.png *.jpg *.jpeg"), ("All files", "*.*")])
+        if not path:
+            return
+        source = Path(path)
+        target_dir = settings_path().parent / "backgrounds"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / ("atlas_cathedral.png" if preferred_hash == "fa9e3e874f135df37fd8671d1d98f2e91b1767001f083f8bb46c9cd6f59d3fae" else "atlas_forest.png")
+        shutil.copy2(source, target)
+        self._load_backgrounds(); self._redraw_backgrounds()
+        self.status.set(f"Background installed · {target.name}")
 
 
     def open_import(self) -> None:
