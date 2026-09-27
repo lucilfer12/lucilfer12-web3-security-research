@@ -1,0 +1,37 @@
+name: Windows executable
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "research-os/**"
+      - "main"
+      - "master"
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build portable executable
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
+
+      - name: Smoke-test executable
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File scripts/test_windows_exe.ps1
+
+      - name: Upload Windows executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: w3sec-windows-x64
+          path: |
+            dist/w3sec.exe
+            dist/w3sec.exe.sha256
+            dist/BUILD-MANIFEST.txt
+          if-no-files-found: error

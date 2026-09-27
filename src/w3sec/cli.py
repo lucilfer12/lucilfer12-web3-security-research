@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse
 import json
+from importlib.metadata import PackageNotFoundError, version as package_version
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,7 +37,12 @@ def _print_json(value: object) -> None:
 
 
 def main() -> int:
+    try:
+        app_version = package_version("web3-security-research")
+    except PackageNotFoundError:
+        app_version = "1.0.0"
     parser = argparse.ArgumentParser(prog="w3sec", description="Web3 security research OS")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {app_version}")
     sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate")
     validate.add_argument("path", nargs="?", default=".")

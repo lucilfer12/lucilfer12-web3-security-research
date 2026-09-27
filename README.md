@@ -103,8 +103,28 @@ four sibling research repositories; these remain secondary research leads until 
 Do not publish private reports, client information, credentials, KYC data, unreleased
 exploit details, or confidential triage material.
 
+## Windows executable
+
+The research OS can run as a portable Windows x64 executable without a local Python
+installation. Build it from a Windows checkout with:
+
+    powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
+
+The resulting files are written to dist/:
+
+    w3sec.exe
+    w3sec.exe.sha256
+    BUILD-MANIFEST.txt
+
+The executable can be smoke-tested with:
+
+    powershell -ExecutionPolicy Bypass -File scripts/test_windows_exe.ps1
+
+GitHub Actions also builds and uploads the same artifact through
+.github/workflows/windows-exe.yml.
+
 ## Verification
 
 The CI pipeline installs dependencies, compiles the package, runs the complete unit suite,
-validates repository contracts, builds the deterministic inventory and executes the
-research-validation manifests.
+validates repository contracts, verifies the temporal ledger, runs the longitudinal engines,
+executes federated checks, and executes the bounded research-validation manifests.
