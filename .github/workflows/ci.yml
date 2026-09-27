@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Prepare federated source workspace
         shell: bash
         run: mkdir -p "$GITHUB_WORKSPACE/../research-federation-work"
