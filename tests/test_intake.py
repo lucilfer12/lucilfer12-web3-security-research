@@ -88,6 +88,28 @@ class IntakeTests(unittest.TestCase):
             self.assertTrue(any(key.startswith("contract-audit:") for key in graph.nodes))
             self.assertTrue(any(key.startswith("audit-finding:") for key in graph.nodes))
 
+    def test_engine_rules_produce_target_derived_evidence(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "Risky.sol"
+            source.write_text(
+                "pragma solidity ^0.8.20;\n"
+                "contract Risky {\n"
+                " function f() public { require(tx.origin == msg.sender); }\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            report = build_contract_audit(source, root / "research")
+            engine_findings = report["engine_scan"]["engine_findings"]
+            self.assertTrue(any(
+                x.get("engine") == "atlas-rules"
+                and x.get("signal") == "tx_origin"
+                and x.get("file") == "Risky.sol"
+                for x in engine_findings
+            ))
+            self.assertEqual(1, report["summary"]["engine_finding_count"])
+
+
     def test_written_intake_is_visible_to_graph(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
