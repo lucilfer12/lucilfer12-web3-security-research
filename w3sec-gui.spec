@@ -1,24 +1,20 @@
 from pathlib import Path
-import sys
-from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path(SPECPATH)
 SRC = ROOT / "src"
+PACKAGE_ROOT = SRC / "w3sec"
 
-# PyInstaller executes the spec before applying Analysis.pathex. Put the local
-# source tree first so collect_submodules("w3sec") cannot resolve an older
-# installed w3sec package from site-packages instead of this repository.
-sys.path.insert(0, str(SRC))
-
-core_hiddenimports = [
-    "w3sec.audit",
-    "w3sec.audit.__init__",
-    "w3sec.intake",
-    "w3sec.graph",
-    "w3sec.export",
-    "w3sec.contract_audit",
-]
-hiddenimports = sorted(set(collect_submodules("w3sec") + core_hiddenimports))
+# Derive hidden imports from the repository files themselves. This avoids
+# collect_submodules() resolving an unrelated installed w3sec package.
+hiddenimports = []
+for module_path in PACKAGE_ROOT.rglob("*.py"):
+    relative = module_path.relative_to(SRC).with_suffix("")
+    parts = list(relative.parts)
+    if parts[-1] == "__init__":
+        parts = parts[:-1]
+    if parts:
+        hiddenimports.append(".".join(parts))
+hiddenimports = sorted(set(hiddenimports))
 
 datas = [(str(ROOT / "backgrounds" / "atlas_forest.jpg"), "backgrounds")]
 
