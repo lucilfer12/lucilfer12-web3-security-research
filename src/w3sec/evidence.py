@@ -33,6 +33,26 @@ def _audit_reports(root: Path) -> list[dict[str, Any]]:
     return reports
 
 
+def _promotion_snapshot(root: Path) -> dict[str, Any]:
+    from .promotion import build_promotion_engine
+    report = build_promotion_engine(root)
+    return {
+        "promotable_count": report["promotable_count"],
+        "blocked_count": report["blocked_count"],
+        "decisions": report["decisions"],
+    }
+
+
+def _chronicle_snapshot(root: Path) -> dict[str, Any]:
+    from .chronicle import build_chronicle
+    report = build_chronicle(root)
+    return {
+        "event_count": report["ledger"]["event_count"],
+        "first_timestamp": report["ledger"]["first_timestamp"],
+        "last_timestamp": report["ledger"]["last_timestamp"],
+    }
+
+
 def build_evidence_graph(root: Path) -> dict[str, Any]:
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, str]] = []
@@ -50,11 +70,7 @@ def build_evidence_graph(root: Path) -> dict[str, Any]:
             findings += 1
             finding_id = str(finding.get("id") or f"{report_id}-{index + 1}")
             result = evaluate_finding(finding)
-            fn = _node(
-                "finding", finding_id, status=result.status,
-                evidence_grade=result.evidence_grade,
-                gates=result.gates, missing=list(result.missing),
-            )
+            fn = _node("finding", finding_id, status=result.status, evidence_grade=result.evidence_grade, gates=result.gates, missing=list(result.missing))
             nodes[fn["id"]] = fn
             edges.append({"source": report_node["id"], "relation": "produced", "target": fn["id"]})
             if result.validated:
@@ -71,13 +87,10 @@ def build_evidence_graph(root: Path) -> dict[str, Any]:
         "schema": "atlas.evidence-graph.v1",
         "nodes": list(nodes.values()),
         "edges": edges,
-        "summary": {
-            "finding_count": findings,
-            "validated_count": validated,
-            "proof_node_count": sum(1 for n in nodes.values() if n["kind"] == "proof"),
-            "research_debt_count": len(debt),
-        },
+        "summary": {"finding_count": findings, "validated_count": validated, "proof_node_count": sum(1 for n in nodes.values() if n["kind"] == "proof"), "research_debt_count": len(debt)},
         "research_debt": debt,
+        "promotion": _promotion_snapshot(root),
+        "chronicle": _chronicle_snapshot(root),
     }
     document["graph_sha256"] = _digest({k: v for k, v in document.items() if k != "graph_sha256"})
     return document
@@ -86,10 +99,7 @@ def build_evidence_graph(root: Path) -> dict[str, Any]:
 def write_evidence_graph(root: Path, path: Path | None = None) -> Path:
     target = path or root / "reports" / "longitudinal" / "evidence-graph.json"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps(build_evidence_graph(root), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    target.write_text(json.dumps(build_evidence_graph(root), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return target
 
 
