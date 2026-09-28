@@ -511,6 +511,10 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
     with _prepared_target(target, progress=lambda p, label: mark(7 + p, label), cancel=cancel) as (scan_root, archive_format):
         mark(10, f"Reading {archive_format or 'workspace'}")
         source_files = _files(scan_root)
+        # A single-file target has scan_root == the file itself. Record it relative
+        # to its parent so the evidence identifies the actual uploaded filename
+        # instead of collapsing it to ".".
+        record_root = scan_root.parent if scan_root.is_file() else scan_root
         mark(12, f"Discovered {len(source_files)} files")
         aggregate = hashlib.sha256()
         files: list[dict[str, Any]] = []
@@ -519,7 +523,7 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
         for index, path in enumerate(source_files, 1):
             _check_cancel(cancel)
             mark(12 + int(43 * index / total_files), f"Indexing {path.name}")
-            record, units = _record_file(path, scan_root)
+            record, units = _record_file(path, record_root)
             files.append(record)
             contracts.extend(units)
             aggregate.update(record["path"].encode("utf-8"))

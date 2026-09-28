@@ -26,6 +26,8 @@ class IntakeTests(unittest.TestCase):
             )
             value = build_intake(target)
             self.assertEqual("file", value["target"]["kind"])
+            self.assertEqual(str(target.resolve()), value["target"]["path"])
+            self.assertEqual(["Vault.sol"], [item["path"] for item in value["files"]])
             self.assertEqual(1, value["summary"]["source_file_count"])
             self.assertEqual(1, value["summary"]["contract_count"])
             self.assertEqual(1, value["summary"]["function_count"])
@@ -126,6 +128,9 @@ class IntakeTests(unittest.TestCase):
                 for x in engine_findings
             ))
             self.assertEqual(1, report["summary"]["engine_finding_count"])
+            self.assertEqual(str(source.resolve()), report["target"]["path"])
+            self.assertEqual(["Risky.sol"], [item["path"] for item in report["intake"]["files"]])
+            self.assertTrue(any(x.get("file") == "Risky.sol" for x in report["findings"]))
 
 
     def test_written_intake_is_visible_to_graph(self):

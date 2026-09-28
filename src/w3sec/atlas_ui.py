@@ -173,6 +173,20 @@ class GlassButton(tk.Button):
         finally:
             self._redrawing=False
 
+def _validate_target_binding(requested: Path, report: dict[str, object]) -> None:
+    """Reject any audit result that is not for the exact target the UI requested."""
+    expected = requested.expanduser().resolve()
+    target_info = report.get("target", {}) if isinstance(report, dict) else {}
+    actual_raw = target_info.get("path") if isinstance(target_info, dict) else None
+    if not actual_raw:
+        raise RuntimeError("Target binding violation: audit report has no target path.")
+    actual = Path(str(actual_raw)).expanduser().resolve()
+    if actual != expected:
+        raise RuntimeError(
+            f"Target binding violation: requested={expected} reported={actual}"
+        )
+
+
 class AtlasApp(tk.Tk):
     def __init__(self, initial_target: Path | None = None) -> None:
         super().__init__()
@@ -1108,6 +1122,7 @@ class AtlasApp(tk.Tk):
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
         report = build_contract_audit(target, self.repo, self._progress_callback, self.cancel_event.is_set)
+        _validate_target_binding(target, report)
         path = write_contract_audit(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
