@@ -7,6 +7,10 @@ from pathlib import Path
 
 from . import __version__
 from .contract_audit import build_contract_audit, write_contract_audit
+from .differential import compare_intake_files, write_differential_report
+from .negative_knowledge import load_negative_results
+from .proof_bundle import build_proof_bundle, verify_proof_bundle
+from .research_run import ResearchRun, resume_audit_run
 from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
 from .coverage import build_coverage
 from .experiments import load_experiment, result_to_json, run_experiment
@@ -72,6 +76,7 @@ def main() -> int:
     audit = sub.add_parser("audit")
     audit.add_argument("path", nargs="?", default=".")
     audit.add_argument("--json", action="store_true")
+    audit.add_argument("--resume", metavar="RUN_ID", help="resume a failed or cancelled research run")
     gate = sub.add_parser("gate", help="derive finding verification state from explicit evidence")
     gate.add_argument("path", nargs="?", default=".")
     gate.add_argument("--json", action="store_true")
@@ -83,6 +88,24 @@ def main() -> int:
     evidence.add_argument("path", nargs="?", default=".")
     evidence.add_argument("--json", action="store_true")
     evidence.add_argument("--write", action="store_true")
+    runs = sub.add_parser("runs", help="inspect or resume durable research runs")
+    runs.add_argument("action", choices=["list", "resume"])
+    runs.add_argument("run_id", nargs="?")
+    runs.add_argument("path", nargs="?", default=".")
+    runs.add_argument("--json", action="store_true")
+    diff = sub.add_parser("diff", help="compare two ATLAS intake revision reports")
+    diff.add_argument("before")
+    diff.add_argument("after")
+    diff.add_argument("--path", default=".")
+    diff.add_argument("--write", action="store_true")
+    diff.add_argument("--json", action="store_true")
+    proof = sub.add_parser("proof", help="build or verify an evidence proof bundle v2")
+    proof_sub = proof.add_subparsers(dest="proof_command", required=True)
+    pv = proof_sub.add_parser("verify")
+    pv.add_argument("bundle")
+    pb = proof_sub.add_parser("build")
+    pb.add_argument("finding")
+    pb.add_argument("output")
 
     contract_audit = sub.add_parser("audit-contract", help="audit a contract file, archive, or repository")
     contract_audit.add_argument("target")
@@ -204,11 +227,46 @@ def main() -> int:
 
     if args.command == "audit":
         from .audit import audit_repo
-        value = audit_repo(root)
+        value = resume_audit_run(root, args.resume) if args.resume else audit_repo(root)
         _print_json(value) if args.json else print(
-            f"ok={value['ok']} nodes={value['graph']['node_count']} edges={value['graph']['edge_count']}"
+            f'run_id={value.get("run_id")} status={value.get("run_status", "completed")} '
+            f'ok={value["ok"]} nodes={value["graph"]["node_count"]} edges={value["graph"]["edge_count"]}'
         )
         return 0 if value["ok"] else 1
+
+    if args.command == "runs":
+        if args.action == "list":
+            values = [run.state for run in ResearchRun.resumable(root)]
+            _print_json(values) if args.json else print("\n".join(
+                f'{item["run_id"]} [{item["status"]}] last={item.get("last_completed_stage")}' for item in values
+            ) or "No resumable runs.")
+            return 0
+        if not args.run_id:
+            print("ERROR: run_id is required for resume")
+            return 2
+        value = resume_audit_run(root, args.run_id)
+        _print_json(value) if args.json else print(
+            f'run_id={value.get("run_id")} status={value.get("run_status")} ok={value["ok"]}'
+        )
+        return 0 if value["ok"] else 1
+
+    if args.command == "diff":
+        value = compare_intake_files(Path(args.before), Path(args.after))
+        if args.write:
+            path = write_differential_report(_root(args.path), value)
+            print(f"differential_report={path}")
+        _print_json(value) if args.json else print(json.dumps(value, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "proof":
+        if args.proof_command == "verify":
+            value = verify_proof_bundle(Path(args.bundle))
+            _print_json(value)
+            return 0 if value["valid"] else 1
+        finding = json.loads(Path(args.finding).read_text(encoding="utf-8"))
+        path = build_proof_bundle(root, finding, Path(args.output))
+        print(f"proof_bundle={path}")
+        return 0
 
     if args.command == "gate":
         findings = []
