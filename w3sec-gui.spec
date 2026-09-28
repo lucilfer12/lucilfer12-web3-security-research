@@ -1,12 +1,15 @@
 from pathlib import Path
+import sys
 from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path(SPECPATH)
 SRC = ROOT / "src"
 
-# Keep explicit core imports in addition to recursive discovery. The project
-# contains both legacy audit.py and the audit/ package, so automatic discovery
-# must not be the only mechanism that retains w3sec.intake in the GUI bundle.
+# PyInstaller executes the spec before applying Analysis.pathex. Put the local
+# source tree first so collect_submodules("w3sec") cannot resolve an older
+# installed w3sec package from site-packages instead of this repository.
+sys.path.insert(0, str(SRC))
+
 core_hiddenimports = [
     "w3sec.audit",
     "w3sec.audit.__init__",
