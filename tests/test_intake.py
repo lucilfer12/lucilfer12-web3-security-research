@@ -6,7 +6,7 @@ from pathlib import Path
 
 from w3sec.contract_audit import build_contract_audit
 from w3sec.graph import ResearchGraph
-from w3sec.intake import build_intake, write_intake_report
+from w3sec.intake import OperationCancelled, build_intake, write_intake_report
 
 
 class IntakeTests(unittest.TestCase):
@@ -139,6 +139,21 @@ class IntakeTests(unittest.TestCase):
             graph = ResearchGraph.from_repo(root)
             self.assertTrue(any(key.startswith("intake:") for key in graph.nodes))
             self.assertTrue(any(edge.relation == "contains-contract" for edge in graph.edges))
+
+    def test_intake_can_be_cancelled_before_work(self):
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "A.sol"
+            target.write_text("contract A {}", encoding="utf-8")
+            with self.assertRaises(OperationCancelled):
+                build_intake(target, cancel=lambda: True)
+
+    def test_contract_audit_can_be_cancelled_before_work(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "A.sol"
+            target.write_text("contract A {}", encoding="utf-8")
+            with self.assertRaises(OperationCancelled):
+                build_contract_audit(target, root / "research", cancel=lambda: True)
 
     def test_intake_registration_is_hash_chained(self):
         with tempfile.TemporaryDirectory() as td:

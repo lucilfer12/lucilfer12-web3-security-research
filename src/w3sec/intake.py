@@ -72,10 +72,15 @@ SIGNAL_PATTERNS = {
     "sysvar": r"\bsysvar\b",
 }
 
-def _sha256(path: Path) -> str:
+def _sha256(path: Path, cancel=None) -> str:
+    _check_cancel(cancel)
     h = hashlib.sha256()
     with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+        while True:
+            _check_cancel(cancel)
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
             h.update(chunk)
     return h.hexdigest()
 
@@ -125,6 +130,15 @@ ARCHIVE_MAX_TOTAL_BYTES = 256 * 1024 * 1024
 ARCHIVE_MAX_COMPRESSION_RATIO = 1_000
 
 
+class OperationCancelled(RuntimeError):
+    """Raised when a cooperative ATLAS operation is cancelled by the user."""
+
+
+def _check_cancel(cancel=None) -> None:
+    if cancel and cancel():
+        raise OperationCancelled("ATLAS operation cancelled")
+
+
 def _is_contract_related(path: Path) -> bool:
     # ATLAS accepts every file type. Known code/artifacts receive structural parsing;
     # unknown or binary files are retained as hashed inventory evidence.
@@ -167,7 +181,7 @@ def _commit_extraction(staging: Path, destination: Path) -> None:
     shutil.rmtree(staging, ignore_errors=True)
 
 
-def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> str:
+def _safe_extract_archive(archive: Path, destination: Path, progress=None, cancel=None) -> str:
     destination = destination.resolve()
     lower = archive.name.lower()
     staging = Path(tempfile.mkdtemp(prefix="atlas-extract-", dir=destination.parent))
@@ -183,6 +197,7 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
             total = 0
             with gzip.open(archive, "rb") as source, output.open("wb") as target:
                 while True:
+                    _check_cancel(cancel)
                     chunk = source.read(1024 * 1024)
                     if not chunk:
                         break
@@ -201,6 +216,7 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
                 members = zf.infolist()
                 total_members = max(1, len(members))
                 for index, member in enumerate(members, 1):
+                    _check_cancel(cancel)
                     if progress:
                         progress(int(7 * index / total_members), f"Extracting {member.filename}")
                     name = _safe_member_name(member.filename)
@@ -223,6 +239,7 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
                     with zf.open(member, "r") as source, target.open("wb") as sink:
                         copied = 0
                         while True:
+                            _check_cancel(cancel)
                             chunk = source.read(1024 * 1024)
                             if not chunk:
                                 break
@@ -240,6 +257,7 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
             members = tf.getmembers()
             total_members = max(1, len(members))
             for index, member in enumerate(members, 1):
+                _check_cancel(cancel)
                 if progress:
                     progress(int(7 * index / total_members), f"Extracting {member.name}")
                 name = _safe_member_name(member.name)
@@ -260,7 +278,12 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
                 if source is None:
                     raise ValueError(f"Cannot read archive member: {member.name}")
                 with source, target.open("wb") as sink:
-                    shutil.copyfileobj(source, sink, length=1024 * 1024)
+                    while True:
+                        _check_cancel(cancel)
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        sink.write(chunk)
             archive_bytes = max(1, archive.stat().st_size)
             if total / archive_bytes > ARCHIVE_MAX_COMPRESSION_RATIO:
                 raise ValueError("Archive total compression-ratio limit exceeded")
@@ -271,11 +294,11 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> st
         raise
 
 @contextmanager
-def _prepared_target(target: Path, progress=None):
+def _prepared_target(target: Path, progress=None, cancel=None):
     if target.is_file() and _is_archive(target):
         with tempfile.TemporaryDirectory(prefix="atlas-intake-") as td:
             root = Path(td)
-            fmt = _safe_extract_archive(target, root, progress=progress)
+            fmt = _safe_extract_archive(target, root, progress=progress, cancel=cancel)
             yield root, fmt
     else:
         yield target, None
@@ -303,7 +326,7 @@ def _configs(target: Path) -> list[dict[str, str]]:
                 result.append({"path": str(path.relative_to(root)).replace("\\", "/"), "name": name})
     return result
 
-def _tool_versions() -> dict[str, Any]:
+def _tool_versions(cancel=None) -> dict[str, Any]:
     commands = {
         "forge": ["forge", "--version"],
         "anvil": ["anvil", "--version"],
@@ -317,6 +340,7 @@ def _tool_versions() -> dict[str, Any]:
     }
     result = {}
     for name, command in commands.items():
+        _check_cancel(cancel)
         path = shutil.which(command[0])
         if not path:
             result[name] = {"available": False}
@@ -472,8 +496,9 @@ def _manifest_sha256(files: list[dict[str, Any]]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def build_intake(target: Path, progress=None) -> dict[str, Any]:
+def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
     def mark(percent: int, label: str) -> None:
+        _check_cancel(cancel)
         if progress:
             progress(percent, label)
 
@@ -481,9 +506,9 @@ def build_intake(target: Path, progress=None) -> dict[str, Any]:
     if not target.exists():
         raise FileNotFoundError(target)
     mark(4, "Hashing input")
-    input_sha256 = _sha256(target) if target.is_file() else None
+    input_sha256 = _sha256(target, cancel=cancel) if target.is_file() else None
     mark(7, f"Opening {target.name}")
-    with _prepared_target(target, progress=lambda p, label: mark(7 + p, label)) as (scan_root, archive_format):
+    with _prepared_target(target, progress=lambda p, label: mark(7 + p, label), cancel=cancel) as (scan_root, archive_format):
         mark(10, f"Reading {archive_format or 'workspace'}")
         source_files = _files(scan_root)
         mark(12, f"Discovered {len(source_files)} files")
@@ -492,6 +517,7 @@ def build_intake(target: Path, progress=None) -> dict[str, Any]:
         contracts: list[dict[str, Any]] = []
         total_files = max(1, len(source_files))
         for index, path in enumerate(source_files, 1):
+            _check_cancel(cancel)
             mark(12 + int(43 * index / total_files), f"Indexing {path.name}")
             record, units = _record_file(path, scan_root)
             files.append(record)
@@ -500,6 +526,7 @@ def build_intake(target: Path, progress=None) -> dict[str, Any]:
             aggregate.update(record["sha256"].encode("ascii"))
         source_hash = aggregate.hexdigest()
         manifest_sha256 = _manifest_sha256(files)
+        _check_cancel(cancel)
         mark(60, "Capturing local toolchain")
         target_id = _safe_id(f"{target.name}-{source_hash[:16]}")
         mark(95, "Assembling intake evidence")
@@ -527,7 +554,7 @@ def build_intake(target: Path, progress=None) -> dict[str, Any]:
                 },
             },
             "git": _git_context(target, archive_format),
-            "toolchain": {"project_files": _configs(scan_root), "local_tools": _tool_versions()},
+            "toolchain": {"project_files": _configs(scan_root), "local_tools": _tool_versions(cancel=cancel)},
             "summary": {
                 "file_count": len(files),
                 "source_file_count": sum(bool(x.get("source")) for x in files),

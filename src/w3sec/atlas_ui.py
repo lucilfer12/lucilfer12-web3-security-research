@@ -6,7 +6,7 @@ import queue
 import threading
 import traceback
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 import tkinter as tk
@@ -22,7 +22,7 @@ from .coverage import build_coverage
 from .federation import build_federation_snapshot, write_candidate_snapshot, write_federation_snapshot
 from .graph import ResearchGraph
 from .history import build_domain_evolution, build_temporal_timeline, write_domain_evolution, write_temporal_history
-from .intake import build_intake, list_intakes, write_intake_report
+from .intake import OperationCancelled, build_intake, list_intakes, write_intake_report
 from .inventory import build_inventory
 from .ledger import verify_chain
 from .promotion import build_promotion_engine, write_promotion_report
@@ -195,7 +195,11 @@ class AtlasApp(tk.Tk):
         self.task_started: float | None = None
         self.job_history: list[dict[str, object]] = []
         self.progress_value = 0
+        self.progress_target = 0
         self.progress_caption = "READY"
+        self.progress_animation_id = None
+        self.cancel_event = threading.Event()
+        self.current_future = None
         self._current_page_name = ""
         self._page_scroll = 0
         self._page_max_scroll = 0
@@ -367,13 +371,14 @@ class AtlasApp(tk.Tk):
                  font=("Segoe UI", 8, "bold")).pack(side="left", padx=(15, 7), pady=10)
         # Reserve the action area first so the expanding repository field can never push controls off-screen.
         # Fixed compact action rail: only the four top buttons are constrained here.
-        actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=292, height=34)
+        actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=354, height=34)
         actions.pack(side="right", padx=(4, 4))
         actions.pack_propagate(False)
         self._top_button(actions, "CHOOSE TARGET", self.choose_target, 0, 2, 78)
-        self._top_button(actions, "AUDIT", self.audit_repo, 64, 2, 50)
-        self._top_button(actions, "FULL REFRESH", self.full_refresh, 120, 2, 98)
-        self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 224, 2, 64)
+        self._top_button(actions, "AUDIT", self.audit_repo, 82, 2, 50)
+        self._top_button(actions, "FULL REFRESH", self.full_refresh, 140, 2, 92)
+        self.stop_button = self._top_button(actions, "STOP", self.stop_current_task, 238, 2, 54)
+        self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 300, 2, 54)
         repo_entry = tk.Entry(top, textvariable=self.repo_var, bg="#081D56", fg="#f3fbff",
                  insertbackground="#46F0D2", relief="flat", font=("Segoe UI", 9), highlightthickness=0)
         repo_entry.pack(side="left", fill="x", expand=True, ipady=7)
@@ -382,7 +387,12 @@ class AtlasApp(tk.Tk):
         status_row.pack(fill="x", pady=(0, 5))
         self.status = tk.StringVar(value="ATLAS ready")
         tk.Label(status_row, textvariable=self.status, fg="#a9c8de", bg="#050b15",
-                 font=("Segoe UI", 9), anchor="w").pack(side="left")
+                 font=("Segoe UI", 9), anchor="w").pack(side="left", fill="x", expand=True)
+        self.progress_caption_label = tk.Label(
+            status_row, text="READY", fg="#6f92a5", bg="#050b15",
+            font=("Segoe UI", 8), anchor="e"
+        )
+        self.progress_caption_label.pack(side="right", padx=(8, 10))
         self.spinner = tk.Label(status_row, text="\u25cf", fg="#46F0D2", bg="#050b15",
                                 font=("Segoe UI", 9))
         self.spinner.pack(side="right", padx=(0, 2))
@@ -928,7 +938,7 @@ class AtlasApp(tk.Tk):
     def _import_target(self, target: Path) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
-        report = build_intake(target, self._progress_callback)
+        report = build_intake(target, self._progress_callback, self.cancel_event.is_set)
         path = write_intake_report(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
@@ -952,7 +962,7 @@ class AtlasApp(tk.Tk):
     def _audit_target_worker(self, target: Path) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
-        report = build_contract_audit(target, self.repo, self._progress_callback)
+        report = build_contract_audit(target, self.repo, self._progress_callback, self.cancel_event.is_set)
         path = write_contract_audit(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
@@ -977,16 +987,19 @@ class AtlasApp(tk.Tk):
         else:
             self.status.set(f"Report not found · {relative}")
     def audit_repo(self) -> None:
-        raw_target = self.target_var.get().strip()
-        if raw_target:
-            target = Path(raw_target).expanduser()
-            if target.exists():
-                self.audit_target()
-                return
+        """Run the repository audit bound to the canonical ATLAS repository.
+
+        Target/contract auditing remains available through the Import / Intake
+        flow; the top-level AUDIT action must always have one unambiguous job.
+        """
         if not self.repo:
             self.status.set("Choose a repository first.")
             return
-        self._run_task("AUDIT REPOSITORY", lambda: audit_repo(self.repo, self._progress_callback))
+        self.show_page("Audit Findings")
+        self._run_task(
+            "AUDIT REPOSITORY",
+            lambda: audit_repo(self.repo, self._progress_callback, self.cancel_event.is_set),
+        )
 
 
     def full_refresh(self) -> None:
@@ -996,38 +1009,50 @@ class AtlasApp(tk.Tk):
         self._run_task("FULL REFRESH", self._full_refresh_worker)
 
 
+    def _raise_if_cancelled(self) -> None:
+        if self.cancel_event.is_set():
+            raise OperationCancelled("ATLAS operation cancelled")
+
     def _full_refresh_worker(self) -> dict[str, object]:
         root = self.repo
         result: dict[str, object] = {}
+        self._raise_if_cancelled()
         self._progress_callback(5, "Starting full refresh")
 
         federation = build_federation_snapshot(root)
         write_federation_snapshot(root); write_candidate_snapshot(root)
         result["federation"] = federation
+        self._raise_if_cancelled()
         self._progress_callback(14, "Federation snapshot complete")
 
         result["research"] = build_research_metrics(root)
         write_longitudinal_report(root)
+        self._raise_if_cancelled()
         self._progress_callback(24, "Research intelligence complete")
 
         result["chronicle"] = build_chronicle(root)
         write_chronicle(root)
+        self._raise_if_cancelled()
         self._progress_callback(34, "Temporal chronicle complete")
 
         result["history"] = build_temporal_timeline(root)
         write_temporal_history(root)
+        self._raise_if_cancelled()
         self._progress_callback(44, "Temporal history complete")
 
         result["domain"] = build_domain_evolution(root)
         write_domain_evolution(root)
+        self._raise_if_cancelled()
         self._progress_callback(54, "Domain evolution complete")
 
         result["versions"] = build_version_diff_report(root)
         write_version_diff_report(root)
+        self._raise_if_cancelled()
         self._progress_callback(64, "Protocol versions complete")
 
         result["promotion"] = build_promotion_engine(root)
         write_promotion_report(root)
+        self._raise_if_cancelled()
         self._progress_callback(74, "Promotion gates complete")
 
         result["audit"] = audit_repo(
@@ -1036,6 +1061,7 @@ class AtlasApp(tk.Tk):
                 74 + int(max(0, min(100, int(percent))) * 0.26),
                 caption or "Repository audit",
             ),
+            self.cancel_event.is_set,
         )
         self._progress_callback(100, "Full refresh complete")
         return result
@@ -1083,8 +1109,11 @@ class AtlasApp(tk.Tk):
             return
         self.busy = True
         self.task_name = name
+        self.cancel_event.clear()
+        self.current_future = None
+        self.stop_button.configure(state="normal")
         self.task_started = datetime.now().timestamp()
-        self.progress_target = 5
+        self.progress_target = 1
         if self.progress_animation_id is not None:
             try:
                 self.after_cancel(self.progress_animation_id)
@@ -1092,15 +1121,24 @@ class AtlasApp(tk.Tk):
                 pass
             self.progress_animation_id = None
         self._set_progress(1, "Starting")
+        self.progress_target = max(self.progress_target, 1)
         self._animate_progress()
         self.status.set(f"{name} - running in background - ATLAS remains usable")
         self.spinner.configure(text="●", fg="#62AAE5")
         self._log(f"[{self._clock()}] START  {name}")
-        future = self.executor.submit(fn)
+        def guarded_task():
+            value = fn()
+            self._raise_if_cancelled()
+            return value
+
+        future = self.executor.submit(guarded_task)
+        self.current_future = future
         def waiter():
             try:
                 value = future.result()
                 self.after(0, lambda: self._task_done(name, value))
+            except (OperationCancelled, CancelledError) as exc:
+                self.after(0, lambda: self._task_cancelled(name, str(exc) or "ATLAS operation cancelled"))
             except Exception as exc:
                 detail = traceback.format_exc()
                 self.after(0, lambda: self._task_failed(name, exc, detail))
@@ -1110,6 +1148,8 @@ class AtlasApp(tk.Tk):
         self.progress_value = max(0, min(100, int(percent)))
         if caption:
             self.progress_caption = caption
+        if hasattr(self, "progress_caption_label"):
+            self.progress_caption_label.configure(text=self.progress_caption.upper())
         if hasattr(self, "progress_percent"):
             self.progress_percent.configure(text=f"{self.progress_value}%")
         if hasattr(self, "progress") and self.progress.winfo_exists():
@@ -1117,7 +1157,7 @@ class AtlasApp(tk.Tk):
 
     def _progress_callback(self, percent: int, caption: str = "") -> None:
         """Show every integer percentage between real worker checkpoints."""
-        target = max(0, min(100, int(percent)))
+        target = max(1, min(99, int(percent)))
 
         def schedule() -> None:
             self.progress_target = max(self.progress_target, target)
@@ -1134,13 +1174,13 @@ class AtlasApp(tk.Tk):
         if not self.busy:
             self.progress_animation_id = None
             return
-        # Keep the UI visibly alive between real worker checkpoints.
-        # Real callbacks can jump the value forward; 100% is reserved for completion.
-        next_value = min(99, max(self.progress_value + 1, target))
+        # Move exactly one percentage point at a time between real worker checkpoints.
+        # 100% is written only by the completion handler, so the UI never lies about completion.
+        next_value = min(95, max(self.progress_value + 1, target))
         self._set_progress(next_value)
         if self.progress_value < 99:
             self.progress_caption = self.progress_caption or "Working"
-        self.progress_animation_id = self.after(250, self._animate_progress)
+        self.progress_animation_id = self.after(100, self._animate_progress)
 
     def _refresh_progress_line(self) -> None:
         if not hasattr(self, "progress"):
@@ -1150,9 +1190,41 @@ class AtlasApp(tk.Tk):
         fill = int(width * (self.progress_value / 100.0))
         self.progress.coords(self.progress_id, 0, 1, max(0, fill), 2)
 
+    def stop_current_task(self) -> None:
+        if not self.busy:
+            self.status.set("No ATLAS operation is running.")
+            return
+        self.cancel_event.set()
+        self.progress_caption = "Stopping"
+        self.status.set(f"{self.task_name} - STOP requested - waiting for safe cancellation point")
+        self.progress_caption_label.configure(text="STOPPING")
+        self.stop_button.configure(state="disabled")
+        future = self.current_future
+        if future is not None:
+            future.cancel()
+
+    def _task_cancelled(self, name: str, detail: str = "") -> None:
+        self.busy = False
+        self.current_future = None
+        self.spinner.configure(text="●", fg="#e7a64b")
+        self.stop_button.configure(state="normal")
+        self.progress_target = self.progress_value
+        self._set_progress(self.progress_value, "Cancelled")
+        self.status.set(f"{name} - CANCELLED")
+        self.job_history.append({
+            "task": name, "status": "cancelled",
+            "at": datetime.now(timezone.utc).isoformat(),
+            "detail": detail,
+        })
+        self._log(f"[{self._clock()}] CANCEL {name} - {detail}")
+        self.cancel_event.clear()
+
     def _task_done(self, name: str, value: object) -> None:
         self._set_progress(100, "Complete")
         self.busy = False
+        self.current_future = None
+        self.cancel_event.clear()
+        self.stop_button.configure(state="normal")
         self.spinner.configure(text="●", fg="#46F0D2")
         elapsed = (datetime.now().timestamp() - self.task_started) if self.task_started else 0
         self.status.set(f"{name} - completed - {elapsed:.1f}s")
@@ -1164,6 +1236,9 @@ class AtlasApp(tk.Tk):
 
     def _task_failed(self, name: str, exc: Exception, detail: str) -> None:
         self.busy = False
+        self.current_future = None
+        self.cancel_event.clear()
+        self.stop_button.configure(state="normal")
         self.spinner.configure(text="●", fg="#62AAE5")
         self._set_progress(0, "Failed")
         self.status.set(f"{name} - failed - details kept in ATLAS log")
@@ -1329,6 +1404,7 @@ class AtlasApp(tk.Tk):
 
 
     def _close(self) -> None:
+        self.cancel_event.set()
         try:
             self.executor.shutdown(wait=False, cancel_futures=True)
         except TypeError:

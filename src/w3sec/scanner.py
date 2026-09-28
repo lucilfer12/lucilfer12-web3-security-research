@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .intake import SOURCE_EXTENSIONS, SIGNAL_PATTERNS, _files, _prepared_target
+from .intake import OperationCancelled, SOURCE_EXTENSIONS, SIGNAL_PATTERNS, _files, _prepared_target
 from .runtime import run_bounded
 
 SCANNER_VERSION = "1.0"
@@ -30,7 +30,9 @@ def _mark(progress, percent: int, label: str) -> None:
         progress(percent, label)
 
 
-def _run_tool(name: str, spec: dict[str, Any], root: Path) -> dict[str, Any]:
+def _run_tool(name: str, spec: dict[str, Any], root: Path, cancel=None) -> dict[str, Any]:
+    if cancel and cancel():
+        raise OperationCancelled("ATLAS operation cancelled")
     executable = name
     path = shutil.which(executable)
     if not path:
@@ -50,6 +52,8 @@ def _run_tool(name: str, spec: dict[str, Any], root: Path) -> dict[str, Any]:
         max_output_bytes=2_000_000,
     )
     elapsed = round(time.perf_counter() - started, 3)
+    if result.cancelled:
+        raise OperationCancelled("ATLAS operation cancelled")
     return {
         "engine": name,
         "available": True,
@@ -92,12 +96,14 @@ def _normalize_slither(result: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
-def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None) -> list[dict[str, Any]]:
+def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, cancel=None) -> list[dict[str, Any]]:
     pool = [focus] if focus is not None else _files(root)
     files = [path for path in pool if path.is_file() and path.suffix.lower() in SOURCE_EXTENSIONS]
     findings: list[dict[str, Any]] = []
     total = max(1, len(files))
     for index, path in enumerate(files, 1):
+        if cancel and cancel():
+            raise OperationCancelled("ATLAS operation cancelled")
         _mark(progress, 92 + int(index / total), f"ATLAS rules · {path.name}")
         try:
             source = path.read_text(encoding="utf-8", errors="replace")
@@ -113,6 +119,8 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None) -
             continue
         relative = str(path.relative_to(root)).replace("\\", "/")
         for signal_id, pattern in SIGNAL_PATTERNS.items():
+            if cancel and cancel():
+                raise OperationCancelled("ATLAS operation cancelled")
             for match_index, match in enumerate(
                 __import__("re").finditer(pattern, source, flags=__import__("re").MULTILINE),
                 1,
@@ -132,12 +140,14 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None) -
 
 
 
-def _structural_snapshot(root: Path, focus: Path | None = None) -> dict[str, Any]:
+def _structural_snapshot(root: Path, focus: Path | None = None, cancel=None) -> dict[str, Any]:
     files = [focus] if focus is not None else _files(root)
     source = []
     total_lines = 0
     total_bytes = 0
     for path in files:
+        if cancel and cancel():
+            raise OperationCancelled("ATLAS operation cancelled")
         total_bytes += path.stat().st_size
         if path.suffix.lower() in {".sol", ".vy", ".move", ".rs", ".cairo", ".sway", ".fe", ".huff", ".clar", ".scilla", ".func", ".fc", ".tact", ".teal", ".tz", ".michelson", ".wat", ".asm", ".js", ".ts", ".go"}:
             try:
@@ -159,18 +169,21 @@ def _structural_snapshot(root: Path, focus: Path | None = None) -> dict[str, Any
     }
 
 
-def run_security_scan(target: Path, progress=None) -> dict[str, Any]:
+def run_security_scan(target: Path, progress=None, cancel=None) -> dict[str, Any]:
     target = target.expanduser().resolve()
+    if cancel and cancel():
+        raise OperationCancelled("ATLAS operation cancelled")
     _mark(progress, 91, "Opening scan workspace")
     with _prepared_target(
         target,
         progress=lambda p, label: _mark(progress, 91 + min(1, int(p / 10)), label),
+        cancel=cancel,
     ) as (prepared_root, archive_format):
         focus = prepared_root if prepared_root.is_file() else None
         root = prepared_root.parent if prepared_root.is_file() else prepared_root
-        snapshot = _structural_snapshot(root, focus=focus)
+        snapshot = _structural_snapshot(root, focus=focus, cancel=cancel)
         _mark(progress, 92, f"Structural pass · {snapshot['source_file_count']} source files")
-        normalized = _atlas_rule_findings(root, progress, focus=focus)
+        normalized = _atlas_rule_findings(root, progress, focus=focus, cancel=cancel)
 
         has_solidity = any(x["path"].lower().endswith(".sol") for x in snapshot["files"])
         has_foundry = (root / "foundry.toml").is_file()
@@ -196,12 +209,16 @@ def run_security_scan(target: Path, progress=None) -> dict[str, Any]:
             candidates.append("forge")
 
         for index, name in enumerate(candidates):
+            if cancel and cancel():
+                raise OperationCancelled("ATLAS operation cancelled")
             _mark(progress, 93 + min(5, index + 0), f"Security engine · {name}")
-            result = _run_tool(name, _EXTERNAL[name], root)
+            result = _run_tool(name, _EXTERNAL[name], root, cancel=cancel)
             if name == "slither":
                 external_findings.extend(_normalize_slither(result))
             engines.append(result)
 
+        if cancel and cancel():
+            raise OperationCancelled("ATLAS operation cancelled")
         _mark(progress, 98, "Finalizing engine evidence")
         return {
             "schema_version": 1,

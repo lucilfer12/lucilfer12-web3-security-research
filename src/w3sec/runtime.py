@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -19,6 +20,7 @@ class BoundedRunResult:
     stderr: str
     timed_out: bool = False
     output_limited: bool = False
+    cancelled: bool = False
 
 
 def _windows_kwargs() -> dict[str, object]:
@@ -48,6 +50,7 @@ def run_bounded(
     max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
     env: Mapping[str, str] | None = None,
     env_allowlist: Sequence[str] | None = None,
+    cancel=None,
 ) -> BoundedRunResult:
     if not command or not all(isinstance(part, str) and part for part in command):
         raise ValueError("command must be a non-empty sequence of strings")
@@ -99,19 +102,37 @@ def run_bounded(
         thread.start()
 
     timed_out = False
-    try:
-        process.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        try:
-            process.terminate()
-            process.wait(timeout=2)
-        except (OSError, subprocess.TimeoutExpired):
+    cancelled = False
+    started = time.monotonic()
+    while process.poll() is None:
+        if cancel and cancel():
+            cancelled = True
             try:
-                process.kill()
-            except OSError:
-                pass
-            process.wait()
+                process.terminate()
+                process.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    pass
+            break
+        if timeout is not None and time.monotonic() - started >= timeout:
+            timed_out = True
+            try:
+                process.terminate()
+                process.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                process.wait()
+            break
+        time.sleep(0.05)
     for thread in threads:
         thread.join(timeout=2)
     for stream in (process.stdout, process.stderr):
@@ -127,6 +148,7 @@ def run_bounded(
         stderr=bytes(stderr).decode("utf-8", errors="replace"),
         timed_out=timed_out,
         output_limited=limited.is_set(),
+        cancelled=cancelled,
     )
 
 

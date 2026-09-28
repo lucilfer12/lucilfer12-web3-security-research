@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .finding_gate import attach_gate, gate_summary
-from .intake import _prepared_target, build_intake, write_intake_report
+from .intake import OperationCancelled, _prepared_target, build_intake, write_intake_report
 from .scanner import run_security_scan
 
 
@@ -137,8 +137,10 @@ def _snippet(root_target: Path, rel: str, line: int) -> str | None:
     except Exception:
         return None
     return None
-def build_contract_audit(target: Path, research_root: Path, progress=None) -> dict[str, Any]:
+def build_contract_audit(target: Path, research_root: Path, progress=None, cancel=None) -> dict[str, Any]:
     def mark(percent: int, label: str) -> None:
+        if cancel and cancel():
+            raise OperationCancelled("ATLAS operation cancelled")
         if progress:
             progress(percent, label)
     mark(5, "Preparing audit target")
@@ -148,17 +150,20 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
     intake = build_intake(
         target,
         progress=lambda percent, label: mark(15 + int(percent * 0.10), label),
+        cancel=cancel,
     )
     intake_path = write_intake_report(research_root, intake)
     mark(25, "Starting structural scan")
 
     findings: list[dict[str, Any]] = []
     controls: list[dict[str, Any]] = []
-    with _prepared_target(target) as (scan_root, _archive_format):
+    with _prepared_target(target, cancel=cancel) as (scan_root, _archive_format):
         root_for_snippet = scan_root
         files = intake.get("files", []) or []
         total_files = max(1, len(files))
         for file_index, file_info in enumerate(files, 1):
+            if cancel and cancel():
+                raise OperationCancelled("ATLAS operation cancelled")
             rel_preview = str(file_info.get("path", ""))
             mark(25 + int(65 * file_index / total_files), f"Scanning {rel_preview}")
             rel = str(file_info.get("path", ""))
@@ -230,7 +235,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
         "verification": gate_summary(findings),
         "intake": intake,
     }
-    engine_scan = run_security_scan(target, progress=mark)
+    engine_scan = run_security_scan(target, progress=mark, cancel=cancel)
     report["engine_scan"] = engine_scan
     report["summary"]["engine_finding_count"] = int(engine_scan.get("engine_finding_count", 0))
 
