@@ -356,13 +356,13 @@ class AtlasApp(tk.Tk):
                  font=("Segoe UI", 8, "bold")).pack(side="left", padx=(15, 7), pady=10)
         # Reserve the action area first so the expanding repository field can never push controls off-screen.
         # Fixed compact action rail: only the four top buttons are constrained here.
-        actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=292, height=34)
+        actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=338, height=34)
         actions.pack(side="right", padx=(4, 4))
         actions.pack_propagate(False)
-        self._top_button(actions, "CHOOSE", self.choose_repo, 0, 2, 58)
-        self._top_button(actions, "AUDIT", self.audit_repo, 64, 2, 50)
-        self._top_button(actions, "FULL REFRESH", self.full_refresh, 120, 2, 98)
-        self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 224, 2, 64)
+        self._top_button(actions, "CHOOSE TARGET", self.choose_target, 0, 2, 104)
+        self._top_button(actions, "AUDIT", self.audit_repo, 110, 2, 50)
+        self._top_button(actions, "FULL REFRESH", self.full_refresh, 166, 2, 98)
+        self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 270, 2, 64)
         repo_entry = tk.Entry(top, textvariable=self.repo_var, bg="#081D56", fg="#f3fbff",
                  insertbackground="#46F0D2", relief="flat", font=("Segoe UI", 9), highlightthickness=0)
         repo_entry.pack(side="left", fill="x", expand=True, ipady=7)
