@@ -587,7 +587,13 @@ class AtlasApp(tk.Tk):
     def _import_target(self, target: Path) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
-        report = build_intake(target)
+        report = build_intake(
+            target,
+            progress=lambda percent, label: self._progress_callback(
+                5 + int(percent * 0.80),
+                label,
+            ),
+        )
         path = write_intake_report(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
@@ -795,6 +801,28 @@ class AtlasApp(tk.Tk):
         if name == "AUDIT TARGET":
             report = value.get("report", {}) if isinstance(value, dict) else {}
             self.last_audit = report
+            summary = report.get("summary", {}) if isinstance(report, dict) else {}
+            engine_scan = report.get("engine_scan", {}) if isinstance(report, dict) else {}
+            engines = engine_scan.get("engines", []) if isinstance(engine_scan, dict) else []
+            executed = [
+                str(item.get("engine"))
+                for item in engines
+                if isinstance(item, dict) and item.get("executed")
+            ]
+            unavailable = [
+                str(item.get("engine"))
+                for item in engines
+                if isinstance(item, dict) and item.get("status") == "unavailable"
+            ]
+            self.status.set(
+                "AUDIT TARGET · "
+                f"files={summary.get('file_count', 0)} · "
+                f"contracts={summary.get('contract_count', 0)} · "
+                f"functions={summary.get('function_count', 0)} · "
+                f"findings={summary.get('finding_count', 0)} · "
+                f"engines={','.join(executed) or 'none'}"
+                + (f" · unavailable={','.join(unavailable)}" if unavailable else "")
+            )
             self.finding_tree.delete(0, "end")
             for finding in report.get("findings", []):
                 self.finding_tree.insert("end", f"[{finding.get('priority','?').upper():8}] {finding.get('file')}:{finding.get('line')} · {finding.get('signal')}")
