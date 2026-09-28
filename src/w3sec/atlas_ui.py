@@ -1189,6 +1189,10 @@ class AtlasApp(tk.Tk):
             self.intake_detail.delete("1.0", "end")
             self.intake_detail.insert("end", pretty(report))
             self.show_page("Import / Intake")
+        elif name in {"AUDIT REPOSITORY", "FULL REFRESH"}:
+            # An explicit repository operation starts the live research session.
+            self.session_active = True
+            self.status.set(f"{name} complete · live repository state loaded")
 
 
     def _log(self, line: str) -> None:
