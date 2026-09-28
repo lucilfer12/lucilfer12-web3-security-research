@@ -97,6 +97,8 @@ class AtlasApp(tk.Tk):
         self.last_audit: dict[str, object] = {}
         self.task_started: float | None = None
         self.job_history: list[dict[str, object]] = []
+        self.progress_value = 0
+        self.progress_caption = "READY"
         self._build_shell()
         self._build_pages()
         self._set_repo(self.repo)
@@ -109,67 +111,72 @@ class AtlasApp(tk.Tk):
 
 
     def _build_shell(self) -> None:
-        self.sidebar = tk.Frame(self, bg="#071522", highlightthickness=1, highlightbackground="#46677b")
-        self.sidebar.place(x=16, y=16, width=220, relheight=1, height=-32)
-        self.brand = tk.Label(self.sidebar, text="◈  ATLAS", fg="#eef7ff", bg="#101f2a",
-                              font=("Segoe UI", 24, "bold"), anchor="w")
-        self.brand.pack(fill="x", padx=18, pady=(18, 0))
-        tk.Label(self.sidebar, text=APP_TAGLINE, fg="#83a5b9", bg="#071522",
-                 font=("Segoe UI", 9), anchor="w").pack(fill="x", padx=20, pady=(0, 20))
-        self.nav = tk.Frame(self.sidebar, bg="#071522")
+        self.configure(bg="#050b15")
+        self.sidebar = tk.Frame(self, bg="#081D56")
+        self.sidebar.place(x=16, y=16, width=222, relheight=1, height=-32)
+        self.brand = tk.Label(self.sidebar, text="ATLAS", fg="#ffffff", bg="#081D56",
+                              font=("Segoe UI", 25, "bold"), anchor="w")
+        self.brand.pack(fill="x", padx=20, pady=(20, 0))
+        tk.Label(self.sidebar, text=APP_TAGLINE.upper(), fg="#8bbfe3", bg="#081D56",
+                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x", padx=21, pady=(0, 22))
+        self.nav = tk.Frame(self.sidebar, bg="#081D56")
         self.nav.pack(fill="x", expand=False, padx=10)
         self.pages: dict[str, tk.Frame] = {}
         self.nav_buttons: dict[str, tk.Button] = {}
         nav = [
-            ("Dashboard", "⌂"), ("Import / Intake", "⇪"), ("Audit Findings", "⚠"), ("Cases", "▣"),
-            ("Research Intelligence", "◉"), ("Knowledge Graph", "⌘"),
-            ("Temporal Ledger", "◷"), ("Promotion", "↗"), ("Protocol Versions", "◇"),
-            ("Reports", "▤"), ("Settings", "⚙"),
+            ("Dashboard", "\u2302"), ("Import / Intake", "\u21e7"), ("Audit Findings", "\u26a0"),
+            ("Cases", "\u25a3"), ("Research Intelligence", "\u25c9"), ("Knowledge Graph", "\u2318"),
+            ("Temporal Ledger", "\u25f7"), ("Promotion", "\u2197"), ("Protocol Versions", "\u25c7"),
+            ("Reports", "\u2261"), ("Settings", "\u2699"),
         ]
         for name, icon in nav:
             btn = tk.Button(
                 self.nav, text=f"{icon}  {name}", command=lambda n=name: self.show_page(n),
-                bg="#071522", fg="#a8c2d2", activebackground="#10324b", activeforeground="#ffffff",
-                relief="flat", bd=0, anchor="w", padx=14, pady=9, font=("Segoe UI", 10),
+                bg="#081D56", fg="#a9c8de", activebackground="#10316f", activeforeground="#ffffff",
+                relief="flat", bd=0, anchor="w", padx=14, pady=9, font=("Segoe UI", 10), cursor="hand2",
             )
             btn.pack(fill="x", pady=2)
             self.nav_buttons[name] = btn
-
-        tk.Label(self.sidebar, text="Continuous development", fg="#66879a", bg="#071522",
-                 font=("Segoe UI", 8)).pack(side="bottom", padx=18, pady=(0, 16), anchor="w")
-
-        self.main = tk.Frame(self, bg="#06121f")
-        self.main.place(x=250, y=16, relwidth=1, width=-266, relheight=1, height=-32)
-        top = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
-        top.pack(fill="x", pady=(0, 10))
+        tk.Label(self.sidebar, text="RESEARCH WORKSPACE", fg="#6fa9d0", bg="#081D56",
+                 font=("Segoe UI", 8, "bold")).pack(side="bottom", padx=20, pady=(0, 18), anchor="w")
+        self.main = tk.Frame(self, bg="#050b15")
+        self.main.place(x=254, y=16, relwidth=1, width=-270, relheight=1, height=-32)
+        top = tk.Frame(self.main, bg="#081D56")
+        top.pack(fill="x", pady=(0, 12), ipady=4)
         self.repo_var = tk.StringVar()
-        tk.Label(top, text="REPOSITORY", fg="#7193a7", bg="#081826", font=("Segoe UI", 8, "bold")).pack(side="left", padx=(14, 6), pady=13)
-        tk.Entry(top, textvariable=self.repo_var, bg="#0a1c2a", fg="#e9f7ff", insertbackground="#ffffff",
-                 relief="flat", font=("Segoe UI", 9), highlightthickness=1, highlightbackground="#22465d").pack(
+        tk.Label(top, text="REPOSITORY", fg="#7fb5db", bg="#081D56",
+                 font=("Segoe UI", 8, "bold")).pack(side="left", padx=(15, 7), pady=10)
+        tk.Entry(top, textvariable=self.repo_var, bg="#081D56", fg="#f3fbff",
+                 insertbackground="#46F0D2", relief="flat", font=("Segoe UI", 9), highlightthickness=0).pack(
                      side="left", fill="x", expand=True, ipady=7)
         self._top_button(top, "CHOOSE", self.choose_repo)
         self._top_button(top, "AUDIT", self.audit_repo)
         self._top_button(top, "FULL REFRESH", self.full_refresh)
         self._top_button(top, "SETTINGS", lambda: self.show_page("Settings"))
-        self.status_bar = tk.Frame(self.main, bg="#101f2a", highlightthickness=1, highlightbackground="#46677b")
-        self.status_bar.pack(fill="x", pady=(0, 10))
+        status_row = tk.Frame(self.main, bg="#050b15")
+        status_row.pack(fill="x", pady=(0, 5))
         self.status = tk.StringVar(value="ATLAS ready")
-        tk.Label(self.status_bar, textvariable=self.status, fg="#b9d2df", bg="#071522",
-                 font=("Segoe UI", 9), anchor="w").pack(side="left", padx=12, pady=8)
-        self.spinner = tk.Label(self.status_bar, text="●", fg="#5de1ff", bg="#071522", font=("Segoe UI", 10))
-        self.spinner.pack(side="right", padx=10)
-        self.progress = tk.Canvas(self.main, height=3, bg="#071823", highlightthickness=0)
-        self.progress.pack(fill="x", pady=(0, 6))
-        self.progress_id = self.progress.create_rectangle(0, 0, 0, 3, fill="#33bfff", outline="")
-
-        self.content = tk.Frame(self.main, bg="#06121f")
+        tk.Label(status_row, textvariable=self.status, fg="#a9c8de", bg="#050b15",
+                 font=("Segoe UI", 9), anchor="w").pack(side="left")
+        self.spinner = tk.Label(status_row, text="\u25cf", fg="#46F0D2", bg="#050b15",
+                                font=("Segoe UI", 9))
+        self.spinner.pack(side="right", padx=(0, 2))
+        self.progress_percent = tk.Label(status_row, text="0%", fg="#62AAE5", bg="#050b15",
+                                         font=("Segoe UI", 9, "bold"))
+        self.progress_percent.pack(side="right", padx=(0, 8))
+        self.progress = tk.Canvas(self.main, height=3, bg="#101a28", highlightthickness=0)
+        self.progress.pack(fill="x", pady=(0, 12))
+        self.progress_base = self.progress.create_rectangle(0, 1, 0, 2, fill="#17304b", outline="")
+        self.progress_id = self.progress.create_rectangle(0, 1, 0, 2, fill="#46F0D2", outline="")
+        self.progress.bind("<Configure>", lambda _e: self._refresh_progress_line())
+        self.content = tk.Frame(self.main, bg="#050b15")
         self.content.pack(fill="both", expand=True)
+
     def _top_button(self, parent: tk.Frame, text: str, command) -> None:
-        tk.Button(parent, text=text, command=command, bg="#0f3149", fg="#e9f8ff",
-                  activebackground="#174b6f", activeforeground="#ffffff", relief="flat",
-                  font=("Segoe UI", 8, "bold"), padx=14, pady=8, bd=0).pack(side="left", padx=4, pady=5)
-
-
+        tk.Button(parent, text=text, command=command, bg="#081D56", fg="#dceeff",
+                  activebackground="#12357a", activeforeground="#ffffff", relief="flat",
+                  font=("Segoe UI", 8, "bold"), padx=11, pady=8, bd=0, cursor="hand2").pack(
+                      side="left", padx=2, pady=4)
 
     def _build_pages(self) -> None:
         names = ["Dashboard", "Import / Intake", "Audit Findings", "Cases", "Research Intelligence",
@@ -190,62 +197,64 @@ class AtlasApp(tk.Tk):
         self.pages[name].place(relx=0, rely=0, relwidth=1, relheight=1)
         for key, btn in self.nav_buttons.items():
             active = key == name
-            btn.configure(bg="#123a56" if active else "#071522",
-                          fg="#ffffff" if active else "#a8c2d2")
-        self.status.set(f"ATLAS · {name}")
-
+            btn.configure(bg="#10316f" if active else "#081D56",
+                          fg="#ffffff" if active else "#a9c8de")
+        self.status.set(f"ATLAS - {name}")
 
     def _panel(self, parent: tk.Frame, title: str, subtitle: str | None = None, **layout) -> tk.Frame:
-        panel = tk.Frame(parent, bg="#0a1825", highlightthickness=1, highlightbackground="#46677b")
+        panel = tk.Frame(parent, bg="#09162a", highlightthickness=0, bd=0)
         if "row" in layout or "column" in layout or "sticky" in layout:
             panel.grid(**layout)
         else:
             panel.pack(**layout)
-        head = tk.Frame(panel, bg="#101f2a")
-        head.pack(fill="x", padx=14, pady=(12, 4))
-        tk.Label(head, text=title.upper(), fg="#dceef7", bg="#0a1825",
-                 font=("Segoe UI", 10, "bold")).pack(side="left")
+        head = tk.Frame(panel, bg="#09162a")
+        head.pack(fill="x", padx=14, pady=(13, 5))
+        tk.Label(head, text=title.upper(), fg="#dceeff", bg="#09162a",
+                 font=("Segoe UI", 9, "bold")).pack(side="left")
         if subtitle:
-            tk.Label(head, text=subtitle, fg="#6f93a6", bg="#0a1825",
-                     font=("Segoe UI", 8)).pack(side="right")
+            tk.Label(head, text=subtitle, fg="#62AAE5", bg="#09162a",
+                     font=("Segoe UI", 7, "bold")).pack(side="right")
         return panel
-    def _card(self, parent: tk.Frame, title: str, key: str, column: int) -> None:
-        panel = tk.Frame(parent, bg="#0c2030", highlightthickness=1, highlightbackground="#28536b")
-        panel.grid(row=0, column=column, sticky="nsew", padx=4)
-        tk.Label(panel, text=title.upper(), fg="#7093a7", bg="#0c2030",
-                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
-        value = tk.Label(panel, text="—", fg="#effaff", bg="#0c2030",
-                         font=("Segoe UI", 22, "bold"))
-        value.pack(anchor="w", padx=12, pady=(1, 10))
-        setattr(self, f"card_{key}", value)
 
+    def _card(self, parent: tk.Frame, title: str, key: str, column: int, row: int = 0) -> None:
+        shadow = tk.Frame(parent, bg="#06101e", bd=0, highlightthickness=0)
+        shadow.grid(row=row, column=column, sticky="nsew", padx=5, pady=5)
+        panel = tk.Frame(shadow, bg="#0a1930", bd=0, highlightthickness=0)
+        panel.pack(fill="both", expand=True, padx=(0, 2), pady=(0, 2))
+        tk.Label(panel, text=title.upper(), fg="#6fa9d0", bg="#0a1930",
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=15, pady=(12, 0))
+        value = tk.Label(panel, text="—", fg="#f4fbff", bg="#0a1930",
+                         font=("Segoe UI", 24, "bold"))
+        value.pack(anchor="w", padx=15, pady=(0, 3))
+        tk.Frame(panel, bg="#46F0D2", height=2).pack(fill="x", padx=15, pady=(0, 13))
+        setattr(self, f"card_{key}", value)
 
     def _dashboard_page(self) -> None:
         page = self.pages["Dashboard"]
-        header = tk.Frame(page, bg="#06121f")
+        header = tk.Frame(page, bg="#050b15")
         header.pack(fill="x")
-        tk.Label(header, text="Command Center", fg="#f2fbff", bg="#06121f",
-                 font=("Segoe UI", 20, "bold")).pack(side="left")
-        tk.Label(header, text="Evidence → Analysis → Research → Knowledge", fg="#6d96aa",
-                 bg="#06121f", font=("Segoe UI", 9)).pack(side="left", padx=15, pady=(7, 0))
-        cards = tk.Frame(page, bg="#06121f")
-        cards.pack(fill="x", pady=(10, 10))
-        for i in range(8):
-            cards.columnconfigure(i, weight=1)
-        for i, item in enumerate([
-            ("Cases", "cases"), ("Intakes", "intakes"), ("Contracts", "contracts"),
-            ("Nodes", "nodes"), ("Edges", "edges"), ("Candidates", "candidates"),
-            ("Evidence", "evidence"), ("Invariants", "invariants"),
-        ]):
-            self._card(cards, item[0], item[1], i)
-
-        body = tk.Frame(page, bg="#06121f")
+        tk.Label(header, text="Command Center", fg="#f4fbff", bg="#050b15",
+                 font=("Segoe UI", 22, "bold")).pack(side="left")
+        tk.Label(header, text="Evidence  ->  Analysis  ->  Research  ->  Knowledge", fg="#6fa9d0",
+                 bg="#050b15", font=("Segoe UI", 9)).pack(side="left", padx=16, pady=(8, 0))
+        cards = tk.Frame(page, bg="#050b15")
+        cards.pack(fill="x", pady=(12, 12))
+        for i in range(4):
+            cards.columnconfigure(i, weight=1, uniform="metric")
+        metrics = [
+            ("Cases", "cases"), ("Intakes", "intakes"), ("Contracts", "contracts"), ("Nodes", "nodes"),
+            ("Edges", "edges"), ("Candidates", "candidates"), ("Evidence", "evidence"), ("Invariants", "invariants"),
+        ]
+        for i, item in enumerate(metrics):
+            self._card(cards, item[0], item[1], i % 4, i // 4)
+        body = tk.Frame(page, bg="#050b15")
         body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=2)
         body.rowconfigure(0, weight=1)
         self._dashboard_system(body)
         self._dashboard_activity(body)
+
     def _dashboard_system(self, parent: tk.Frame) -> None:
         panel = self._panel(parent, "System Overview", "LIVE", row=0, column=0, sticky="nsew", padx=(0, 5))
         self.system_lines = tk.Frame(panel, bg="#0a1825")
@@ -332,16 +341,14 @@ class AtlasApp(tk.Tk):
                                           font=("Consolas", 9))
         self.intake_detail.pack(fill="both", expand=True, padx=10, pady=10)
     def _action_button(self, parent: tk.Frame, text: str, command) -> tk.Button:
-        return tk.Button(parent, text=text, command=command, bg="#0e3047", fg="#e8f8ff",
-                         activebackground="#154c70", activeforeground="#ffffff",
-                         relief="flat", bd=0, font=("Segoe UI", 9, "bold"), pady=10)
-
+        return tk.Button(parent, text=text, command=command, bg="#0a1930", fg="#e8f8ff",
+                         activebackground="#103d68", activeforeground="#ffffff",
+                         relief="flat", bd=0, font=("Segoe UI", 9, "bold"), pady=10, cursor="hand2")
 
     def _toolbar_button(self, parent: tk.Frame, text: str, command) -> tk.Button:
-        return tk.Button(parent, text=text, command=command, bg="#10354c", fg="#e3f7ff",
-                         activebackground="#17608a", activeforeground="#ffffff",
-                         relief="flat", bd=0, font=("Segoe UI", 8, "bold"), padx=10, pady=7)
-
+        return tk.Button(parent, text=text, command=command, bg="#081D56", fg="#e3f7ff",
+                         activebackground="#12357a", activeforeground="#ffffff",
+                         relief="flat", bd=0, font=("Segoe UI", 8, "bold"), padx=10, pady=7, cursor="hand2")
 
     def _intake_selected(self, _event=None) -> None:
         if not self.intake_tree.curselection():
@@ -551,7 +558,7 @@ class AtlasApp(tk.Tk):
     def _audit_target_worker(self, target: Path) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
-        report = build_contract_audit(target, self.repo)
+        report = build_contract_audit(target, self.repo, self._progress_callback)
         path = write_contract_audit(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
@@ -579,7 +586,7 @@ class AtlasApp(tk.Tk):
         if not self.repo:
             self.status.set("Choose a repository first.")
             return
-        self._run_task("AUDIT", lambda: audit_repo(self.repo))
+        self._run_task("AUDIT", lambda: audit_repo(self.repo, self._progress_callback))
 
 
     def full_refresh(self) -> None:
@@ -648,10 +655,10 @@ class AtlasApp(tk.Tk):
         self.busy = True
         self.task_name = name
         self.task_started = datetime.now().timestamp()
-        self.status.set(f"{name} · running in background · ATLAS remains usable")
-        self.spinner.configure(text="◌", fg="#ffd166")
+        self._set_progress(5, "Starting")
+        self.status.set(f"{name} - running in background - ATLAS remains usable")
+        self.spinner.configure(text="●", fg="#62AAE5")
         self._log(f"[{self._clock()}] START  {name}")
-        self._animate_progress()
         future = self.executor.submit(fn)
         def waiter():
             try:
@@ -662,37 +669,48 @@ class AtlasApp(tk.Tk):
                 self.after(0, lambda: self._task_failed(name, exc, detail))
         threading.Thread(target=waiter, daemon=True, name=f"atlas-{name.lower()}-waiter").start()
 
+    def _set_progress(self, percent: int, caption: str = "") -> None:
+        self.progress_value = max(0, min(100, int(percent)))
+        if caption:
+            self.progress_caption = caption
+        if hasattr(self, "progress_percent"):
+            self.progress_percent.configure(text=f"{self.progress_value}%")
+        if hasattr(self, "progress") and self.progress.winfo_exists():
+            self._refresh_progress_line()
 
-    def _animate_progress(self) -> None:
-        if not self.busy:
-            self.progress.coords(self.progress_id, 0, 0, 0, 3)
+    def _progress_callback(self, percent: int, caption: str = "") -> None:
+        self.after(0, lambda: self._set_progress(percent, caption))
+
+    def _refresh_progress_line(self) -> None:
+        if not hasattr(self, "progress"):
             return
-        width = max(300, self.progress.winfo_width())
-        position = int((datetime.now().timestamp() * 140) % max(1, width + 260)) - 130
-        self.progress.coords(self.progress_id, position, 0, position + 260, 3)
-        self.after(40, self._animate_progress)
-
+        width = max(1, self.progress.winfo_width())
+        self.progress.coords(self.progress_base, 0, 1, width, 2)
+        fill = int(width * (self.progress_value / 100.0))
+        self.progress.coords(self.progress_id, 0, 1, max(0, fill), 2)
 
     def _task_done(self, name: str, value: object) -> None:
+        self._set_progress(100, "Complete")
         self.busy = False
-        self.spinner.configure(text="●", fg="#47dca7")
+        self.spinner.configure(text="●", fg="#46F0D2")
         elapsed = (datetime.now().timestamp() - self.task_started) if self.task_started else 0
-        self.status.set(f"{name} · completed · {elapsed:.1f}s · no terminal window")
+        self.status.set(f"{name} - completed - {elapsed:.1f}s")
         self.job_history.append({"task": name, "status": "completed", "seconds": round(elapsed, 2),
                                  "at": datetime.now(timezone.utc).isoformat()})
-        self._log(f"[{self._clock()}] DONE   {name} · {elapsed:.1f}s")
+        self._log(f"[{self._clock()}] DONE   {name} - {elapsed:.1f}s")
         self._write_result_to_page(name, value)
         self.refresh_views()
 
-
     def _task_failed(self, name: str, exc: Exception, detail: str) -> None:
         self.busy = False
-        self.spinner.configure(text="●", fg="#ff7b8b")
-        self.status.set(f"{name} · failed · details kept in ATLAS log")
+        self.spinner.configure(text="●", fg="#62AAE5")
+        self._set_progress(0, "Failed")
+        self.status.set(f"{name} - failed - details kept in ATLAS log")
         self.job_history.append({"task": name, "status": "failed", "error": str(exc),
                                  "at": datetime.now(timezone.utc).isoformat()})
-        self._log(f"[{self._clock()}] FAIL   {name} · {exc}\n{detail}")
+        self._log(f"[{self._clock()}] FAIL   {name} - {exc}\n{detail}")
         self._write_result_to_page(name, {"error": str(exc), "traceback": detail})
+
     def _write_result_to_page(self, name: str, value: object) -> None:
         text = pretty(value)
         self.activity_log.insert("end", text + "\n\n")

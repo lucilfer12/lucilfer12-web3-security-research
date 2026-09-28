@@ -135,17 +135,27 @@ def _snippet(root_target: Path, rel: str, line: int) -> str | None:
     except Exception:
         return None
     return None
-def build_contract_audit(target: Path, research_root: Path) -> dict[str, Any]:
+def build_contract_audit(target: Path, research_root: Path, progress=None) -> dict[str, Any]:
+    def mark(percent: int, label: str) -> None:
+        if progress:
+            progress(percent, label)
+    mark(5, "Preparing audit target")
     target = target.expanduser().resolve()
     research_root = research_root.expanduser().resolve()
+    mark(15, "Building contract intake")
     intake = build_intake(target)
     intake_path = write_intake_report(research_root, intake)
+    mark(25, "Starting structural scan")
 
     findings: list[dict[str, Any]] = []
     controls: list[dict[str, Any]] = []
     with _prepared_target(target) as (scan_root, _archive_format):
         root_for_snippet = scan_root
-        for file_info in intake.get("files", []) or []:
+        files = intake.get("files", []) or []
+        total_files = max(1, len(files))
+        for file_index, file_info in enumerate(files, 1):
+            rel_preview = str(file_info.get("path", ""))
+            mark(25 + int(65 * file_index / total_files), f"Scanning {rel_preview}")
             rel = str(file_info.get("path", ""))
             for signal in file_info.get("signals", []) or []:
                 sid = str(signal.get("id", ""))
@@ -212,7 +222,9 @@ def build_contract_audit(target: Path, research_root: Path) -> dict[str, Any]:
         "findings": findings,
         "intake": intake,
     }
+    mark(95, "Writing audit findings")
     write_contract_audit(research_root, report)
+    mark(100, "Audit complete")
     return report
 
 
