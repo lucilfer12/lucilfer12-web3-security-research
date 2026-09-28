@@ -133,7 +133,7 @@ def _snippet(root_target: Path, rel: str, line: int) -> str | None:
         path = root_target / rel if root_target.is_dir() else root_target.parent / rel
         lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
         if 1 <= line <= len(lines):
-            return lines[line - 1].strip()[:320]
+            return lines[line - 1].lstrip("﻿").strip()[:320]
     except Exception:
         return None
     return None
