@@ -167,7 +167,7 @@ def _commit_extraction(staging: Path, destination: Path) -> None:
     shutil.rmtree(staging, ignore_errors=True)
 
 
-def _safe_extract_archive(archive: Path, destination: Path) -> str:
+def _safe_extract_archive(archive: Path, destination: Path, progress=None) -> str:
     destination = destination.resolve()
     lower = archive.name.lower()
     staging = Path(tempfile.mkdtemp(prefix="atlas-extract-", dir=destination.parent))
@@ -198,7 +198,11 @@ def _safe_extract_archive(archive: Path, destination: Path) -> str:
         total = 0
         if lower.endswith(".zip"):
             with zipfile.ZipFile(archive) as zf:
-                for member in zf.infolist():
+                members = zf.infolist()
+                total_members = max(1, len(members))
+                for index, member in enumerate(members, 1):
+                    if progress:
+                        progress(int(7 * index / total_members), f"Extracting {member.filename}")
                     name = _safe_member_name(member.filename)
                     folded = name.casefold()
                     if folded in seen:
@@ -233,7 +237,11 @@ def _safe_extract_archive(archive: Path, destination: Path) -> str:
             return "zip"
 
         with tarfile.open(archive, "r:*") as tf:
-            for member in tf.getmembers():
+            members = tf.getmembers()
+            total_members = max(1, len(members))
+            for index, member in enumerate(members, 1):
+                if progress:
+                    progress(int(7 * index / total_members), f"Extracting {member.name}")
                 name = _safe_member_name(member.name)
                 folded = name.casefold()
                 if folded in seen:
@@ -263,11 +271,11 @@ def _safe_extract_archive(archive: Path, destination: Path) -> str:
         raise
 
 @contextmanager
-def _prepared_target(target: Path):
+def _prepared_target(target: Path, progress=None):
     if target.is_file() and _is_archive(target):
         with tempfile.TemporaryDirectory(prefix="atlas-intake-") as td:
             root = Path(td)
-            fmt = _safe_extract_archive(target, root)
+            fmt = _safe_extract_archive(target, root, progress=progress)
             yield root, fmt
     else:
         yield target, None
@@ -462,17 +470,27 @@ def _manifest_sha256(files: list[dict[str, Any]]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def build_intake(target: Path) -> dict[str, Any]:
+def build_intake(target: Path, progress=None) -> dict[str, Any]:
+    def mark(percent: int, label: str) -> None:
+        if progress:
+            progress(percent, label)
+
     target = target.expanduser().resolve()
     if not target.exists():
         raise FileNotFoundError(target)
+    mark(4, "Hashing input")
     input_sha256 = _sha256(target) if target.is_file() else None
-    with _prepared_target(target) as (scan_root, archive_format):
+    mark(7, f"Opening {target.name}")
+    with _prepared_target(target, progress=lambda p, label: mark(7 + p, label)) as (scan_root, archive_format):
+        mark(10, f"Reading {archive_format or 'workspace'}")
         source_files = _files(scan_root)
+        mark(12, f"Discovered {len(source_files)} files")
         aggregate = hashlib.sha256()
         files: list[dict[str, Any]] = []
         contracts: list[dict[str, Any]] = []
-        for path in source_files:
+        total_files = max(1, len(source_files))
+        for index, path in enumerate(source_files, 1):
+            mark(12 + int(43 * index / total_files), f"Indexing {path.name}")
             record, units = _record_file(path, scan_root)
             files.append(record)
             contracts.extend(units)
@@ -480,8 +498,10 @@ def build_intake(target: Path) -> dict[str, Any]:
             aggregate.update(record["sha256"].encode("ascii"))
         source_hash = aggregate.hexdigest()
         manifest_sha256 = _manifest_sha256(files)
+        mark(60, "Capturing local toolchain")
         target_id = _safe_id(f"{target.name}-{source_hash[:16]}")
-        return {
+        mark(95, "Assembling intake evidence")
+        result = {
             "intake_version": INTAKE_VERSION,
             "id": target_id,
             "captured_at": datetime.now(timezone.utc).isoformat(),
@@ -520,6 +540,8 @@ def build_intake(target: Path) -> dict[str, Any]:
             "files": files,
             "contracts": contracts,
         }
+        mark(100, "Intake complete")
+        return result
 
 def write_intake_report(root: Path, report: dict[str, Any]) -> Path:
     out = root / "reports" / "intake"
