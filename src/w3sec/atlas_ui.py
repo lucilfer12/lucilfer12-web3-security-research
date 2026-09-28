@@ -1091,7 +1091,8 @@ class AtlasApp(tk.Tk):
             except Exception:
                 pass
             self.progress_animation_id = None
-        self._set_progress(5, "Starting")
+        self._set_progress(1, "Starting")
+        self._animate_progress()
         self.status.set(f"{name} - running in background - ATLAS remains usable")
         self.spinner.configure(text="●", fg="#62AAE5")
         self._log(f"[{self._clock()}] START  {name}")
@@ -1130,13 +1131,16 @@ class AtlasApp(tk.Tk):
 
     def _animate_progress(self) -> None:
         target = self.progress_target
-        if self.progress_value >= target:
+        if not self.busy:
             self.progress_animation_id = None
-            if self.busy and self.progress_caption:
-                self.status.set(f"{self.task_name} · {self.progress_caption}")
             return
-        self._set_progress(self.progress_value + 1)
-        self.progress_animation_id = self.after(18, self._animate_progress)
+        # Keep the UI visibly alive between real worker checkpoints.
+        # Real callbacks can jump the value forward; 100% is reserved for completion.
+        next_value = min(99, max(self.progress_value + 1, target))
+        self._set_progress(next_value)
+        if self.progress_value < 99:
+            self.progress_caption = self.progress_caption or "Working"
+        self.progress_animation_id = self.after(250, self._animate_progress)
 
     def _refresh_progress_line(self) -> None:
         if not hasattr(self, "progress"):
