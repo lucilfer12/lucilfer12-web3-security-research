@@ -129,6 +129,29 @@ class QualityHardeningTests(unittest.TestCase):
             self.assertEqual(first["target"]["manifest_sha256"], second["target"]["manifest_sha256"])
             self.assertEqual(first["target"]["content_address"], f"sha256:{first['target']['source_hash']}")
 
+    def test_evidence_graph_keeps_unproved_findings_as_debt(self):
+        import json
+        from w3sec.evidence import build_evidence_graph
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            report_dir = root / "reports" / "contract-audits"
+            report_dir.mkdir(parents=True)
+            (report_dir / "audit.json").write_text(json.dumps({
+                "id": "audit-1",
+                "findings": [{
+                    "id": "F-1",
+                    "file": "Vault.sol",
+                    "line": 10,
+                    "source_hash": "a" * 64,
+                    "security_property": "authorization integrity",
+                }],
+            }), encoding="utf-8")
+            graph = build_evidence_graph(root)
+            self.assertEqual(1, graph["summary"]["finding_count"])
+            self.assertEqual(0, graph["summary"]["validated_count"])
+            self.assertEqual(3, graph["summary"]["research_debt_count"])
+            self.assertTrue(graph["graph_sha256"])
+
     def test_quality_report_is_structurally_healthy(self):
         from w3sec.quality import build_quality_report
         report = build_quality_report(ROOT)

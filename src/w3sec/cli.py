@@ -10,6 +10,7 @@ from .contract_audit import build_contract_audit, write_contract_audit
 from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
 from .coverage import build_coverage
 from .experiments import load_experiment, result_to_json, run_experiment
+from .evidence import build_evidence_graph, write_evidence_graph
 from .finding_gate import gate_summary
 from .export import graph_document
 from .federation import (
@@ -72,6 +73,10 @@ def main() -> int:
     quality.add_argument("path", nargs="?", default=".")
     quality.add_argument("--json", action="store_true")
     quality.add_argument("--write", action="store_true")
+    evidence = sub.add_parser("evidence", help="build the evidence graph and research-debt ledger")
+    evidence.add_argument("path", nargs="?", default=".")
+    evidence.add_argument("--json", action="store_true")
+    evidence.add_argument("--write", action="store_true")
 
     contract_audit = sub.add_parser("audit-contract", help="audit a contract file, archive, or repository")
     contract_audit.add_argument("target")
@@ -228,6 +233,23 @@ def main() -> int:
             f"proof_findings={value['proof_debt']['finding_count']}"
         )
         return 0 if value["ok"] else 1
+
+    if args.command == "evidence":
+        value = build_evidence_graph(root)
+        if args.write:
+            path = write_evidence_graph(root)
+            print(f"evidence_graph={path}")
+        if args.json:
+            _print_json(value)
+        else:
+            summary = value["summary"]
+            print(
+                f"findings={summary['finding_count']} "
+                f"validated={summary['validated_count']} "
+                f"research_debt={summary['research_debt_count']} "
+                f"sha256={value['graph_sha256']}"
+            )
+        return 0
 
     if args.command == "federate":
         value = build_federation_snapshot(root)
