@@ -126,7 +126,7 @@ if proc.returncode != 0:
 with open(out_path, "wb") as handle:
     handle.write(proc.stdout)
 '@ | Set-Content $AuditPy -Encoding utf8
-python $AuditPy (Join-Path $Root "dist\atlas-cli.exe") $SmokeZip $Root $SmokeJson
+python $AuditPy (Join-Path $Stage "dist\atlas-cli.exe") $SmokeZip $Root $SmokeJson
 if ($LASTEXITCODE -ne 0) { throw "Packaged CLI audit smoke test failed" }
 $SmokeCheck = @'
 import json
