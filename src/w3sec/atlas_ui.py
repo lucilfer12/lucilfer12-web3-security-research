@@ -27,7 +27,6 @@ from .inventory import build_inventory
 from .ledger import verify_chain
 from .promotion import build_promotion_engine, write_promotion_report
 from .query import CaseQuery, query_cases, summarize_cases
-from .quality import build_quality_report
 from .research_intelligence import build_research_metrics, write_longitudinal_report
 from .validator import validate_repo
 from .versions import build_version_diff_report, write_version_diff_report
@@ -84,12 +83,97 @@ def read_report(root: Path, relative: str, default: object = {}) -> object:
     except (OSError, json.JSONDecodeError):
         return default
 
+class GlassButton(tk.Button):
+    """Native Tk button with a composited 70%-visible forest surface.
+
+    A real Button is used for input semantics so mouse, keyboard and accessibility
+    activation are handled by Tk rather than a canvas event shim.
+    """
+    def __init__(self, parent, text, command, app, *, font=("Segoe UI", 9, "bold"),
+                 height=38, padx=12, radius=8):
+        super().__init__(
+            parent, text=text, command=command, font=font,
+            bd=0, relief="flat", highlightthickness=0,
+            activeforeground="#ffffff", foreground="#e3f4ff",
+            compound="center", cursor="hand2", takefocus=1,
+        )
+        self._app=app; self._text=text; self._height=height; self._padx=padx
+        self._photo=None; self._hover=False; self._active=False
+        self._last_size=(0,0); self._redrawing=False
+        self.configure(height=max(1,height), padx=padx, pady=0)
+        self.bind("<Enter>", self._enter, add="+")
+        self.bind("<Leave>", self._leave, add="+")
+        self.bind("<ButtonPress-1>", self._press, add="+")
+        self.bind("<ButtonRelease-1>", self._release, add="+")
+        self.bind("<Configure>", lambda _e: self._redraw(), add="+")
+        self.after_idle(self._redraw)
+
+    def _enter(self, _event=None):
+        self._hover=True; self._last_size=(0,0); self._redraw()
+
+    def _leave(self, _event=None):
+        self._hover=False; self._active=False; self._last_size=(0,0); self._redraw()
+
+    def _press(self, _event=None):
+        self._active=True; self._last_size=(0,0); self._redraw()
+
+    def _release(self, _event=None):
+        self._active=False; self._last_size=(0,0); self._redraw()
+
+    def set_active(self, active: bool):
+        self._active = bool(active)
+        self._last_size=(0,0)
+        self._redraw()
+
+    def _background_crop(self):
+        image=self._app._background_image
+        if image is None: return None
+        self._app._ensure_background_cache()
+        fitted=self._app._background_fitted
+        root_w, root_h = fitted.size
+        x=max(0,self.winfo_rootx()-self._app.winfo_rootx()); y=max(0,self.winfo_rooty()-self._app.winfo_rooty())
+        w=max(self.winfo_width(),2); h=max(self.winfo_height(),2)
+        if x >= root_w or y >= root_h:
+            return None
+        right=max(x+1,min(x+w,root_w)); bottom=max(y+1,min(y+h,root_h))
+        crop=fitted.crop((x,y,right,bottom))
+        if crop.size!=(w,h):
+            canvas=Image.new("RGB",(w,h)); canvas.paste(crop,(0,0)); crop=canvas
+        return crop
+
+    def _redraw(self):
+        if not self.winfo_exists() or self._redrawing:
+            return
+        w,h=max(self.winfo_width(),2),max(self.winfo_height(),2)
+        if (w,h)==self._last_size and self._photo is not None:
+            return
+        self._redrawing=True
+        self._last_size=(w,h)
+        base=self._background_crop()
+        if base is None: base=Image.new("RGB",(w,h),"#0a1930")
+        base=base.convert("RGBA")
+        # Blend into the actual page background. Only hover/active states add
+        # a light glass wash; idle buttons carry no visible rectangle.
+        tint_alpha=34 if self._active else (16 if self._hover else 0)
+        glass=Image.alpha_composite(base,Image.new("RGBA",base.size,(4,23,43,tint_alpha)))
+        self._photo=ImageTk.PhotoImage(glass)
+        try:
+            self.configure(image=self._photo, text=self._text,
+                           foreground="#ffffff" if (self._active or self._hover) else "#e3f4ff")
+        finally:
+            self._redrawing=False
 
 class AtlasApp(tk.Tk):
     def __init__(self, initial_target: Path | None = None) -> None:
         super().__init__()
         self.title("ATLAS — Web3 Security Research OS")
-        self.geometry("1540x940")
+        screen_w = max(self.winfo_screenwidth(), 1180)
+        screen_h = max(self.winfo_screenheight(), 740)
+        window_w = min(1540, screen_w - 24)
+        window_h = min(940, screen_h - 56)
+        window_w = max(window_w, 1180)
+        window_h = max(window_h, 740)
+        self.geometry(f"{window_w}x{window_h}+0+0")
         self.minsize(1180, 740)
         self.configure(bg="#06121f")
         self.repo = discover_repo()
@@ -102,6 +186,9 @@ class AtlasApp(tk.Tk):
         self.job_history: list[dict[str, object]] = []
         self.progress_value = 0
         self.progress_caption = "READY"
+        self._current_page_name = ""
+        self._page_scroll = 0
+        self._page_max_scroll = 0
         self._build_shell()
         self._build_pages()
         self._set_repo(self.repo)
@@ -122,53 +209,120 @@ class AtlasApp(tk.Tk):
         return next((path for path in candidates if path.is_file()), None)
 
     def _init_background(self) -> None:
-        self._background_canvas = tk.Canvas(
-            self, bg="#050b15", highlightthickness=0, bd=0,
-        )
-        self._background_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self._background_canvas.lower()
         self._background_source = self._background_asset()
         self._background_image = None
-        self._background_photo = None
+        self._background_surfaces: list[tuple[tk.Widget, tk.Label]] = []
+        self._background_cache_size = (0, 0)
+        self._background_fitted = None
+        self._background_redraw_after = None
+        self._background_draw_queue = []
+        self._background_draw_after = None
         if self._background_source is None:
             return
         try:
             self._background_image = Image.open(self._background_source).convert("RGB")
-            self._background_canvas.bind("<Configure>", self._resize_background)
-            self.after_idle(self._resize_background)
         except (OSError, ValueError):
             self._background_image = None
 
-    def _resize_background(self, _event=None) -> None:
+    def _apply_background(self, widget: tk.Widget) -> None:
         if self._background_image is None:
             return
-        width = max(self.winfo_width(), 1)
-        height = max(self.winfo_height(), 1)
+        surface = tk.Label(widget, bd=0, highlightthickness=0)
+        surface.place(x=0, y=0, relwidth=1, relheight=1)
+        surface.lower()
+        self._background_surfaces.append((widget, surface))
+        self._schedule_background_redraw()
+
+    def _ensure_background_cache(self) -> None:
+        if self._background_image is None:
+            return
+        root_w = max(self.winfo_width(), 1)
+        root_h = max(self.winfo_height(), 1)
+        if self._background_cache_size == (root_w, root_h) and self._background_fitted is not None:
+            return
         fitted = ImageOps.fit(
-            self._background_image,
-            (width, height),
-            method=Image.Resampling.LANCZOS,
-            centering=(0.5, 0.5),
+            self._background_image, (root_w, root_h),
+            method=Image.Resampling.LANCZOS, centering=(0.5, 0.5)
+        ).convert("RGBA")
+        self._background_fitted = Image.alpha_composite(
+            fitted, Image.new("RGBA", fitted.size, (4, 23, 43, 77))
         )
-        self._background_photo = ImageTk.PhotoImage(fitted)
-        self._background_canvas.delete("atlas-background")
-        self._background_canvas.create_image(
-            0, 0, anchor="nw", image=self._background_photo, tags="atlas-background"
-        )
-        self._background_canvas.tag_lower("atlas-background")
+        self._background_cache_size = (root_w, root_h)
+
+    def _schedule_background_redraw(self, _event=None) -> None:
+        if self._background_image is None or not self.winfo_exists():
+            return
+        if self._background_redraw_after is not None:
+            try:
+                self.after_cancel(self._background_redraw_after)
+            except tk.TclError:
+                pass
+        self._background_redraw_after = self.after(60, self._redraw_visible_backgrounds)
+
+    def _redraw_visible_backgrounds(self) -> None:
+        self._background_redraw_after = None
+        if self._background_image is None:
+            return
+        self._ensure_background_cache()
+        self._background_draw_queue = [
+            pair for pair in self._background_surfaces
+            if pair[0].winfo_exists() and pair[0].winfo_ismapped()
+        ]
+        self._redraw_next_background()
+
+    def _redraw_next_background(self) -> None:
+        if self._background_draw_queue:
+            widget, surface = self._background_draw_queue.pop(0)
+            self._render_surface(widget, surface)
+            self._background_draw_after = self.after_idle(self._redraw_next_background)
+            return
+        self._background_draw_after = None
+
+    def _render_surface(self, widget: tk.Widget, surface: tk.Label) -> None:
+        if self._background_fitted is None:
+            return
+        fitted = self._background_fitted
+        root_w, root_h = fitted.size
+        x = max(0, widget.winfo_rootx() - self.winfo_rootx())
+        y = max(0, widget.winfo_rooty() - self.winfo_rooty())
+        width = max(widget.winfo_width(), 2)
+        height = max(widget.winfo_height(), 2)
+        if x >= root_w or y >= root_h:
+            return
+        right = max(x + 1, min(x + width, root_w))
+        bottom = max(y + 1, min(y + height, root_h))
+        crop = fitted.crop((x, y, right, bottom))
+        if crop.size != (width, height):
+            canvas = Image.new("RGBA", (width, height), (7, 18, 29, 255))
+            canvas.paste(crop, (0, 0))
+            crop = canvas
+        photo = ImageTk.PhotoImage(crop)
+        surface.configure(image=photo)
+        surface._atlas_photo = photo
 
     def _build_shell(self) -> None:
         self.configure(bg="#050b15")
         self._init_background()
+        self.bind("<Configure>", self._schedule_background_redraw, add="+")
         self.sidebar = tk.Frame(self, bg="#081D56")
         self.sidebar.place(x=16, y=16, width=222, relheight=1, height=-32)
+        self._apply_background(self.sidebar)
         self.brand = tk.Label(self.sidebar, text="ATLAS", fg="#ffffff", bg="#081D56",
                               font=("Segoe UI", 25, "bold"), anchor="w")
         self.brand.pack(fill="x", padx=20, pady=(20, 0))
         tk.Label(self.sidebar, text=APP_TAGLINE.upper(), fg="#8bbfe3", bg="#081D56",
-                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x", padx=21, pady=(0, 22))
-        self.nav = tk.Frame(self.sidebar, bg="#081D56")
-        self.nav.pack(fill="x", expand=False, padx=10)
+                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x", padx=21, pady=(0, 10))
+        # Scrollable navigation without a visible scrollbar. The canvas itself
+        # carries the continuous glass background; buttons are direct windows
+        # on it so there is no opaque inner Frame hiding the forest.
+        self.nav_view = tk.Canvas(self.sidebar, bg="#081D56", bd=0, highlightthickness=0)
+        self.nav_view.pack(fill="both", expand=True, padx=10, pady=(0, 6))
+        self.nav_window_ids: list[int] = []
+        self._nav_content_height = 0
+        self.nav_view.bind("<Configure>", self._nav_configure, add="+")
+        self.bind_all("<MouseWheel>", self._mousewheel, add="+")
+        self.bind_all("<Button-4>", self._mousewheel, add="+")
+        self.bind_all("<Button-5>", self._mousewheel, add="+")
         self.pages: dict[str, tk.Frame] = {}
         self.nav_buttons: dict[str, tk.Button] = {}
         nav = [
@@ -177,31 +331,43 @@ class AtlasApp(tk.Tk):
             ("Temporal Ledger", "\u25f7"), ("Promotion", "\u2197"), ("Protocol Versions", "\u25c7"),
             ("Reports", "\u2261"), ("Settings", "\u2699"),
         ]
+        y = 4
         for name, icon in nav:
-            btn = tk.Button(
-                self.nav, text=f"{icon}  {name}", command=lambda n=name: self.show_page(n),
-                bg="#081D56", fg="#a9c8de", activebackground="#10316f", activeforeground="#ffffff",
-                relief="flat", bd=0, anchor="w", padx=14, pady=9, font=("Segoe UI", 10), cursor="hand2",
+            btn = GlassButton(
+                self.nav_view, f"{icon}  {name}", lambda n=name: self.show_page(n), self,
+                font=("Segoe UI", 10), height=42, padx=14,
             )
-            btn.pack(fill="x", pady=2)
+            item_id = self.nav_view.create_window((0, y), window=btn, anchor="nw",
+                                                  height=42, width=190)
+            self.nav_window_ids.append(item_id)
             self.nav_buttons[name] = btn
+            y += 46
+        self._nav_content_height = y + 4
+        self.nav_view.configure(scrollregion=(0, 0, 1, self._nav_content_height))
         tk.Label(self.sidebar, text="RESEARCH WORKSPACE", fg="#6fa9d0", bg="#081D56",
                  font=("Segoe UI", 8, "bold")).pack(side="bottom", padx=20, pady=(0, 18), anchor="w")
         self.main = tk.Frame(self, bg="#050b15")
         self.main.place(x=254, y=16, relwidth=1, width=-270, relheight=1, height=-32)
+        self._apply_background(self.main)
         top = tk.Frame(self.main, bg="#081D56")
         top.pack(fill="x", pady=(0, 12), ipady=4)
         self.repo_var = tk.StringVar()
         tk.Label(top, text="REPOSITORY", fg="#7fb5db", bg="#081D56",
                  font=("Segoe UI", 8, "bold")).pack(side="left", padx=(15, 7), pady=10)
-        tk.Entry(top, textvariable=self.repo_var, bg="#081D56", fg="#f3fbff",
-                 insertbackground="#46F0D2", relief="flat", font=("Segoe UI", 9), highlightthickness=0).pack(
-                     side="left", fill="x", expand=True, ipady=7)
-        self._top_button(top, "CHOOSE", self.choose_repo)
-        self._top_button(top, "AUDIT", self.audit_repo)
-        self._top_button(top, "FULL REFRESH", self.full_refresh)
-        self._top_button(top, "SETTINGS", lambda: self.show_page("Settings"))
+        # Reserve the action area first so the expanding repository field can never push controls off-screen.
+        # Fixed compact action rail: only the four top buttons are constrained here.
+        actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=292, height=34)
+        actions.pack(side="right", padx=(4, 4))
+        actions.pack_propagate(False)
+        self._top_button(actions, "CHOOSE", self.choose_repo, 0, 2, 58)
+        self._top_button(actions, "AUDIT", self.audit_repo, 64, 2, 50)
+        self._top_button(actions, "FULL REFRESH", self.full_refresh, 120, 2, 98)
+        self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 224, 2, 64)
+        repo_entry = tk.Entry(top, textvariable=self.repo_var, bg="#081D56", fg="#f3fbff",
+                 insertbackground="#46F0D2", relief="flat", font=("Segoe UI", 9), highlightthickness=0)
+        repo_entry.pack(side="left", fill="x", expand=True, ipady=7)
         status_row = tk.Frame(self.main, bg="#050b15")
+        self._apply_background(status_row)
         status_row.pack(fill="x", pady=(0, 5))
         self.status = tk.StringVar(value="ATLAS ready")
         tk.Label(status_row, textvariable=self.status, fg="#a9c8de", bg="#050b15",
@@ -219,12 +385,78 @@ class AtlasApp(tk.Tk):
         self.progress.bind("<Configure>", lambda _e: self._refresh_progress_line())
         self.content = tk.Frame(self.main, bg="#050b15")
         self.content.pack(fill="both", expand=True)
+        self._apply_background(self.content)
+        self.content.bind("<Configure>", lambda _e: self.after_idle(self._reflow_page), add="+")
 
-    def _top_button(self, parent: tk.Frame, text: str, command) -> None:
-        tk.Button(parent, text=text, command=command, bg="#081D56", fg="#dceeff",
-                  activebackground="#12357a", activeforeground="#ffffff", relief="flat",
-                  font=("Segoe UI", 8, "bold"), padx=11, pady=8, bd=0, cursor="hand2").pack(
-                      side="left", padx=2, pady=4)
+    def _nav_configure(self, event=None) -> None:
+        width = max(1, self.nav_view.winfo_width())
+        for item_id in getattr(self, "nav_window_ids", []):
+            self.nav_view.itemconfigure(item_id, width=width)
+        self.nav_view.configure(
+            scrollregion=(0, 0, width, max(self._nav_content_height, self.nav_view.winfo_height()))
+        )
+        self._redraw_nav_surface()
+
+    def _redraw_nav_surface(self) -> None:
+        if self._background_image is None or not self.nav_view.winfo_exists():
+            return
+        self._ensure_background_cache()
+        fitted = self._background_fitted
+        root_w, root_h = fitted.size
+        x = max(0, self.nav_view.winfo_rootx() - self.winfo_rootx())
+        y = max(0, self.nav_view.winfo_rooty() - self.winfo_rooty())
+        w = max(self.nav_view.winfo_width(), 2)
+        h = max(self.nav_view.winfo_height(), 2)
+        if x >= root_w or y >= root_h:
+            return
+        right = max(x + 1, min(x + w, root_w))
+        bottom = max(y + 1, min(y + h, root_h))
+        crop = fitted.crop((x, y, right, bottom))
+        if crop.size != (w, h):
+            canvas = Image.new("RGBA", (w, h), (7, 18, 29, 255))
+            canvas.paste(crop, (0, 0)); crop = canvas
+        glass = Image.alpha_composite(crop, Image.new("RGBA", crop.size, (4, 23, 43, 77)))
+        self._nav_photo = ImageTk.PhotoImage(glass)
+        self.nav_view.delete("nav-bg")
+        self.nav_view.create_image(0, 0, anchor="nw", image=self._nav_photo, tags=("nav-bg",))
+        self.nav_view.tag_lower("nav-bg")
+
+    def _mousewheel(self, event) -> None:
+        """Route the physical wheel to navigation or the current page."""
+        widget = getattr(event, "widget", None)
+        if widget is None:
+            try:
+                widget = self.winfo_containing(event.x_root, event.y_root)
+            except tk.TclError:
+                widget = None
+        if widget is None:
+            return
+
+        # Navigation has its own scroll region.
+        if self._is_descendant(widget, self.nav_view):
+            if hasattr(event, "delta") and event.delta:
+                steps = -int(event.delta / 120) or (-1 if event.delta < 0 else 1)
+            else:
+                steps = 1 if getattr(event, "num", None) == 5 else -1
+            self.nav_view.yview_scroll(steps, "units")
+            return "break"
+
+        # Native text/list controls keep their own wheel behavior.
+        if isinstance(widget, (tk.Text, tk.Listbox)):
+            return
+
+        # Everything else inside the working area scrolls the current page.
+        if self._is_descendant(widget, self.content):
+            if hasattr(event, "delta") and event.delta:
+                steps = -int(event.delta / 120) or (-1 if event.delta < 0 else 1)
+            else:
+                steps = 1 if getattr(event, "num", None) == 5 else -1
+            self._scroll_page(steps)
+            return "break"
+    def _top_button(self, parent: tk.Frame, text: str, command, x: int, y: int, width: int) -> None:
+        # Top-bar buttons are deliberately ~65% of the previous visual height.
+        btn=GlassButton(parent, text, command, self, font=("Segoe UI", 7, "bold"), height=20, padx=3)
+        btn.place(x=x, y=y, width=width, height=28)
 
     def _build_pages(self) -> None:
         names = ["Dashboard", "Import / Intake", "Audit Findings", "Cases", "Research Intelligence",
@@ -233,6 +465,7 @@ class AtlasApp(tk.Tk):
         for name in names:
             frame = tk.Frame(self.content, bg="#06121f")
             self.pages[name] = frame
+            self._apply_background(frame)
         self._dashboard_page()
         self._intake_page()
         self._audit_findings_page()
@@ -242,21 +475,64 @@ class AtlasApp(tk.Tk):
     def show_page(self, name: str) -> None:
         for frame in self.pages.values():
             frame.place_forget()
-        self.pages[name].place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._current_page_name = name
+        self._page_scroll = 0
+        self._page_max_scroll = 0
+        page = self.pages[name]
+        page.place(relx=0, rely=0, relwidth=1, height=max(self.content.winfo_height(), 1), y=0)
         for key, btn in self.nav_buttons.items():
-            active = key == name
-            btn.configure(bg="#10316f" if active else "#081D56",
-                          fg="#ffffff" if active else "#a9c8de")
+            btn.set_active(key == name)
         self.status.set(f"ATLAS - {name}")
+        self.after_idle(self._reflow_page)
+
+    def _reflow_page(self) -> None:
+        name = self._current_page_name
+        if not name or name not in self.pages or not self.content.winfo_exists():
+            return
+        page = self.pages[name]
+        page.update_idletasks()
+        viewport_h = max(self.content.winfo_height(), 1)
+        requested_h = max(page.winfo_reqheight(), viewport_h)
+        self._page_max_scroll = max(0, requested_h - viewport_h)
+        self._page_scroll = min(self._page_scroll, self._page_max_scroll)
+        page.place(relx=0, rely=0, relwidth=1, height=requested_h, y=-self._page_scroll)
+
+    def _scroll_page(self, steps: int) -> None:
+        if self._page_max_scroll <= 0:
+            self._reflow_page()
+            if self._page_max_scroll <= 0:
+                return
+        self._page_scroll = max(0, min(self._page_max_scroll, self._page_scroll + steps * 42))
+        page = self.pages.get(self._current_page_name)
+        if page is not None:
+            page.place_configure(y=-self._page_scroll)
+        self._schedule_background_redraw()
+
+    def _is_descendant(self, widget: tk.Widget | None, ancestor: tk.Widget) -> bool:
+        """Return True when widget is ancestor or nested below it."""
+        current = widget
+        while current is not None:
+            if current is ancestor:
+                return True
+            try:
+                parent_path = current.winfo_parent()
+                if not parent_path:
+                    break
+                current = self.nametowidget(parent_path)
+            except (tk.TclError, KeyError, AttributeError):
+                break
+        return False
 
     def _panel(self, parent: tk.Frame, title: str, subtitle: str | None = None, **layout) -> tk.Frame:
         # Open-surface layout: panels are typographic groups, not boxes.
         panel = tk.Frame(parent, bg="#06121f", highlightthickness=0, bd=0)
+        self._apply_background(panel)
         if "row" in layout or "column" in layout or "sticky" in layout:
             panel.grid(**layout)
         else:
             panel.pack(**layout)
         head = tk.Frame(panel, bg="#06121f", highlightthickness=0, bd=0)
+        self._apply_background(head)
         head.pack(fill="x", padx=2, pady=(8, 10))
         tk.Label(head, text=title.upper(), fg="#dceeff", bg="#06121f",
                  font=("Segoe UI", 9, "bold")).pack(side="left")
@@ -269,6 +545,7 @@ class AtlasApp(tk.Tk):
     def _card(self, parent: tk.Frame, title: str, key: str, column: int, row: int = 0) -> None:
         # Metric clusters intentionally have no enclosing card/frame.
         cluster = tk.Frame(parent, bg="#050b15", bd=0, highlightthickness=0)
+        self._apply_background(cluster)
         cluster.grid(row=row, column=column, sticky="nsew", padx=(0, 22), pady=(3, 12))
         tk.Label(cluster, text=title.upper(), fg="#6fa9d0", bg="#050b15",
                  font=("Segoe UI", 7, "bold")).pack(anchor="w")
@@ -313,7 +590,7 @@ class AtlasApp(tk.Tk):
         self.system_lines.pack(fill="both", expand=True, padx=12, pady=8)
         self.system_checks: dict[str, tk.Label] = {}
         labels = ["Knowledge Graph", "Temporal Ledger", "Federation Layer", "Research Intelligence",
-                  "Promotion Engine", "Protocol Versions", "Audit & Validation", "Quality Constitution"]
+                  "Promotion Engine", "Protocol Versions", "Audit & Validation"]
         for label in labels:
             row = tk.Frame(self.system_lines, bg="#06121f")
             row.pack(fill="x", pady=6)
@@ -330,17 +607,18 @@ class AtlasApp(tk.Tk):
 
     def _dashboard_activity(self, parent: tk.Frame) -> None:
         pane = tk.Frame(parent, bg="#06121f")
+        self._apply_background(pane)
         pane.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
         pane.rowconfigure(0, weight=1)
         pane.rowconfigure(1, weight=1)
         pane.columnconfigure(0, weight=1)
         quick = self._panel(pane, "Quick Actions", "READY", row=0, column=0, sticky="nsew")
         grid = tk.Frame(quick, bg="#06121f")
+        self._apply_background(grid)
         grid.pack(fill="both", expand=True, padx=10, pady=8)
         actions = [
             ("IMPORT CONTRACT / REPOSITORY", self.open_import),
             ("AUDIT", self.audit_repo),
-            ("QUALITY CHECK", self.run_quality),
             ("FULL REFRESH", self.full_refresh),
             ("FEDERATION", self.run_federation),
             ("CHRONICLE", self.run_chronicle),
@@ -365,6 +643,7 @@ class AtlasApp(tk.Tk):
         tk.Label(page, text="Load source files, ZIP/TAR archives, or a complete contract repository. Progress reflects actual processing; unavailable engines are reported, never simulated.",
                  fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
         toolbar = tk.Frame(page, bg="#06121f", highlightthickness=0)
+        self._apply_background(toolbar)
         toolbar.pack(fill="x", pady=(0, 8), ipady=6)
         self.target_var = tk.StringVar()
         tk.Entry(toolbar, textvariable=self.target_var, bg="#091a29", fg="#e8f7ff",
@@ -379,6 +658,7 @@ class AtlasApp(tk.Tk):
                  fg="#6f92a5", bg="#06121f", font=("Segoe UI", 8), justify="left").pack(anchor="w", pady=(0, 8))
 
         body = tk.Frame(page, bg="#06121f")
+        self._apply_background(body)
         body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(body, "Registered Inputs", "HASHED", row=0, column=0, sticky="nsew", padx=(0, 5))
@@ -392,15 +672,17 @@ class AtlasApp(tk.Tk):
                                           insertbackground="#ffffff", relief="flat",
                                           font=("Consolas", 9))
         self.intake_detail.pack(fill="both", expand=True, padx=10, pady=10)
-    def _action_button(self, parent: tk.Frame, text: str, command) -> tk.Button:
-        return tk.Button(parent, text=text, command=command, bg="#0a1930", fg="#e8f8ff",
-                         activebackground="#103d68", activeforeground="#ffffff",
-                         relief="flat", bd=0, font=("Segoe UI", 9, "bold"), pady=10, cursor="hand2")
+    def _action_button(self, parent: tk.Frame, text: str, command) -> GlassButton:
+        return GlassButton(
+            parent, text, command, self,
+            font=("Segoe UI", 9, "bold"), height=42, padx=12,
+        )
 
-    def _toolbar_button(self, parent: tk.Frame, text: str, command) -> tk.Button:
-        return tk.Button(parent, text=text, command=command, bg="#081D56", fg="#e3f7ff",
-                         activebackground="#12357a", activeforeground="#ffffff",
-                         relief="flat", bd=0, font=("Segoe UI", 8, "bold"), padx=10, pady=7, cursor="hand2")
+    def _toolbar_button(self, parent: tk.Frame, text: str, command) -> GlassButton:
+        return GlassButton(
+            parent, text, command, self,
+            font=("Segoe UI", 8, "bold"), height=34, padx=10,
+        )
 
     def _intake_selected(self, _event=None) -> None:
         if not self.intake_tree.curselection():
@@ -412,8 +694,29 @@ class AtlasApp(tk.Tk):
             self.intake_detail.insert("end", pretty(items[index]))
 
 
+    def choose_target(self) -> None:
+        """Open the real target picker; archives must remain visible/selectable."""
+        path = filedialog.askopenfilename(
+            title="Choose ATLAS target",
+            filetypes=[
+                ("All supported inputs", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar *.sol *.vy *.rs *.move *.cairo *.go *.ts *.js *.json *.yaml *.yml *.*"),
+                ("Archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar"),
+                ("All files", "*.*"),
+            ],
+        )
+        if path:
+            self.start_target_import(Path(path))
+
+
     def choose_files(self) -> None:
-        paths = filedialog.askopenfilenames(title="Load contract files / artifacts")
+        paths = filedialog.askopenfilenames(
+            title="Load contract files / artifacts",
+            filetypes=[
+                ("All supported inputs", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar *.sol *.vy *.rs *.move *.cairo *.go *.ts *.js *.json *.yaml *.yml *.*"),
+                ("Archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar"),
+                ("All files", "*.*"),
+            ],
+        )
         if not paths:
             return
         self._stage_files([Path(x) for x in paths])
@@ -436,7 +739,7 @@ class AtlasApp(tk.Tk):
         page = self.pages["Audit Findings"]
         tk.Label(page, text="Audit Findings", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
-        body = tk.Frame(page, bg="#06121f"); body.pack(fill="both", expand=True)
+        body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(body, "Findings", "PRIORITIZED", row=0, column=0, sticky="nsew", padx=(0, 5))
         right = self._panel(body, "Finding Detail", "EVIDENCE", row=0, column=1, sticky="nsew", padx=(5, 0))
@@ -521,7 +824,6 @@ class AtlasApp(tk.Tk):
             ("Temporal History", "reports/longitudinal/temporal-history.json"),
             ("Domain Evolution", "reports/longitudinal/domain-evolution.json"),
             ("Promotion Decisions", "reports/longitudinal/promotion-decisions.json"),
-            ("Quality Constitution", "reports/longitudinal/quality-report.json"),
             ("Federation Snapshot", "reports/federation/snapshot.json"),
         ]:
             btn = self._action_button(body, title, lambda r=rel: self.open_report(r))
@@ -648,23 +950,6 @@ class AtlasApp(tk.Tk):
         self._run_task("AUDIT", lambda: audit_repo(self.repo, self._progress_callback))
 
 
-    def run_quality(self) -> None:
-        if not self.repo:
-            self.status.set("Choose a repository first.")
-            return
-        self._run_task("QUALITY", lambda: self._quality_worker())
-
-
-    def _quality_worker(self) -> dict[str, object]:
-        if not self.repo:
-            raise RuntimeError("Choose an ATLAS research repository first.")
-        value = build_quality_report(self.repo)
-        path = self.repo / "reports" / "longitudinal" / "quality-report.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(pretty(value) + "\n", encoding="utf-8")
-        return {"report": value, "report_path": str(path)}
-
-
     def full_refresh(self) -> None:
         if not self.repo:
             self.status.set("Choose a repository first.")
@@ -684,10 +969,6 @@ class AtlasApp(tk.Tk):
         result["domain"] = build_domain_evolution(root); write_domain_evolution(root)
         result["versions"] = build_version_diff_report(root); write_version_diff_report(root)
         result["promotion"] = build_promotion_engine(root); write_promotion_report(root)
-        result["quality"] = build_quality_report(root)
-        quality_path = root / "reports" / "longitudinal" / "quality-report.json"
-        quality_path.parent.mkdir(parents=True, exist_ok=True)
-        quality_path.write_text(pretty(result["quality"]) + "\n", encoding="utf-8")
         result["audit"] = audit_repo(root)
         return result
 
@@ -735,6 +1016,13 @@ class AtlasApp(tk.Tk):
         self.busy = True
         self.task_name = name
         self.task_started = datetime.now().timestamp()
+        self.progress_target = 5
+        if self.progress_animation_id is not None:
+            try:
+                self.after_cancel(self.progress_animation_id)
+            except Exception:
+                pass
+            self.progress_animation_id = None
         self._set_progress(5, "Starting")
         self.status.set(f"{name} - running in background - ATLAS remains usable")
         self.spinner.configure(text="●", fg="#62AAE5")
@@ -761,7 +1049,28 @@ class AtlasApp(tk.Tk):
             self._refresh_progress_line()
 
     def _progress_callback(self, percent: int, caption: str = "") -> None:
-        self.after(0, lambda: self._set_progress(percent, caption))
+        """Show every integer percentage between real worker checkpoints."""
+        target = max(0, min(100, int(percent)))
+
+        def schedule() -> None:
+            self.progress_target = max(self.progress_target, target)
+            if caption:
+                self.progress_caption = caption
+            if self.progress_animation_id is None:
+                self._animate_progress()
+
+        self.after(0, schedule)
+
+
+    def _animate_progress(self) -> None:
+        target = self.progress_target
+        if self.progress_value >= target:
+            self.progress_animation_id = None
+            if self.busy and self.progress_caption:
+                self.status.set(f"{self.task_name} · {self.progress_caption}")
+            return
+        self._set_progress(self.progress_value + 1)
+        self.progress_animation_id = self.after(18, self._animate_progress)
 
     def _refresh_progress_line(self) -> None:
         if not hasattr(self, "progress"):
@@ -867,11 +1176,9 @@ class AtlasApp(tk.Tk):
         history = read_report(root, "reports/longitudinal/temporal-history.json", {})
         versions = read_report(root, "reports/longitudinal/protocol-version-diffs.json", {})
         promotion = read_report(root, "reports/longitudinal/promotion-decisions.json", {})
-        quality = read_report(root, "reports/longitudinal/quality-report.json", {}) or build_quality_report(root)
         cases = summarize_cases(query_cases(root, CaseQuery(text=self.case_query.get().strip() or None)))
         return {"inventory": inventory, "graph": graph, "cases": cases, "intakes": list_intakes(root),
-                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion,
-                "quality": quality}
+                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion}
     def _apply_views(self, data: dict[str, object]) -> None:
         inventory = data["inventory"]
         graph: ResearchGraph = data["graph"]
@@ -896,11 +1203,6 @@ class AtlasApp(tk.Tk):
         self.system_checks["Promotion Engine"].configure(fg="#48dca8")
         self.system_checks["Protocol Versions"].configure(fg="#48dca8")
         self.system_checks["Audit & Validation"].configure(fg="#48dca8")
-        quality = data.get("quality", {})
-        quality_ok = bool(quality.get("ok")) if isinstance(quality, dict) else False
-        self.system_checks["Quality Constitution"].configure(
-            fg="#46F0D2" if quality_ok else "#62AAE5"
-        )
         self.case_tree.delete(0, "end")
         for case in cases:
             self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
@@ -921,7 +1223,6 @@ class AtlasApp(tk.Tk):
         self._set_report_text("temporal_ledger", data["history"])
         self._set_report_text("protocol_versions", data["versions"])
         self._set_report_text("promotion", data["promotion"])
-        self._set_report_text("quality", data["quality"])
     def _set_report_text(self, key: str, value: object) -> None:
         widget = getattr(self, f"text_{key}", None)
         if widget is not None:
@@ -949,14 +1250,14 @@ def run_self_test() -> int:
     if errors:
         log_file.write_text("SELF-TEST: validation failed\n" + "\n".join(errors), encoding="utf-8")
         return 1
-    quality = build_quality_report(root)
-    if not quality.get("ok"):
-        log_file.write_text("SELF-TEST: quality failed\n" + pretty(quality), encoding="utf-8")
+    audit = audit_repo(root)
+    if not audit.get("ok"):
+        log_file.write_text("SELF-TEST: audit failed\n" + pretty(audit), encoding="utf-8")
         return 1
-    graph = ResearchGraph.from_repo(root)
-    inventory = build_inventory(root)
+    ResearchGraph.from_repo(root)
+    build_inventory(root)
     log_file.write_text(
-        f"SELF-TEST: OK\ncases={inventory['case_count']} nodes={len(graph.nodes)} edges={len(graph.edges)}\n",
+        f"SELF-TEST: OK\ncases={audit['graph']['node_count']} nodes={audit['graph']['node_count']} edges={audit['graph']['edge_count']}\n",
         encoding="utf-8",
     )
     return 0
