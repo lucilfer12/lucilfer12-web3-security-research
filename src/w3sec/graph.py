@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,6 +11,7 @@ from .model import LineageEdge, NodeRef
 from .records import discover_case_records, discover_knowledge_files, load_yaml_mapping
 from .intake import list_intakes
 from .contract_audit import list_contract_audits
+from .negative_knowledge import load_negative_results
 
 
 @dataclass
@@ -201,6 +204,70 @@ class ResearchGraph:
                     valid_from=raw.get("valid_from"),
                     valid_to=raw.get("valid_to"),
                 ))
+
+        for path in sorted((root / "runs").glob("*/state.json")):
+            try:
+                state = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            run_id = str(state.get("run_id") or path.parent.name)
+            if not run_id:
+                continue
+            run_ref = NodeRef("run", run_id)
+            graph.add_node(run_ref)
+            for stage, checkpoint in (state.get("stages") or {}).items():
+                stage_id = f"{run_id}:{stage}"
+                stage_ref = NodeRef("run-stage", stage_id)
+                graph.add_edge(LineageEdge(run_ref, "checkpointed", stage_ref))
+                if isinstance(checkpoint, dict) and checkpoint.get("digest"):
+                    graph.add_edge(
+                        LineageEdge(
+                            stage_ref,
+                            "has-digest",
+                            NodeRef("digest", str(checkpoint["digest"])),
+                        )
+                    )
+
+        for negative in load_negative_results(root):
+            negative_id = str(negative.get("id", ""))
+            if not negative_id:
+                continue
+            negative_ref = NodeRef("negative-result", negative_id)
+            graph.add_node(negative_ref)
+            fingerprint = str(negative.get("fingerprint", ""))
+            if fingerprint:
+                graph.add_edge(
+                    LineageEdge(
+                        negative_ref,
+                        "fingerprint",
+                        NodeRef("negative-fingerprint", fingerprint[:24]),
+                    )
+                )
+            hypothesis = str(negative.get("hypothesis", "")).strip()
+            if hypothesis:
+                graph.add_edge(
+                    LineageEdge(
+                        negative_ref,
+                        "tests-hypothesis",
+                        NodeRef("hypothesis", hashlib.sha256(hypothesis.encode("utf-8")).hexdigest()[:20]),
+                    )
+                )
+
+        for path in sorted((root / "reports" / "differential").glob("*.json")):
+            try:
+                report = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            diff_id = path.stem
+            diff_ref = NodeRef("revision-diff", diff_id)
+            graph.add_node(diff_ref)
+            before_id = str(report.get("before_revision", "")).strip()
+            after_id = str(report.get("after_revision", "")).strip()
+            if before_id:
+                graph.add_edge(LineageEdge(diff_ref, "compares-before", NodeRef("revision", before_id)))
+            if after_id:
+                graph.add_edge(LineageEdge(diff_ref, "compares-after", NodeRef("revision", after_id)))
+
         return graph
 
 

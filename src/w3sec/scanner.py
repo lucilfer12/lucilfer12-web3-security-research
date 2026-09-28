@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import json
 import shutil
-import time
 from pathlib import Path
 from typing import Any
 
+from .engine_orchestrator import EngineOrchestrator
 from .intake import OperationCancelled, SOURCE_EXTENSIONS, SIGNAL_PATTERNS, _files, _prepared_target
-from .runtime import run_bounded
 
 SCANNER_VERSION = "1.0"
 
@@ -33,43 +32,7 @@ def _mark(progress, percent: int, label: str) -> None:
 def _run_tool(name: str, spec: dict[str, Any], root: Path, cancel=None) -> dict[str, Any]:
     if cancel and cancel():
         raise OperationCancelled("ATLAS operation cancelled")
-    executable = name
-    path = shutil.which(executable)
-    if not path:
-        return {
-            "engine": name,
-            "available": False,
-            "executed": False,
-            "status": "unavailable",
-            "executable": None,
-        }
-
-    started = time.perf_counter()
-    result = run_bounded(
-        spec["command"](root),
-        cwd=root,
-        timeout=float(spec["timeout"]),
-        max_output_bytes=2_000_000,
-    )
-    elapsed = round(time.perf_counter() - started, 3)
-    if result.cancelled:
-        raise OperationCancelled("ATLAS operation cancelled")
-    return {
-        "engine": name,
-        "available": True,
-        "executed": True,
-        "status": (
-            "timeout" if result.timed_out
-            else "output_limited" if result.output_limited
-            else "passed" if result.returncode == 0
-            else "failed"
-        ),
-        "returncode": result.returncode,
-        "duration_seconds": elapsed,
-        "command": list(result.command),
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-    }
+    return EngineOrchestrator().run_legacy(name, spec, root, cancel=cancel)
 
 
 def _normalize_slither(result: dict[str, Any]) -> list[dict[str, Any]]:
