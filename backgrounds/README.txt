@@ -1,8 +1,10 @@
 ATLAS ORIGINAL BACKGROUNDS
 
-Place the two user-supplied original images in this folder:
+Place the user-supplied original images in this folder:
 atlas_cathedral.png
-atlas_forest.png
+atlas_forest.jpg
+
+ATLAS uses atlas_forest.jpg as the desktop background layer behind the application UI.
 
 Verified SHA-256:
 fa9e3e874f135df37fd8671d1d98f2e91b1767001f083f8bb46c9cd6f59d3fae
