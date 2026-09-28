@@ -359,7 +359,7 @@ class AtlasApp(tk.Tk):
         actions = tk.Frame(top, bg="#081D56", bd=0, highlightthickness=0, width=292, height=34)
         actions.pack(side="right", padx=(4, 4))
         actions.pack_propagate(False)
-        self._top_button(actions, "CHOOSE", self.choose_repo, 0, 2, 58)
+        self._top_button(actions, "CHOOSE TARGET", self.choose_target, 0, 2, 78)
         self._top_button(actions, "AUDIT", self.audit_repo, 64, 2, 50)
         self._top_button(actions, "FULL REFRESH", self.full_refresh, 120, 2, 98)
         self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 224, 2, 64)
