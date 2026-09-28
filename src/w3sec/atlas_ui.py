@@ -294,8 +294,8 @@ class AtlasApp(tk.Tk):
         for i in range(4):
             cards.columnconfigure(i, weight=1, uniform="metric")
         metrics = [
-            ("Cases", "cases"), ("Intakes", "intakes"), ("Contracts", "contracts"), ("Nodes", "nodes"),
-            ("Edges", "edges"), ("Candidates", "candidates"), ("Evidence", "evidence"), ("Invariants", "invariants"),
+            ("Workspace Cases", "cases"), ("Workspace Intakes", "intakes"), ("Workspace Contracts", "contracts"), ("Graph Nodes", "nodes"),
+            ("Graph Edges", "edges"), ("Candidates", "candidates"), ("Evidence", "evidence"), ("Invariants", "invariants"),
         ]
         for i, item in enumerate(metrics):
             self._card(cards, item[0], item[1], i % 4, i // 4)
@@ -362,7 +362,7 @@ class AtlasApp(tk.Tk):
         page = self.pages["Import / Intake"]
         tk.Label(page, text="Contract Intake", fg="#f2fbff", bg="#06121f",
                  font=("Segoe UI", 20, "bold")).pack(anchor="w")
-        tk.Label(page, text="Load source files, ZIP/TAR archives, or a complete contract repository.",
+        tk.Label(page, text="Load source files, ZIP/TAR archives, or a complete contract repository. Progress reflects actual processing; unavailable engines are reported, never simulated.",
                  fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
         toolbar = tk.Frame(page, bg="#06121f", highlightthickness=0)
         toolbar.pack(fill="x", pady=(0, 8), ipady=6)
@@ -747,6 +747,8 @@ class AtlasApp(tk.Tk):
         self.progress_value = max(0, min(100, int(percent)))
         if caption:
             self.progress_caption = caption
+            if getattr(self, "busy", False):
+                self.status.set(f"{self.task_name} · {caption}")
         if hasattr(self, "progress_percent"):
             self.progress_percent.configure(text=f"{self.progress_value}%")
         if hasattr(self, "progress") and self.progress.winfo_exists():

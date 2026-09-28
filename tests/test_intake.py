@@ -115,6 +115,29 @@ class IntakeTests(unittest.TestCase):
             self.assertEqual("intake:" + report["id"], "intake:" + event["subject"]["id"])
             self.assertEqual([], __import__("w3sec.ledger", fromlist=["verify_chain"]).verify_chain(root / "ledger" / "events.jsonl"))
 
+    def test_zip_audit_reports_live_progress_and_real_target_counts(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "OneLine.sol"
+            source.write_text("pragma solidity ^0.8.20;\n", encoding="utf-8")
+            archive = root / "one-line.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.write(source, arcname="OneLine.sol")
+            progress = []
+            research = root / "research"
+            report = build_contract_audit(archive, research, lambda p, label: progress.append((p, label)))
+            percentages = [p for p, _ in progress]
+            self.assertGreater(len(percentages), 6)
+            self.assertEqual(100, percentages[-1])
+            self.assertTrue(any("Discovered 1 files" in label for _, label in progress))
+            self.assertEqual(1, report["summary"]["file_count"])
+            self.assertEqual(1, report["summary"]["source_file_count"])
+            self.assertEqual(0, report["summary"]["contract_count"])
+            self.assertEqual(0, report["summary"]["finding_count"])
+            self.assertIn("engine_scan", report)
+            self.assertIn("structural", report["engine_scan"])
+            self.assertEqual(1, report["engine_scan"]["structural"]["source_file_count"])
+
 
 if __name__ == "__main__":
     unittest.main()

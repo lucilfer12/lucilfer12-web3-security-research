@@ -8,6 +8,7 @@ from typing import Any
 
 from .finding_gate import attach_gate, gate_summary
 from .intake import _prepared_target, build_intake, write_intake_report
+from .scanner import run_security_scan
 
 
 PRIORITY = {
@@ -144,7 +145,10 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
     target = target.expanduser().resolve()
     research_root = research_root.expanduser().resolve()
     mark(15, "Building contract intake")
-    intake = build_intake(target)
+    intake = build_intake(
+        target,
+        progress=lambda percent, label: mark(15 + int(percent * 0.10), label),
+    )
     intake_path = write_intake_report(research_root, intake)
     mark(25, "Starting structural scan")
 
@@ -226,7 +230,11 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
         "verification": gate_summary(findings),
         "intake": intake,
     }
-    mark(95, "Writing audit findings")
+    engine_scan = run_security_scan(target, progress=mark)
+    report["engine_scan"] = engine_scan
+    report["summary"]["engine_finding_count"] = int(engine_scan.get("engine_finding_count", 0))
+
+    mark(99, "Writing audit findings")
     write_contract_audit(research_root, report)
     mark(100, "Audit complete")
     return report
