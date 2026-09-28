@@ -196,7 +196,7 @@ class AtlasApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
         if self.initial_target:
-            self.after(500, lambda: self.start_target_import(self.initial_target))
+            self.after(500, lambda: self._start_initial_target_audit(self.initial_target))
 
 
 
@@ -707,7 +707,10 @@ class AtlasApp(tk.Tk):
             ],
         )
         if path:
-            self.start_target_import(Path(path))
+            target = Path(path)
+            self.target_var.set(str(target))
+            self.show_page("Import / Intake")
+            self.audit_target()
 
 
     def choose_files(self) -> None:
@@ -878,6 +881,15 @@ class AtlasApp(tk.Tk):
         self.start_target_import(stage)
 
 
+    def _start_initial_target_audit(self, target: Path) -> None:
+        if not target.exists():
+            self.status.set("Initial target does not exist.")
+            return
+        self.target_var.set(str(target))
+        self.show_page("Import / Intake")
+        self._run_task("AUDIT TARGET", lambda: self._audit_target_worker(target), switch_to_import=True)
+
+
     def start_target_import(self, target: Path) -> None:
         if not target.exists():
             self.status.set("Import target does not exist.")
@@ -940,10 +952,16 @@ class AtlasApp(tk.Tk):
         else:
             self.status.set(f"Report not found · {relative}")
     def audit_repo(self) -> None:
+        raw_target = self.target_var.get().strip()
+        if raw_target:
+            target = Path(raw_target).expanduser()
+            if target.exists():
+                self.audit_target()
+                return
         if not self.repo:
             self.status.set("Choose a repository first.")
             return
-        self._run_task("AUDIT", lambda: audit_repo(self.repo, self._progress_callback))
+        self._run_task("AUDIT REPOSITORY", lambda: audit_repo(self.repo, self._progress_callback))
 
 
     def full_refresh(self) -> None:
