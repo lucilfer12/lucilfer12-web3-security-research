@@ -178,6 +178,8 @@ class AtlasApp(tk.Tk):
         self.configure(bg="#06121f")
         self.repo = discover_repo()
         self.initial_target = initial_target
+        # Dashboard starts as a clean session; historical artifacts are not live target metrics.
+        self.session_active = bool(initial_target)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="atlas-worker")
         self.busy = False
         self.task_name = ""
@@ -551,7 +553,7 @@ class AtlasApp(tk.Tk):
         cluster.grid(row=row, column=column, sticky="nsew", padx=(0, 22), pady=(3, 12))
         tk.Label(cluster, text=title.upper(), fg="#6fa9d0", bg="#050b15",
                  font=("Segoe UI", 7, "bold")).pack(anchor="w")
-        value = tk.Label(cluster, text="", fg="#f4fbff", bg="#050b15",
+        value = tk.Label(cluster, text="0", fg="#f4fbff", bg="#050b15",
                          font=("Segoe UI", 27, "bold"))
         value.pack(anchor="w", pady=(2, 1))
         meta = tk.Frame(cluster, bg="#050b15", height=1)
@@ -869,7 +871,9 @@ class AtlasApp(tk.Tk):
 
     def _set_repo(self, repo: Path | None) -> None:
         self.repo = repo.resolve() if repo else None
+        self.session_active = False
         self.repo_var.set(str(self.repo) if self.repo else "No repository selected")
+        self._reset_dashboard_metrics()
         if self.repo:
             save_repo(self.repo)
             self.status.set(f"Repository selected · {self.repo}")
@@ -910,7 +914,7 @@ class AtlasApp(tk.Tk):
     def _import_target(self, target: Path) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
-        report = build_intake(target)
+        report = build_intake(target, self._progress_callback)
         path = write_intake_report(self.repo, report)
         return {"report": report, "report_path": str(path)}
 
@@ -1128,6 +1132,7 @@ class AtlasApp(tk.Tk):
         self.last_result = value
         if name == "AUDIT TARGET":
             report = value.get("report", {}) if isinstance(value, dict) else {}
+            self.session_active = True
             self.last_audit = report
             self.finding_tree.delete(0, "end")
             for finding in report.get("findings", []):
@@ -1137,6 +1142,7 @@ class AtlasApp(tk.Tk):
             self.finding_detail.insert("end", pretty(report))
         elif name == "IMPORT":
             report = value.get("report", {}) if isinstance(value, dict) else {}
+            self.session_active = True
             self.intake_detail.delete("1.0", "end")
             self.intake_detail.insert("end", pretty(report))
             self.show_page("Import / Intake")
@@ -1176,7 +1182,16 @@ class AtlasApp(tk.Tk):
         cases = summarize_cases(query_cases(root, CaseQuery(text=self.case_query.get().strip() or None)))
         return {"inventory": inventory, "graph": graph, "cases": cases, "intakes": list_intakes(root),
                 "intelligence": audit, "history": history, "versions": versions, "promotion": promotion}
+    def _reset_dashboard_metrics(self) -> None:
+        for key in ("cases", "intakes", "contracts", "nodes", "edges", "candidates", "evidence", "invariants"):
+            widget = getattr(self, f"card_{key}", None)
+            if widget is not None:
+                widget.configure(text="0")
+
     def _apply_views(self, data: dict[str, object]) -> None:
+        if not self.session_active:
+            self._reset_dashboard_metrics()
+            return
         inventory = data["inventory"]
         graph: ResearchGraph = data["graph"]
         cases = data["cases"]
