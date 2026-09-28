@@ -16,6 +16,7 @@ from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageOps, ImageTk
 
 from .audit import audit_repo
+from .evidence_fabric import build_evidence_fabric
 from .chronicle import build_chronicle, write_chronicle
 from .contract_audit import build_contract_audit, write_contract_audit
 from .coverage import build_coverage
@@ -27,7 +28,9 @@ from .inventory import build_inventory
 from .ledger import verify_chain
 from .promotion import build_promotion_engine, write_promotion_report
 from .query import CaseQuery, query_cases, summarize_cases
+from .negative_knowledge import load_negative_results
 from .research_intelligence import build_research_metrics, write_longitudinal_report
+from .research_run import ResearchRun, resume_audit_run
 from .validator import validate_repo
 from .versions import build_version_diff_report, write_version_diff_report
 
@@ -199,6 +202,7 @@ class AtlasApp(tk.Tk):
         self.progress_caption = "READY"
         self.progress_animation_id = None
         self.cancel_event = threading.Event()
+        self.ui_event_queue: queue.Queue[tuple] = queue.Queue()
         self.current_future = None
         self._current_page_name = ""
         self._page_scroll = 0
@@ -341,10 +345,11 @@ class AtlasApp(tk.Tk):
         self.pages: dict[str, tk.Frame] = {}
         self.nav_buttons: dict[str, tk.Button] = {}
         nav = [
-            ("Dashboard", "\u2302"), ("Import / Intake", "\u21e7"), ("Audit Findings", "\u26a0"),
-            ("Cases", "\u25a3"), ("Research Intelligence", "\u25c9"), ("Knowledge Graph", "\u2318"),
-            ("Temporal Ledger", "\u25f7"), ("Promotion", "\u2197"), ("Protocol Versions", "\u25c7"),
-            ("Reports", "\u2261"), ("Settings", "\u2699"),
+            ("Dashboard", "\u2302"), ("Import / Intake", "\u21e7"), ("Research Runs", "\u25b6"),
+            ("Audit Findings", "\u26a0"), ("Evidence Fabric", "\u25ce"), ("Cases", "\u25a3"),
+            ("Knowledge Graph", "\u2318"), ("Differential", "\u21c4"), ("Negative Knowledge", "\u2298"),
+            ("Research Intelligence", "\u25c9"), ("Temporal Ledger", "\u25f7"), ("Promotion", "\u2197"),
+            ("Protocol Versions", "\u25c7"), ("Reports", "\u2261"), ("Settings", "\u2699"),
         ]
         y = 4
         for name, icon in nav:
@@ -476,14 +481,16 @@ class AtlasApp(tk.Tk):
                 steps = 1 if getattr(event, "num", None) == 5 else -1
             self._scroll_page(steps)
             return "break"
-    def _top_button(self, parent: tk.Frame, text: str, command, x: int, y: int, width: int) -> None:
+    def _top_button(self, parent: tk.Frame, text: str, command, x: int, y: int, width: int) -> GlassButton:
         # Top-bar buttons are deliberately ~65% of the previous visual height.
         btn=GlassButton(parent, text, command, self, font=("Segoe UI", 7, "bold"), height=20, padx=3)
         btn.place(x=x, y=y, width=width, height=28)
+        return btn
 
     def _build_pages(self) -> None:
-        names = ["Dashboard", "Import / Intake", "Audit Findings", "Cases", "Research Intelligence",
-                 "Knowledge Graph", "Temporal Ledger", "Promotion", "Protocol Versions",
+        names = ["Dashboard", "Import / Intake", "Research Runs", "Audit Findings", "Evidence Fabric",
+                 "Cases", "Knowledge Graph", "Differential", "Negative Knowledge",
+                 "Research Intelligence", "Temporal Ledger", "Promotion", "Protocol Versions",
                  "Reports", "Settings"]
         for name in names:
             frame = tk.Frame(self.content, bg="#06121f")
@@ -491,8 +498,12 @@ class AtlasApp(tk.Tk):
             self._apply_background(frame)
         self._dashboard_page()
         self._intake_page()
+        self._research_runs_page()
         self._audit_findings_page()
+        self._evidence_fabric_page()
         self._cases_page()
+        self._differential_page()
+        self._negative_knowledge_page()
         self._reports_pages()
         self._settings_page()
     def show_page(self, name: str) -> None:
@@ -770,6 +781,140 @@ class AtlasApp(tk.Tk):
             self.target_var.set(str(target))
             self.show_page("Import / Intake")
             self.audit_target()
+
+    def _research_runs_page(self) -> None:
+        page = self.pages["Research Runs"]
+        tk.Label(page, text="Research Runs", fg="#f2fbff", bg="#06121f",
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Durable run IDs, checkpoints, cancellation state, and resumable research history.",
+                 fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
+        toolbar = tk.Frame(page, bg="#06121f")
+        toolbar.pack(fill="x", pady=(0, 8))
+        self._toolbar_button(toolbar, "REFRESH RUNS", self.refresh_views)
+        self._toolbar_button(toolbar, "RESUME SELECTED", self.resume_selected_run)
+        body = tk.Frame(page, bg="#06121f")
+        self._apply_background(body)
+        body.pack(fill="both", expand=True)
+        body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
+        left = self._panel(body, "Runs", "PERSISTENT", row=0, column=0, sticky="nsew", padx=(0, 5))
+        right = self._panel(body, "Checkpoint Detail", "REPLAYABLE", row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.run_tree = tk.Listbox(left, bg="#07121d", fg="#b9d8e4", relief="flat",
+                                   selectbackground="#12496a", selectforeground="#ffffff", font=("Consolas", 9))
+        self.run_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        self.run_tree.bind("<<ListboxSelect>>", self._run_selected)
+        self.run_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff",
+                                       relief="flat", font=("Consolas", 9))
+        self.run_detail.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def _run_selected(self, _event=None) -> None:
+        if not self.run_tree.curselection():
+            return
+        index = self.run_tree.curselection()[0]
+        runs = self._list_all_run_states()
+        if 0 <= index < len(runs):
+            self.run_detail.delete("1.0", "end")
+            self.run_detail.insert("end", pretty(runs[index]))
+
+    def _list_all_run_states(self) -> list[dict[str, object]]:
+        if not self.repo:
+            return []
+        base = self.repo / "runs"
+        values = []
+        for path in sorted(base.glob("*/state.json")) if base.exists() else []:
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(value, dict):
+                values.append(value)
+        return sorted(values, key=lambda item: str(item.get("updated_at", "")), reverse=True)
+
+    def resume_selected_run(self) -> None:
+        if self.busy or not self.repo or not self.run_tree.curselection():
+            return
+        index = self.run_tree.curselection()[0]
+        runs = self._list_all_run_states()
+        if not (0 <= index < len(runs)):
+            return
+        run_id = str(runs[index].get("run_id", "")).strip()
+        if not run_id:
+            return
+        self._run_task(
+            "RESUME RUN",
+            lambda: resume_audit_run(self.repo, run_id, self._progress_callback, self.cancel_event.is_set),
+        )
+
+    def _evidence_fabric_page(self) -> None:
+        page = self.pages["Evidence Fabric"]
+        tk.Label(page, text="Evidence Fabric", fg="#f2fbff", bg="#06121f",
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="No evidence stage can silently promote the next stage.",
+                 fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
+        self.evidence_summary = tk.Label(page, text="NO AUDIT EVIDENCE",
+                                         fg="#62AAE5", bg="#06121f", font=("Segoe UI", 9, "bold"))
+        self.evidence_summary.pack(anchor="w", pady=(0, 8))
+        body = self._panel(page, "Finding Chains", "STAGE-GATED", fill="both", expand=True)
+        self.evidence_detail = ScrolledText(body, bg="#07121d", fg="#b9d8e4",
+                                            insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
+        self.evidence_detail.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def _differential_page(self) -> None:
+        page = self.pages["Differential"]
+        tk.Label(page, text="Differential Security", fg="#f2fbff", bg="#06121f",
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Revision A ↔ Revision B: source, structure, findings, and execution-domain changes.",
+                 fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
+        body = tk.Frame(page, bg="#06121f")
+        self._apply_background(body)
+        body.pack(fill="both", expand=True)
+        body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
+        left = self._panel(body, "Revision Diffs", "RECORDED", row=0, column=0, sticky="nsew", padx=(0, 5))
+        right = self._panel(body, "Diff Detail", "EXPLICIT", row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.diff_tree = tk.Listbox(left, bg="#07121d", fg="#b9d8e4", relief="flat",
+                                    selectbackground="#12496a", selectforeground="#ffffff", font=("Consolas", 8))
+        self.diff_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        self.diff_tree.bind("<<ListboxSelect>>", self._diff_selected)
+        self.diff_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", relief="flat", font=("Consolas", 8))
+        self.diff_detail.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def _diff_selected(self, _event=None) -> None:
+        if not self.diff_tree.curselection() or not self.repo:
+            return
+        paths = sorted((self.repo / "reports" / "differential").glob("*.json"))
+        index = self.diff_tree.curselection()[0]
+        if 0 <= index < len(paths):
+            self.diff_detail.delete("1.0", "end")
+            self.diff_detail.insert("end", pretty(read_report(self.repo, str(paths[index].relative_to(self.repo)), {})))
+
+    def _negative_knowledge_page(self) -> None:
+        page = self.pages["Negative Knowledge"]
+        tk.Label(page, text="Negative Knowledge", fg="#f2fbff", bg="#06121f",
+                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        tk.Label(page, text="Failed proof attempts stay queryable with environment, input space, and explored-state context.",
+                 fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
+        body = tk.Frame(page, bg="#06121f")
+        self._apply_background(body)
+        body.pack(fill="both", expand=True)
+        body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
+        left = self._panel(body, "Negative Results", "MEMORY", row=0, column=0, sticky="nsew", padx=(0, 5))
+        right = self._panel(body, "Attempt Detail", "WHY NOT PROVED", row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.negative_tree = tk.Listbox(left, bg="#07121d", fg="#b9d8e4", relief="flat",
+                                        selectbackground="#12496a", selectforeground="#ffffff", font=("Consolas", 8))
+        self.negative_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        self.negative_tree.bind("<<ListboxSelect>>", self._negative_selected)
+        self.negative_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", relief="flat", font=("Consolas", 8))
+        self.negative_detail.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def _negative_selected(self, _event=None) -> None:
+        if not self.negative_tree.curselection() or not self.repo:
+            return
+        values = load_negative_results(self.repo)
+        index = self.negative_tree.curselection()[0]
+        if 0 <= index < len(values):
+            self.negative_detail.delete("1.0", "end")
+            self.negative_detail.insert("end", pretty(values[index]))
+
+
     def _audit_findings_page(self) -> None:
         page = self.pages["Audit Findings"]
         tk.Label(page, text="Audit Findings", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
@@ -1133,16 +1278,19 @@ class AtlasApp(tk.Tk):
 
         future = self.executor.submit(guarded_task)
         self.current_future = future
+
         def waiter():
             try:
                 value = future.result()
-                self.after(0, lambda: self._task_done(name, value))
+                self.ui_event_queue.put(("done", name, value))
             except (OperationCancelled, CancelledError) as exc:
-                self.after(0, lambda: self._task_cancelled(name, str(exc) or "ATLAS operation cancelled"))
+                self.ui_event_queue.put(("cancelled", name, str(exc) or "ATLAS operation cancelled"))
             except Exception as exc:
                 detail = traceback.format_exc()
-                self.after(0, lambda: self._task_failed(name, exc, detail))
+                self.ui_event_queue.put(("failed", name, exc, detail))
+
         threading.Thread(target=waiter, daemon=True, name=f"atlas-{name.lower()}-waiter").start()
+        self.after(50, self._drain_ui_events)
 
     def _set_progress(self, percent: int, caption: str = "") -> None:
         self.progress_value = max(0, min(100, int(percent)))
@@ -1156,17 +1304,40 @@ class AtlasApp(tk.Tk):
             self._refresh_progress_line()
 
     def _progress_callback(self, percent: int, caption: str = "") -> None:
-        """Show every integer percentage between real worker checkpoints."""
+        """Queue real worker progress for consumption by the Tk main thread."""
         target = max(1, min(99, int(percent)))
+        self.ui_event_queue.put(("progress", target, caption))
 
-        def schedule() -> None:
-            self.progress_target = max(self.progress_target, target)
-            if caption:
-                self.progress_caption = caption
-            if self.progress_animation_id is None:
-                self._animate_progress()
-
-        self.after(0, schedule)
+    def _drain_ui_events(self) -> None:
+        """Apply worker events on the Tk thread; never call Tk from worker threads."""
+        terminal = False
+        while True:
+            try:
+                event = self.ui_event_queue.get_nowait()
+            except queue.Empty:
+                break
+            kind = event[0]
+            if kind == "progress":
+                _, target, caption = event
+                self.progress_target = max(self.progress_target, target)
+                if caption:
+                    self.progress_caption = caption
+                if self.busy and self.progress_animation_id is None:
+                    self._animate_progress()
+            elif kind == "done":
+                _, name, value = event
+                self._task_done(name, value)
+                terminal = True
+            elif kind == "cancelled":
+                _, name, detail = event
+                self._task_cancelled(name, detail)
+                terminal = True
+            elif kind == "failed":
+                _, name, exc, detail = event
+                self._task_failed(name, exc, detail)
+                terminal = True
+        if self.busy and not terminal:
+            self.after(50, self._drain_ui_events)
 
 
     def _animate_progress(self) -> None:
@@ -1174,13 +1345,14 @@ class AtlasApp(tk.Tk):
         if not self.busy:
             self.progress_animation_id = None
             return
-        # Move exactly one percentage point at a time between real worker checkpoints.
+        # Move exactly one percentage point at a time toward the latest real worker checkpoint.
         # 100% is written only by the completion handler, so the UI never lies about completion.
-        next_value = min(95, max(self.progress_value + 1, target))
-        self._set_progress(next_value)
-        if self.progress_value < 99:
-            self.progress_caption = self.progress_caption or "Working"
-        self.progress_animation_id = self.after(100, self._animate_progress)
+        if self.progress_value < target:
+            self._set_progress(min(target, self.progress_value + 1))
+        if self.progress_value < target:
+            self.progress_animation_id = self.after(100, self._animate_progress)
+        else:
+            self.progress_animation_id = None
 
     def _refresh_progress_line(self) -> None:
         if not hasattr(self, "progress"):
@@ -1268,7 +1440,20 @@ class AtlasApp(tk.Tk):
             self.intake_detail.delete("1.0", "end")
             self.intake_detail.insert("end", pretty(report))
             self.show_page("Import / Intake")
-        elif name in {"AUDIT REPOSITORY", "FULL REFRESH"}:
+        elif name == "AUDIT REPOSITORY":
+            report = value if isinstance(value, dict) else {"result": value}
+            self.last_audit = report
+            self.finding_tree.delete(0, "end")
+            if "error" in report:
+                self.finding_tree.insert(0, "REPOSITORY AUDIT · FAILED")
+            else:
+                self.session_active = True
+                status = "PASS" if report.get("ok") else "ATTENTION"
+                self.finding_tree.insert(0, f"REPOSITORY AUDIT · {status}")
+            self.finding_detail.delete("1.0", "end")
+            self.finding_detail.insert("end", pretty(report))
+            self.show_page("Audit Findings")
+        elif name == "FULL REFRESH":
             # An explicit repository operation starts the live research session.
             self.session_active = True
             self.status.set(f"{name} complete · live repository state loaded")
@@ -1316,9 +1501,24 @@ class AtlasApp(tk.Tk):
         validation_errors = validate_repo(root)
         ledger_errors = verify_chain(root / "ledger" / "events.jsonl")
         cases = summarize_cases(query_cases(root, CaseQuery(text=self.case_query.get().strip() or None)))
+        runs = self._list_all_run_states()
+        negatives = load_negative_results(root)
+        finding_records = []
+        audit_dir = root / "reports" / "contract-audits"
+        if audit_dir.exists():
+            for path in sorted(audit_dir.glob("*.json")):
+                value = read_report(root, str(path.relative_to(root)), {})
+                if isinstance(value, dict):
+                    finding_records.extend(
+                        item for item in value.get("findings", []) if isinstance(item, dict)
+                    )
+        evidence_fabric = build_evidence_fabric(finding_records)
+        diff_paths = sorted((root / "reports" / "differential").glob("*.json"))
         return {"inventory": inventory, "graph": graph, "cases": cases, "intakes": list_intakes(root),
                 "intelligence": audit, "history": history, "versions": versions, "promotion": promotion,
-                "federation": federation, "validation_errors": validation_errors, "ledger_errors": ledger_errors}
+                "federation": federation, "validation_errors": validation_errors, "ledger_errors": ledger_errors,
+                "runs": runs, "negative_results": negatives, "evidence_fabric": evidence_fabric,
+                "differential_paths": diff_paths}
     def _reset_dashboard_metrics(self) -> None:
         for key in ("cases", "intakes", "contracts", "nodes", "edges", "candidates", "evidence", "invariants"):
             widget = getattr(self, f"card_{key}", None)
@@ -1392,6 +1592,39 @@ class AtlasApp(tk.Tk):
             {"from": edge.source.key, "to": edge.target.key, "relation": edge.relation}
             for edge in graph.edges
         ]))
+
+        runs = data.get("runs", [])
+        self.run_tree.delete(0, "end")
+        for item in runs if isinstance(runs, list) else []:
+            self.run_tree.insert(
+                "end",
+                f'{item.get("run_id")}  ·  {item.get("status")}  ·  last={item.get("last_completed_stage")}'
+            )
+
+        fabric = data.get("evidence_fabric") or {}
+        self.evidence_summary.configure(
+            text=(
+                f'FINDINGS {fabric.get("finding_count", 0)}  ·  '
+                f'VALIDATED {fabric.get("validated_count", 0)}  ·  '
+                f'RESEARCH DEBT {fabric.get("research_debt_count", 0)}'
+            )
+        )
+        self.evidence_detail.delete("1.0", "end")
+        self.evidence_detail.insert("end", pretty(fabric))
+
+        diff_paths = data.get("differential_paths", [])
+        self.diff_tree.delete(0, "end")
+        for path in diff_paths if isinstance(diff_paths, list) else []:
+            self.diff_tree.insert("end", path.name)
+
+        negatives = data.get("negative_results", [])
+        self.negative_tree.delete(0, "end")
+        for item in negatives if isinstance(negatives, list) else []:
+            self.negative_tree.insert(
+                "end",
+                f'{item.get("id")}  ·  {item.get("tool")}  ·  states={item.get("explored_states", 0)}'
+            )
+
         self._set_report_text("research_intelligence", data["intelligence"])
         self._set_report_text("temporal_ledger", data["history"])
         self._set_report_text("protocol_versions", data["versions"])
