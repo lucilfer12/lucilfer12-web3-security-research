@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
-from .audit import audit_repo
 from .contract_audit import build_contract_audit, write_contract_audit
 from .chronicle import build_chronicle, write_chronicle, write_event_backfill_plan
 from .coverage import build_coverage
 from .experiments import load_experiment, result_to_json, run_experiment
+from .finding_gate import gate_summary
 from .export import graph_document
 from .federation import (
     build_candidate_network, build_federation_snapshot, write_candidate_snapshot,
@@ -24,6 +24,7 @@ from .ledger import append_event, verify_chain
 from .model import NodeRef, ResearchStage
 from .promotion import build_promotion_engine, write_promotion_report
 from .query import CaseQuery, query_cases, summarize_cases
+from .quality import build_quality_report, write_quality_report
 from .research_intelligence import (
     build_research_metrics, write_longitudinal_report,
 )
@@ -64,6 +65,13 @@ def main() -> int:
     audit = sub.add_parser("audit")
     audit.add_argument("path", nargs="?", default=".")
     audit.add_argument("--json", action="store_true")
+    gate = sub.add_parser("gate", help="derive finding verification state from explicit evidence")
+    gate.add_argument("path", nargs="?", default=".")
+    gate.add_argument("--json", action="store_true")
+    quality = sub.add_parser("quality", help="run the integrated quality constitution checks")
+    quality.add_argument("path", nargs="?", default=".")
+    quality.add_argument("--json", action="store_true")
+    quality.add_argument("--write", action="store_true")
 
     contract_audit = sub.add_parser("audit-contract", help="audit a contract file, archive, or repository")
     contract_audit.add_argument("target")
@@ -184,9 +192,40 @@ def main() -> int:
         return 0
 
     if args.command == "audit":
+        from .audit import audit_repo
         value = audit_repo(root)
         _print_json(value) if args.json else print(
             f"ok={value['ok']} nodes={value['graph']['node_count']} edges={value['graph']['edge_count']}"
+        )
+        return 0 if value["ok"] else 1
+
+    if args.command == "gate":
+        findings = []
+        audit_dir = root / "reports" / "contract-audits"
+        if audit_dir.exists():
+            for report_path in sorted(audit_dir.glob("*.json")):
+                try:
+                    report = json.loads(report_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if isinstance(report, dict):
+                    findings.extend(x for x in report.get("findings", []) if isinstance(x, dict))
+        summary = gate_summary(findings)
+        if args.json:
+            _print_json(summary)
+        else:
+            print(f"findings={summary['finding_count']} validated={summary['validated_count']} regressed={summary['regressed_validated_count']}")
+        return 0
+
+    if args.command == "quality":
+        value = build_quality_report(root)
+        if args.write:
+            path = write_quality_report(root, root / "reports" / "longitudinal" / "quality-report.json")
+            print(f"quality_report={path}")
+        _print_json(value) if args.json else print(
+            f"ok={value['ok']} validation={len(value['blocking_issues'])} "
+            f"case_integrity={len(value['case_integrity_issues'])} "
+            f"proof_findings={value['proof_debt']['finding_count']}"
         )
         return 0 if value["ok"] else 1
 

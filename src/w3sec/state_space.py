@@ -27,13 +27,28 @@ class ExplorationResult(Generic[State]):
     visited_states: int
     explored_traces: int
     counterexample: Counterexample[State] | None = None
+    outcome: str = "complete"
+    error: str | None = None
+
+    @property
+    def found(self) -> bool:
+        return self.outcome == "found_violation"
+
 
 
 def default_state_key(state: State) -> Hashable:
     try:
-        return json.dumps(state, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    except TypeError:
-        return repr(state)
+        return json.dumps(
+            state,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise TypeError(
+            "state is not deterministically serializable; provide an explicit state_key"
+        ) from exc
 
 
 def explore(
@@ -52,21 +67,45 @@ def explore(
     visited = {state_key(initial)}
     queue: deque[tuple[State, tuple[str, ...], int]] = deque([(initial, (), 0)])
     traces = 0
-    while queue and len(visited) <= max_nodes:
+    depth_limited = False
+    node_limited = False
+    while queue:
         state, actions, depth = queue.popleft()
         traces += 1
-        if not invariant(state):
-            return ExplorationResult(len(visited), traces, Counterexample(state, actions))
+        try:
+            valid = bool(invariant(state))
+        except Exception as exc:
+            return ExplorationResult(
+                len(visited), traces, None, "engine_failure", f"invariant failed: {exc!r}"
+            )
+        if not valid:
+            return ExplorationResult(
+                len(visited), traces, Counterexample(state, actions), "found_violation"
+            )
         if depth >= max_depth:
+            depth_limited = True
             continue
         for transition in transitions:
-            next_state = transition.apply(state)
-            key = state_key(next_state)
+            if len(visited) >= max_nodes:
+                node_limited = True
+                break
+            try:
+                next_state = transition.apply(state)
+                key = state_key(next_state)
+            except Exception as exc:
+                return ExplorationResult(
+                    len(visited), traces, None, "engine_failure",
+                    f"transition {transition.name!r} failed: {exc!r}"
+                )
             if key in visited:
                 continue
             visited.add(key)
             queue.append((next_state, actions + (transition.name,), depth + 1))
-    return ExplorationResult(len(visited), traces, None)
+    if node_limited:
+        return ExplorationResult(len(visited), traces, None, "exhausted_nodes")
+    if depth_limited:
+        return ExplorationResult(len(visited), traces, None, "exhausted_depth")
+    return ExplorationResult(len(visited), traces, None, "complete")
 
 
 def minimize_trace(

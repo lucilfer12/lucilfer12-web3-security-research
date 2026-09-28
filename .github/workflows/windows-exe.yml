@@ -14,6 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare federated source workspace
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\..\research-federation-work" | Out-Null
+          git clone --depth 1 https://github.com/lucilfer12/web3-smart-contract-forensics.git "$env:GITHUB_WORKSPACE\..\web3-smart-contract-forensics"
+          git clone --depth 1 https://github.com/lucilfer12/security-invariant-lab.git "$env:GITHUB_WORKSPACE\..\security-invariant-lab"
+          git clone --depth 1 https://github.com/lucilfer12/web3-zeroday-forensics.git "$env:GITHUB_WORKSPACE\..\research-federation-work\web3-zeroday-forensics"
+          git clone --depth 1 https://github.com/lucilfer12/smart-contract-security-lab.git "$env:GITHUB_WORKSPACE\..\research-federation-work\smart-contract-security-lab"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

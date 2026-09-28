@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .finding_gate import attach_gate, gate_summary
 from .intake import _prepared_target, build_intake, write_intake_report
 
 
@@ -191,6 +192,8 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
     findings.sort(key=lambda x: (priority_order[x["priority"]], x["file"], x["line"], x["signal"]))
     for i, item in enumerate(findings, 1):
         item["id"] = f"atlas-review-{i:04d}"
+        item["source_hash"] = intake["target"]["source_hash"]
+        findings[i - 1] = attach_gate(item)
 
     report = {
         "schema_version": 1,
@@ -220,6 +223,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None) -> di
         },
         "controls_observed": controls,
         "findings": findings,
+        "verification": gate_summary(findings),
         "intake": intake,
     }
     mark(95, "Writing audit findings")

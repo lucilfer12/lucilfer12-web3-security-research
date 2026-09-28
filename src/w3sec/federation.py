@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -34,9 +35,12 @@ def _load_yaml(path: Path) -> Any:
 def _source_roots(root: Path) -> list[FederationRoot]:
     config = root / "corpus" / "federation" / "sources.yaml"
     data = _load_yaml(config) if config.exists() else {"sources": []}
+    federation_base = os.environ.get("ATLAS_FEDERATION_BASE")
+    external_base = Path(federation_base).expanduser().resolve() if federation_base else root
     result: list[FederationRoot] = []
     for item in data.get("sources", []):
-        base = root if item["path"] == "." else (root / item["path"]).resolve()
+        source_path = str(item["path"])
+        base = root if source_path == "." else (external_base / source_path).resolve()
         result.append(FederationRoot(
             id=str(item["id"]), path=base, adapter=str(item["adapter"]),
             required=bool(item.get("required", False)), dataset=item.get("dataset"),
@@ -75,7 +79,7 @@ def _git_head(path: Path) -> str | None:
         return None
     try:
         result = hidden_run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"], check=True,
+            ["git", "-C", str(path), "rev-parse", "HEAD"], timeout=5, check=True,
         )
     except (OSError, subprocess.CalledProcessError):
         return None

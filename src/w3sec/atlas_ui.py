@@ -13,6 +13,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText
 
+from PIL import Image, ImageOps, ImageTk
+
 from .audit import audit_repo
 from .chronicle import build_chronicle, write_chronicle
 from .contract_audit import build_contract_audit, write_contract_audit
@@ -25,6 +27,7 @@ from .inventory import build_inventory
 from .ledger import verify_chain
 from .promotion import build_promotion_engine, write_promotion_report
 from .query import CaseQuery, query_cases, summarize_cases
+from .quality import build_quality_report
 from .research_intelligence import build_research_metrics, write_longitudinal_report
 from .validator import validate_repo
 from .versions import build_version_diff_report, write_version_diff_report
@@ -110,8 +113,53 @@ class AtlasApp(tk.Tk):
 
 
 
+    def _background_asset(self) -> Path | None:
+        candidates = [
+            resource_path("backgrounds/atlas_forest.jpg"),
+            resource_path("backgrounds/atlas_forest.png"),
+            Path.home() / "Downloads" / "Sans titre.jpg",
+        ]
+        return next((path for path in candidates if path.is_file()), None)
+
+    def _init_background(self) -> None:
+        self._background_canvas = tk.Canvas(
+            self, bg="#050b15", highlightthickness=0, bd=0,
+        )
+        self._background_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self._background_canvas.lower()
+        self._background_source = self._background_asset()
+        self._background_image = None
+        self._background_photo = None
+        if self._background_source is None:
+            return
+        try:
+            self._background_image = Image.open(self._background_source).convert("RGB")
+            self._background_canvas.bind("<Configure>", self._resize_background)
+            self.after_idle(self._resize_background)
+        except (OSError, ValueError):
+            self._background_image = None
+
+    def _resize_background(self, _event=None) -> None:
+        if self._background_image is None:
+            return
+        width = max(self.winfo_width(), 1)
+        height = max(self.winfo_height(), 1)
+        fitted = ImageOps.fit(
+            self._background_image,
+            (width, height),
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+        self._background_photo = ImageTk.PhotoImage(fitted)
+        self._background_canvas.delete("atlas-background")
+        self._background_canvas.create_image(
+            0, 0, anchor="nw", image=self._background_photo, tags="atlas-background"
+        )
+        self._background_canvas.tag_lower("atlas-background")
+
     def _build_shell(self) -> None:
         self.configure(bg="#050b15")
+        self._init_background()
         self.sidebar = tk.Frame(self, bg="#081D56")
         self.sidebar.place(x=16, y=16, width=222, relheight=1, height=-32)
         self.brand = tk.Label(self.sidebar, text="ATLAS", fg="#ffffff", bg="#081D56",
@@ -202,31 +250,35 @@ class AtlasApp(tk.Tk):
         self.status.set(f"ATLAS - {name}")
 
     def _panel(self, parent: tk.Frame, title: str, subtitle: str | None = None, **layout) -> tk.Frame:
-        panel = tk.Frame(parent, bg="#09162a", highlightthickness=0, bd=0)
+        # Open-surface layout: panels are typographic groups, not boxes.
+        panel = tk.Frame(parent, bg="#06121f", highlightthickness=0, bd=0)
         if "row" in layout or "column" in layout or "sticky" in layout:
             panel.grid(**layout)
         else:
             panel.pack(**layout)
-        head = tk.Frame(panel, bg="#09162a")
-        head.pack(fill="x", padx=14, pady=(13, 5))
-        tk.Label(head, text=title.upper(), fg="#dceeff", bg="#09162a",
+        head = tk.Frame(panel, bg="#06121f", highlightthickness=0, bd=0)
+        head.pack(fill="x", padx=2, pady=(8, 10))
+        tk.Label(head, text=title.upper(), fg="#dceeff", bg="#06121f",
                  font=("Segoe UI", 9, "bold")).pack(side="left")
         if subtitle:
-            tk.Label(head, text=subtitle, fg="#62AAE5", bg="#09162a",
+            tk.Label(head, text=subtitle, fg="#62AAE5", bg="#06121f",
                      font=("Segoe UI", 7, "bold")).pack(side="right")
+        tk.Frame(panel, bg="#17304b", height=1).pack(fill="x", padx=2, pady=(0, 8))
         return panel
 
     def _card(self, parent: tk.Frame, title: str, key: str, column: int, row: int = 0) -> None:
-        shadow = tk.Frame(parent, bg="#06101e", bd=0, highlightthickness=0)
-        shadow.grid(row=row, column=column, sticky="nsew", padx=5, pady=5)
-        panel = tk.Frame(shadow, bg="#0a1930", bd=0, highlightthickness=0)
-        panel.pack(fill="both", expand=True, padx=(0, 2), pady=(0, 2))
-        tk.Label(panel, text=title.upper(), fg="#6fa9d0", bg="#0a1930",
-                 font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=15, pady=(12, 0))
-        value = tk.Label(panel, text="—", fg="#f4fbff", bg="#0a1930",
-                         font=("Segoe UI", 24, "bold"))
-        value.pack(anchor="w", padx=15, pady=(0, 3))
-        tk.Frame(panel, bg="#46F0D2", height=2).pack(fill="x", padx=15, pady=(0, 13))
+        # Metric clusters intentionally have no enclosing card/frame.
+        cluster = tk.Frame(parent, bg="#050b15", bd=0, highlightthickness=0)
+        cluster.grid(row=row, column=column, sticky="nsew", padx=(0, 22), pady=(3, 12))
+        tk.Label(cluster, text=title.upper(), fg="#6fa9d0", bg="#050b15",
+                 font=("Segoe UI", 7, "bold")).pack(anchor="w")
+        value = tk.Label(cluster, text="", fg="#f4fbff", bg="#050b15",
+                         font=("Segoe UI", 27, "bold"))
+        value.pack(anchor="w", pady=(2, 1))
+        meta = tk.Frame(cluster, bg="#050b15", height=1)
+        meta.pack(fill="x", pady=(2, 0))
+        tk.Frame(meta, bg="#46F0D2", height=1, width=28).pack(side="left", anchor="w")
+        tk.Frame(meta, bg="#17304b", height=1).pack(side="left", fill="x", expand=True, padx=(6, 0))
         setattr(self, f"card_{key}", value)
 
     def _dashboard_page(self) -> None:
@@ -238,7 +290,7 @@ class AtlasApp(tk.Tk):
         tk.Label(header, text="Evidence  ->  Analysis  ->  Research  ->  Knowledge", fg="#6fa9d0",
                  bg="#050b15", font=("Segoe UI", 9)).pack(side="left", padx=16, pady=(8, 0))
         cards = tk.Frame(page, bg="#050b15")
-        cards.pack(fill="x", pady=(12, 12))
+        cards.pack(fill="x", pady=(18, 18))
         for i in range(4):
             cards.columnconfigure(i, weight=1, uniform="metric")
         metrics = [
@@ -257,22 +309,22 @@ class AtlasApp(tk.Tk):
 
     def _dashboard_system(self, parent: tk.Frame) -> None:
         panel = self._panel(parent, "System Overview", "LIVE", row=0, column=0, sticky="nsew", padx=(0, 5))
-        self.system_lines = tk.Frame(panel, bg="#0a1825")
+        self.system_lines = tk.Frame(panel, bg="#06121f")
         self.system_lines.pack(fill="both", expand=True, padx=12, pady=8)
         self.system_checks: dict[str, tk.Label] = {}
         labels = ["Knowledge Graph", "Temporal Ledger", "Federation Layer", "Research Intelligence",
-                  "Promotion Engine", "Protocol Versions", "Audit & Validation"]
+                  "Promotion Engine", "Protocol Versions", "Audit & Validation", "Quality Constitution"]
         for label in labels:
-            row = tk.Frame(self.system_lines, bg="#0a1825")
+            row = tk.Frame(self.system_lines, bg="#06121f")
             row.pack(fill="x", pady=6)
-            check = tk.Label(row, text="●", fg="#48dca8", bg="#0a1825", font=("Segoe UI", 10))
+            check = tk.Label(row, text="●", fg="#48dca8", bg="#06121f", font=("Segoe UI", 10))
             check.pack(side="left", padx=(2, 8))
-            text_label = tk.Label(row, text=label, fg="#d8ecf5", bg="#0a1825",
+            text_label = tk.Label(row, text=label, fg="#d8ecf5", bg="#06121f",
                                   font=("Segoe UI", 9, "bold"), anchor="w")
             text_label.pack(side="left")
             self.system_checks[label] = text_label
         tk.Label(panel, text="ATLAS keeps evidence and inference separate. Candidate data never silently becomes canonical.",
-                 fg="#66899d", bg="#0a1825", justify="left", wraplength=430,
+                 fg="#66899d", bg="#06121f", justify="left", wraplength=430,
                  font=("Segoe UI", 8)).pack(fill="x", padx=14, pady=(8, 14))
 
 
@@ -283,11 +335,12 @@ class AtlasApp(tk.Tk):
         pane.rowconfigure(1, weight=1)
         pane.columnconfigure(0, weight=1)
         quick = self._panel(pane, "Quick Actions", "READY", row=0, column=0, sticky="nsew")
-        grid = tk.Frame(quick, bg="#0a1825")
+        grid = tk.Frame(quick, bg="#06121f")
         grid.pack(fill="both", expand=True, padx=10, pady=8)
         actions = [
             ("IMPORT CONTRACT / REPOSITORY", self.open_import),
             ("AUDIT", self.audit_repo),
+            ("QUALITY CHECK", self.run_quality),
             ("FULL REFRESH", self.full_refresh),
             ("FEDERATION", self.run_federation),
             ("CHRONICLE", self.run_chronicle),
@@ -301,7 +354,7 @@ class AtlasApp(tk.Tk):
         grid.columnconfigure(0, weight=1); grid.columnconfigure(1, weight=1)
 
         activity = self._panel(pane, "Background Activity", "NO TERMINAL", row=1, column=0, sticky="nsew", pady=(8, 0))
-        self.activity_log = ScrolledText(activity, bg="#07141f", fg="#b8d4df",
+        self.activity_log = ScrolledText(activity, bg="#07121d", fg="#b8d4df",
                                          insertbackground="#ffffff", relief="flat",
                                          font=("Consolas", 9), height=8)
         self.activity_log.pack(fill="both", expand=True, padx=10, pady=10)
@@ -311,12 +364,11 @@ class AtlasApp(tk.Tk):
                  font=("Segoe UI", 20, "bold")).pack(anchor="w")
         tk.Label(page, text="Load source files, ZIP/TAR archives, or a complete contract repository.",
                  fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
-        toolbar = tk.Frame(page, bg="#0a1825", highlightthickness=1, highlightbackground="#244b62")
+        toolbar = tk.Frame(page, bg="#06121f", highlightthickness=0)
         toolbar.pack(fill="x", pady=(0, 8), ipady=6)
         self.target_var = tk.StringVar()
         tk.Entry(toolbar, textvariable=self.target_var, bg="#091a29", fg="#e8f7ff",
-                 insertbackground="#ffffff", relief="flat", highlightthickness=1,
-                 highlightbackground="#254d64").pack(side="left", fill="x", expand=True, padx=10, ipady=7)
+                 insertbackground="#ffffff", relief="flat", highlightthickness=0).pack(side="left", fill="x", expand=True, padx=10, ipady=7)
         self._toolbar_button(toolbar, "FILES", self.choose_files)
         self._toolbar_button(toolbar, "ZIP / ARCHIVE", self.choose_archive)
         self._toolbar_button(toolbar, "DIRECTORY", self.choose_directory)
@@ -331,12 +383,12 @@ class AtlasApp(tk.Tk):
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(body, "Registered Inputs", "HASHED", row=0, column=0, sticky="nsew", padx=(0, 5))
         right = self._panel(body, "Intake Snapshot", "STRUCTURAL", row=0, column=1, sticky="nsew", padx=(5, 0))
-        self.intake_tree = tk.Listbox(left, bg="#07141f", fg="#b9d8e4", relief="flat",
+        self.intake_tree = tk.Listbox(left, bg="#07121d", fg="#b9d8e4", relief="flat",
                                       selectbackground="#12496a", selectforeground="#ffffff",
                                       font=("Consolas", 9))
         self.intake_tree.pack(fill="both", expand=True, padx=10, pady=10)
         self.intake_tree.bind("<<ListboxSelect>>", self._intake_selected)
-        self.intake_detail = ScrolledText(right, bg="#07141f", fg="#b9d8e4",
+        self.intake_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4",
                                           insertbackground="#ffffff", relief="flat",
                                           font=("Consolas", 9))
         self.intake_detail.pack(fill="both", expand=True, padx=10, pady=10)
@@ -388,10 +440,10 @@ class AtlasApp(tk.Tk):
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(body, "Findings", "PRIORITIZED", row=0, column=0, sticky="nsew", padx=(0, 5))
         right = self._panel(body, "Finding Detail", "EVIDENCE", row=0, column=1, sticky="nsew", padx=(5, 0))
-        self.finding_tree = tk.Listbox(left, bg="#07141f", fg="#c3dce7", selectbackground="#6b2b38", selectforeground="#ffffff", relief="flat", font=("Consolas", 9))
+        self.finding_tree = tk.Listbox(left, bg="#07121d", fg="#c3dce7", selectbackground="#6b2b38", selectforeground="#ffffff", relief="flat", font=("Consolas", 9))
         self.finding_tree.pack(fill="both", expand=True, padx=10, pady=10)
         self.finding_tree.bind("<<ListboxSelect>>", self._finding_selected)
-        self.finding_detail = ScrolledText(right, bg="#07141f", fg="#b9d8e4", insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
+        self.finding_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
         self.finding_detail.pack(fill="both", expand=True, padx=10, pady=10)
 
 
@@ -412,14 +464,14 @@ class AtlasApp(tk.Tk):
         page = self.pages["Cases"]
         tk.Label(page, text="Research Cases", fg="#f2fbff", bg="#06121f",
                  font=("Segoe UI", 20, "bold")).pack(anchor="w")
-        top = tk.Frame(page, bg="#0a1825", highlightthickness=1, highlightbackground="#244b62")
+        top = tk.Frame(page, bg="#06121f", highlightthickness=0)
         top.pack(fill="x", pady=(8, 8))
         self.case_query = tk.StringVar()
         tk.Entry(top, textvariable=self.case_query, bg="#091a29", fg="#e8f7ff",
                  insertbackground="#ffffff", relief="flat").pack(side="left", fill="x", expand=True, padx=10, ipady=8)
         self._toolbar_button(top, "SEARCH", self.load_cases)
         body = self._panel(page, "Case Corpus", "EVIDENCE-FIRST", fill="both", expand=True)
-        self.case_tree = tk.Listbox(body, bg="#07141f", fg="#c0dbe6", relief="flat",
+        self.case_tree = tk.Listbox(body, bg="#07121d", fg="#c0dbe6", relief="flat",
                                     selectbackground="#12496a", selectforeground="#ffffff",
                                     font=("Consolas", 9))
         self.case_tree.pack(fill="both", expand=True, padx=10, pady=10)
@@ -439,7 +491,7 @@ class AtlasApp(tk.Tk):
             tk.Label(frame, text=rel, fg="#6f92a5", bg="#06121f",
                      font=("Segoe UI", 8)).pack(anchor="w", pady=(0, 8))
             text = self._panel(frame, "Report", "READ ONLY", fill="both", expand=True)
-            widget = ScrolledText(text, bg="#07141f", fg="#b9d8e4", insertbackground="#ffffff",
+            widget = ScrolledText(text, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff",
                                   relief="flat", font=("Consolas", 9))
             widget.pack(fill="both", expand=True, padx=10, pady=10)
             setattr(self, f"text_{name.replace(' ', '_').lower()}", widget)
@@ -453,10 +505,10 @@ class AtlasApp(tk.Tk):
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=1); body.rowconfigure(0, weight=1)
         nodes = self._panel(body, "Nodes", "TYPED", row=0, column=0, sticky="nsew", padx=(0, 5))
         edges = self._panel(body, "Lineage Edges", "DERIVED", row=0, column=1, sticky="nsew", padx=(5, 0))
-        self.graph_nodes = tk.Listbox(nodes, bg="#07141f", fg="#b9d8e4", relief="flat",
+        self.graph_nodes = tk.Listbox(nodes, bg="#07121d", fg="#b9d8e4", relief="flat",
                                       font=("Consolas", 8))
         self.graph_nodes.pack(fill="both", expand=True, padx=10, pady=10)
-        self.graph_edges = ScrolledText(edges, bg="#07141f", fg="#b9d8e4", relief="flat",
+        self.graph_edges = ScrolledText(edges, bg="#07121d", fg="#b9d8e4", relief="flat",
                                         font=("Consolas", 8))
         self.graph_edges.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -469,6 +521,7 @@ class AtlasApp(tk.Tk):
             ("Temporal History", "reports/longitudinal/temporal-history.json"),
             ("Domain Evolution", "reports/longitudinal/domain-evolution.json"),
             ("Promotion Decisions", "reports/longitudinal/promotion-decisions.json"),
+            ("Quality Constitution", "reports/longitudinal/quality-report.json"),
             ("Federation Snapshot", "reports/federation/snapshot.json"),
         ]:
             btn = self._action_button(body, title, lambda r=rel: self.open_report(r))
@@ -481,7 +534,7 @@ class AtlasApp(tk.Tk):
                  font=("Segoe UI", 20, "bold")).pack(anchor="w")
         panel = self._panel(page, "Workspace", "PERSISTENT", fill="both", expand=True)
         tk.Label(panel, text="Repository is stored locally in %APPDATA%\\ATLAS\\settings.json.",
-                 fg="#88a7b7", bg="#0a1825", font=("Segoe UI", 9)).pack(anchor="w", padx=14, pady=14)
+                 fg="#88a7b7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", padx=14, pady=14)
         self._action_button(panel, "CHOOSE REPOSITORY", self.choose_repo).pack(anchor="w", padx=14, pady=5)
         self._action_button(panel, "OPEN ATLAS DATA FOLDER",
                             lambda: os.startfile(settings_path().parent)).pack(anchor="w", padx=14, pady=5)
@@ -589,6 +642,23 @@ class AtlasApp(tk.Tk):
         self._run_task("AUDIT", lambda: audit_repo(self.repo, self._progress_callback))
 
 
+    def run_quality(self) -> None:
+        if not self.repo:
+            self.status.set("Choose a repository first.")
+            return
+        self._run_task("QUALITY", lambda: self._quality_worker())
+
+
+    def _quality_worker(self) -> dict[str, object]:
+        if not self.repo:
+            raise RuntimeError("Choose an ATLAS research repository first.")
+        value = build_quality_report(self.repo)
+        path = self.repo / "reports" / "longitudinal" / "quality-report.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(pretty(value) + "\n", encoding="utf-8")
+        return {"report": value, "report_path": str(path)}
+
+
     def full_refresh(self) -> None:
         if not self.repo:
             self.status.set("Choose a repository first.")
@@ -608,6 +678,10 @@ class AtlasApp(tk.Tk):
         result["domain"] = build_domain_evolution(root); write_domain_evolution(root)
         result["versions"] = build_version_diff_report(root); write_version_diff_report(root)
         result["promotion"] = build_promotion_engine(root); write_promotion_report(root)
+        result["quality"] = build_quality_report(root)
+        quality_path = root / "reports" / "longitudinal" / "quality-report.json"
+        quality_path.parent.mkdir(parents=True, exist_ok=True)
+        quality_path.write_text(pretty(result["quality"]) + "\n", encoding="utf-8")
         result["audit"] = audit_repo(root)
         return result
 
@@ -763,9 +837,11 @@ class AtlasApp(tk.Tk):
         history = read_report(root, "reports/longitudinal/temporal-history.json", {})
         versions = read_report(root, "reports/longitudinal/protocol-version-diffs.json", {})
         promotion = read_report(root, "reports/longitudinal/promotion-decisions.json", {})
+        quality = read_report(root, "reports/longitudinal/quality-report.json", {}) or build_quality_report(root)
         cases = summarize_cases(query_cases(root, CaseQuery(text=self.case_query.get().strip() or None)))
         return {"inventory": inventory, "graph": graph, "cases": cases, "intakes": list_intakes(root),
-                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion}
+                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion,
+                "quality": quality}
     def _apply_views(self, data: dict[str, object]) -> None:
         inventory = data["inventory"]
         graph: ResearchGraph = data["graph"]
@@ -790,6 +866,11 @@ class AtlasApp(tk.Tk):
         self.system_checks["Promotion Engine"].configure(fg="#48dca8")
         self.system_checks["Protocol Versions"].configure(fg="#48dca8")
         self.system_checks["Audit & Validation"].configure(fg="#48dca8")
+        quality = data.get("quality", {})
+        quality_ok = bool(quality.get("ok")) if isinstance(quality, dict) else False
+        self.system_checks["Quality Constitution"].configure(
+            fg="#46F0D2" if quality_ok else "#62AAE5"
+        )
         self.case_tree.delete(0, "end")
         for case in cases:
             self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
@@ -810,6 +891,7 @@ class AtlasApp(tk.Tk):
         self._set_report_text("temporal_ledger", data["history"])
         self._set_report_text("protocol_versions", data["versions"])
         self._set_report_text("promotion", data["promotion"])
+        self._set_report_text("quality", data["quality"])
     def _set_report_text(self, key: str, value: object) -> None:
         widget = getattr(self, f"text_{key}", None)
         if widget is not None:
@@ -837,14 +919,14 @@ def run_self_test() -> int:
     if errors:
         log_file.write_text("SELF-TEST: validation failed\n" + "\n".join(errors), encoding="utf-8")
         return 1
-    audit = audit_repo(root)
-    if not audit.get("ok"):
-        log_file.write_text("SELF-TEST: audit failed\n" + pretty(audit), encoding="utf-8")
+    quality = build_quality_report(root)
+    if not quality.get("ok"):
+        log_file.write_text("SELF-TEST: quality failed\n" + pretty(quality), encoding="utf-8")
         return 1
-    ResearchGraph.from_repo(root)
-    build_inventory(root)
+    graph = ResearchGraph.from_repo(root)
+    inventory = build_inventory(root)
     log_file.write_text(
-        f"SELF-TEST: OK\ncases={audit['graph']['node_count']} nodes={audit['graph']['node_count']} edges={audit['graph']['edge_count']}\n",
+        f"SELF-TEST: OK\ncases={inventory['case_count']} nodes={len(graph.nodes)} edges={len(graph.edges)}\n",
         encoding="utf-8",
     )
     return 0

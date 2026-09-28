@@ -22,7 +22,10 @@ The repository is organized as cooperating research layers:
 7. Promotion engine: explicit Candidate -> Observed -> Reproduced -> Corroborated -> Generalized -> Pattern -> Validated Pattern gates.
 8. Protocol differential: source-backed security-model diffs across explicit protocol-version contexts.
 9. Deterministic tooling: schema validation, referential integrity, inventory, queries, reports and bounded experiments.
-10. Human analysis: interpretation stays above the evidence layer and never replaces it.
+10. Evidence gate: findings are derived into candidate/observed/reproduced/validated states from explicit proof fields; detector severity never upgrades truth.
+11. Secure runtime and intake: strict YAML, bounded subprocess output, minimal experiment environment, archive traversal/link/size/compression controls, and content manifests.
+12. Integrated quality constitution: repository, ledger, proof debt, promotion debt and regression debt are evaluated together.
+13. Human analysis: interpretation stays above the evidence layer and never replaces it.
 ## Repository map
 
 | Area | Purpose |
@@ -89,6 +92,20 @@ Impact -> Mitigation -> Regression -> Generalize
 Research stages are explicit. Missing stages are reported as research debt, not silently
 invented. Candidate patterns remain candidates until stronger evidence supports promotion.
 
+The contract-audit layer reports deterministic source signals only. A signal such as
+tx.origin, delegatecall, selfdestruct or a low-level call is a review lead; it is not a
+validated vulnerability. The finding gate requires a pinned source, security property,
+concrete reproduction, impact evidence and independent verification before validation,
+with regression tracked separately.
+
+Run the integrated constitution check with:
+
+    python -m w3sec quality --json --write
+    python -m w3sec gate --json
+
+The quality report combines schema/reference validation, ledger integrity, case integrity,
+proof debt, promotion state and repository coverage without rewriting canonical records.
+
 ## Current corpus
 
 The canonical layer covers 4 case studies, 5 invariants, 4 counterexamples, 4 hypotheses,
@@ -134,6 +151,12 @@ Build both binaries from Windows:
 
     powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
 
+The production build script creates an isolated clean staging checkout under %TEMP%,
+overlays readable working-tree changes, falls back to the committed HEAD copy only when a
+known file is unreadable/locked, then compiles, validates, runs the full unit suite and
+builds both PyInstaller executables. BUILD-MANIFEST.txt records the commit, hashes,
+platform and any skipped locked files.
+
 The resulting dist/ bundle contains ATLAS.exe, atlas-cli.exe, both SHA-256 files,
 BUILD-MANIFEST.txt, and ATLAS-windows-x64.zip.
 
@@ -149,4 +172,5 @@ self-test log. GitHub Actions builds and uploads the same portable Windows bundl
 
 The CI pipeline installs dependencies, compiles the package, runs the complete unit suite,
 validates repository contracts, verifies the temporal ledger, runs the longitudinal engines,
-executes federated checks, and executes the bounded research-validation manifests.
+checks the quality constitution and evidence gate, executes federated checks, and executes
+the bounded research-validation manifests.

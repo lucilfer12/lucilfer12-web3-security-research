@@ -4,15 +4,42 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import yaml
+from yaml.constructor import ConstructorError
 
 
 class RecordLoadError(ValueError):
     """Raised when a research YAML record cannot be loaded safely."""
 
 
+class _StrictLoader(yaml.SafeLoader):
+    pass
+
+
+def _construct_mapping(loader: _StrictLoader, node: yaml.MappingNode, deep: bool = False):
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise ConstructorError(
+                "while constructing a mapping", node.start_mark,
+                f"found duplicate key {key!r}", key_node.start_mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+_StrictLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _construct_mapping,
+)
+
+
 def load_yaml(path: Path) -> Any:
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+        return yaml.load(text, Loader=_StrictLoader)
+    except (OSError, UnicodeError) as exc:
+        raise RecordLoadError(f"{path}: cannot read YAML: {exc}") from exc
     except yaml.YAMLError as exc:
         raise RecordLoadError(f"{path}: invalid YAML: {exc}") from exc
 
