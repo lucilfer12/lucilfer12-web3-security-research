@@ -179,7 +179,7 @@ class AtlasApp(tk.Tk):
         self.repo = discover_repo()
         self.initial_target = initial_target
         # Dashboard starts as a clean session; historical artifacts are not live target metrics.
-        self.session_active = bool(initial_target)
+        self.session_active = bool(self.repo)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="atlas-worker")
         self.busy = False
         self.task_name = ""
@@ -197,6 +197,7 @@ class AtlasApp(tk.Tk):
         self.show_page("Dashboard")
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
+        self.after(2500, self._live_refresh_tick)
         if self.initial_target:
             self.after(500, lambda: self._start_initial_target_audit(self.initial_target))
 
@@ -871,7 +872,7 @@ class AtlasApp(tk.Tk):
 
     def _set_repo(self, repo: Path | None) -> None:
         self.repo = repo.resolve() if repo else None
-        self.session_active = False
+        self.session_active = bool(self.repo)
         self.repo_var.set(str(self.repo) if self.repo else "No repository selected")
         self._reset_dashboard_metrics()
         if self.repo:
@@ -985,16 +986,30 @@ class AtlasApp(tk.Tk):
     def _full_refresh_worker(self) -> dict[str, object]:
         root = self.repo
         result: dict[str, object] = {}
+        def stage(start: int, end: int, label: str):
+            def cb(percent: int, caption: str = "") -> None:
+                mapped = start + int((max(0, min(100, int(percent))) / 100) * (end - start))
+                self._progress_callback(mapped, caption or label)
+            self._progress_callback(start, label)
+            return cb
         federation = build_federation_snapshot(root)
         write_federation_snapshot(root); write_candidate_snapshot(root)
+        self._progress_callback(15, "Federation snapshot refreshed")
         result["federation"] = federation
         result["research"] = build_research_metrics(root); write_longitudinal_report(root)
+        self._progress_callback(30, "Research intelligence refreshed")
         result["chronicle"] = build_chronicle(root); write_chronicle(root)
+        self._progress_callback(42, "Temporal chronicle refreshed")
         result["history"] = build_temporal_timeline(root); write_temporal_history(root)
+        self._progress_callback(54, "Temporal history refreshed")
         result["domain"] = build_domain_evolution(root); write_domain_evolution(root)
+        self._progress_callback(66, "Domain evolution refreshed")
         result["versions"] = build_version_diff_report(root); write_version_diff_report(root)
+        self._progress_callback(78, "Protocol versions refreshed")
         result["promotion"] = build_promotion_engine(root); write_promotion_report(root)
-        result["audit"] = audit_repo(root)
+        self._progress_callback(88, "Promotion gates evaluated")
+        result["audit"] = audit_repo(root, self._progress_callback)
+        self._progress_callback(99, "Audit result assembled")
         return result
 
 
@@ -1159,6 +1174,13 @@ class AtlasApp(tk.Tk):
         return datetime.now().strftime("%H:%M:%S")
 
 
+    def _live_refresh_tick(self) -> None:
+        if not self.winfo_exists():
+            return
+        self.refresh_views()
+        self.after(2500, self._live_refresh_tick)
+
+
     def refresh_views(self) -> None:
         if not self.repo or self.busy:
             return
@@ -1179,9 +1201,13 @@ class AtlasApp(tk.Tk):
         history = read_report(root, "reports/longitudinal/temporal-history.json", {})
         versions = read_report(root, "reports/longitudinal/protocol-version-diffs.json", {})
         promotion = read_report(root, "reports/longitudinal/promotion-decisions.json", {})
+        federation = read_report(root, "reports/federation/snapshot.json", {})
+        validation_errors = validate_repo(root)
+        ledger_errors = verify_chain(root / "ledger" / "events.jsonl")
         cases = summarize_cases(query_cases(root, CaseQuery(text=self.case_query.get().strip() or None)))
         return {"inventory": inventory, "graph": graph, "cases": cases, "intakes": list_intakes(root),
-                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion}
+                "intelligence": audit, "history": history, "versions": versions, "promotion": promotion,
+                "federation": federation, "validation_errors": validation_errors, "ledger_errors": ledger_errors}
     def _reset_dashboard_metrics(self) -> None:
         for key in ("cases", "intakes", "contracts", "nodes", "edges", "candidates", "evidence", "invariants"):
             widget = getattr(self, f"card_{key}", None)
@@ -1189,9 +1215,6 @@ class AtlasApp(tk.Tk):
                 widget.configure(text="0")
 
     def _apply_views(self, data: dict[str, object]) -> None:
-        if not self.session_active:
-            self._reset_dashboard_metrics()
-            return
         inventory = data["inventory"]
         graph: ResearchGraph = data["graph"]
         cases = data["cases"]
@@ -1208,13 +1231,20 @@ class AtlasApp(tk.Tk):
         self.card_candidates.configure(text=str(candidate_count))
         self.card_evidence.configure(text=str((inventory or {}).get("knowledge_registry_counts", {}).get("evidence", "—")))
         self.card_invariants.configure(text=str((inventory or {}).get("knowledge_registry_counts", {}).get("invariants", "—")))
-        self.system_checks["Knowledge Graph"].configure(fg="#48dca8")
-        self.system_checks["Temporal Ledger"].configure(fg="#48dca8")
-        self.system_checks["Federation Layer"].configure(fg="#48dca8")
-        self.system_checks["Research Intelligence"].configure(fg="#48dca8")
-        self.system_checks["Promotion Engine"].configure(fg="#48dca8")
-        self.system_checks["Protocol Versions"].configure(fg="#48dca8")
-        self.system_checks["Audit & Validation"].configure(fg="#48dca8")
+        validation_ok = not data.get("validation_errors")
+        ledger_ok = not data.get("ledger_errors")
+        federation = data.get("federation") or {}
+        status_map = {
+            "Knowledge Graph": bool(graph.nodes),
+            "Temporal Ledger": ledger_ok,
+            "Federation Layer": federation.get("federation_health") == "ok",
+            "Research Intelligence": bool(data.get("intelligence")),
+            "Promotion Engine": bool(data.get("promotion")),
+            "Protocol Versions": bool(data.get("versions")),
+            "Audit & Validation": validation_ok and ledger_ok,
+        }
+        for label, ok in status_map.items():
+            self.system_checks[label].configure(fg="#48dca8" if ok else "#e7a64b")
         self.case_tree.delete(0, "end")
         for case in cases:
             self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
