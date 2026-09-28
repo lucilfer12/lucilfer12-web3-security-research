@@ -42,6 +42,12 @@ def _print_json(value: object) -> None:
 
 
 def main() -> int:
+    import sys
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     try:
         app_version = __version__
     except Exception:
