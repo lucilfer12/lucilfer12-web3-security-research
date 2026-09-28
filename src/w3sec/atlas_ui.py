@@ -419,7 +419,9 @@ class AtlasApp(tk.Tk):
         self._nav_photo = ImageTk.PhotoImage(glass)
         self.nav_view.delete("nav-bg")
         self.nav_view.create_image(0, 0, anchor="nw", image=self._nav_photo, tags=("nav-bg",))
-        self.nav_view.tag_lower("nav-bg")
+        items = self.nav_view.find_all()
+        if len(items) > 1:
+            self.nav_view.tag_lower("nav-bg", items[1])
 
     def _mousewheel(self, event) -> None:
         """Route the physical wheel to navigation or the current page."""
