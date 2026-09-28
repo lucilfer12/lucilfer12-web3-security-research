@@ -733,13 +733,19 @@ class AtlasApp(tk.Tk):
             filetypes=[("Archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar"), ("All files", "*.*")]
         )
         if path:
-            self.start_target_import(Path(path))
+            target = Path(path)
+            self.target_var.set(str(target))
+            self.show_page("Import / Intake")
+            self.audit_target()
 
 
     def choose_directory(self) -> None:
         path = filedialog.askdirectory(title="Load contract repository")
         if path:
-            self.start_target_import(Path(path))
+            target = Path(path)
+            self.target_var.set(str(target))
+            self.show_page("Import / Intake")
+            self.audit_target()
     def _audit_findings_page(self) -> None:
         page = self.pages["Audit Findings"]
         tk.Label(page, text="Audit Findings", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
@@ -878,7 +884,8 @@ class AtlasApp(tk.Tk):
                 target = stage / f"{len(list(stage.iterdir()))}-{path.name}"
             shutil.copy2(path, target)
         self.target_var.set(str(stage))
-        self.start_target_import(stage)
+        self.show_page("Import / Intake")
+        self.audit_target()
 
 
     def _start_initial_target_audit(self, target: Path) -> None:
