@@ -330,7 +330,9 @@ def _tool_versions() -> dict[str, Any]:
     return result
 
 def _text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
+    # UTF-8 with an optional Windows BOM is common in uploaded source files.
+    # The BOM must not become semantic source content or poison JSON/report output.
+    return path.read_text(encoding="utf-8-sig", errors="replace")
 
 def _pragmas(text: str) -> list[str]:
     return sorted(set(re.findall(r"\bpragma\s+solidity\s+([^;]+);", text)))
