@@ -48,12 +48,19 @@ def save_repo(repo: Path) -> None:
 
 
 def discover_repo() -> Path | None:
+    # ATLAS has one canonical local checkout. A packaged EXE must not attach to
+    # an old build/verify copy just because that path launched the process.
     places: list[Path] = []
+    canonical = Path.home() / "lucilfer12-web3-security-research"
+    if canonical.is_dir():
+        places.append(canonical)
     env = os.environ.get("ATLAS_REPO") or os.environ.get("W3SEC_REPO")
     if env:
         places.append(Path(env))
     try:
-        places.insert(0, Path(json.loads(settings_path().read_text(encoding="utf-8")).get("repo", "")))
+        saved = Path(json.loads(settings_path().read_text(encoding="utf-8")).get("repo", ""))
+        if saved and saved != canonical:
+            places.append(saved)
     except Exception:
         pass
     places.extend([Path.cwd(), Path(__file__).resolve().parents[2]])
@@ -178,8 +185,9 @@ class AtlasApp(tk.Tk):
         self.configure(bg="#06121f")
         self.repo = discover_repo()
         self.initial_target = initial_target
-        # Dashboard starts as a clean session; historical artifacts are not live target metrics.
-        self.session_active = bool(self.repo)
+        # Dashboard metrics stay at zero until a real user-triggered operation runs.
+        # Repository history remains readable elsewhere without becoming fake live counters.
+        self.session_active = bool(initial_target)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="atlas-worker")
         self.busy = False
         self.task_name = ""
@@ -590,22 +598,25 @@ class AtlasApp(tk.Tk):
         self._dashboard_activity(body)
 
     def _dashboard_system(self, parent: tk.Frame) -> None:
-        panel = self._panel(parent, "System Overview", "LIVE", row=0, column=0, sticky="nsew", padx=(0, 5))
+        panel = self._panel(parent, "System Overview", "LIVE STATE", row=0, column=0, sticky="nsew", padx=(0, 5))
         self.system_lines = tk.Frame(panel, bg="#06121f")
         self.system_lines.pack(fill="both", expand=True, padx=12, pady=8)
-        self.system_checks: dict[str, tk.Label] = {}
+        self.system_checks: dict[str, tuple[tk.Label, tk.Label]] = {}
         labels = ["Knowledge Graph", "Temporal Ledger", "Federation Layer", "Research Intelligence",
                   "Promotion Engine", "Protocol Versions", "Audit & Validation"]
         for label in labels:
             row = tk.Frame(self.system_lines, bg="#06121f")
             row.pack(fill="x", pady=6)
-            check = tk.Label(row, text="●", fg="#48dca8", bg="#06121f", font=("Segoe UI", 10))
+            check = tk.Label(row, text="●", fg="#7b91a1", bg="#06121f", font=("Segoe UI", 10))
             check.pack(side="left", padx=(2, 8))
             text_label = tk.Label(row, text=label, fg="#d8ecf5", bg="#06121f",
                                   font=("Segoe UI", 9, "bold"), anchor="w")
             text_label.pack(side="left")
-            self.system_checks[label] = text_label
-        tk.Label(panel, text="ATLAS keeps evidence and inference separate. Candidate data never silently becomes canonical.",
+            state = tk.Label(row, text="EMPTY", fg="#7b91a1", bg="#06121f",
+                             font=("Segoe UI", 8, "bold"), anchor="e")
+            state.pack(side="right")
+            self.system_checks[label] = (check, state)
+        tk.Label(panel, text="System state is derived from the current ATLAS repository; dashboard metrics remain session-zero until an action runs.",
                  fg="#66899d", bg="#06121f", justify="left", wraplength=430,
                  font=("Segoe UI", 8)).pack(fill="x", padx=14, pady=(8, 14))
 
@@ -872,7 +883,9 @@ class AtlasApp(tk.Tk):
 
     def _set_repo(self, repo: Path | None) -> None:
         self.repo = repo.resolve() if repo else None
-        self.session_active = bool(self.repo)
+        # Selecting the repository alone does not start a research session.
+        # Metrics become live only after an explicit audit/import/refresh action.
+        self.session_active = bool(self.initial_target)
         self.repo_var.set(str(self.repo) if self.repo else "No repository selected")
         self._reset_dashboard_metrics()
         if self.repo:
@@ -986,30 +999,45 @@ class AtlasApp(tk.Tk):
     def _full_refresh_worker(self) -> dict[str, object]:
         root = self.repo
         result: dict[str, object] = {}
-        def stage(start: int, end: int, label: str):
-            def cb(percent: int, caption: str = "") -> None:
-                mapped = start + int((max(0, min(100, int(percent))) / 100) * (end - start))
-                self._progress_callback(mapped, caption or label)
-            self._progress_callback(start, label)
-            return cb
+        self._progress_callback(5, "Starting full refresh")
+
         federation = build_federation_snapshot(root)
         write_federation_snapshot(root); write_candidate_snapshot(root)
-        self._progress_callback(15, "Federation snapshot refreshed")
         result["federation"] = federation
-        result["research"] = build_research_metrics(root); write_longitudinal_report(root)
-        self._progress_callback(30, "Research intelligence refreshed")
-        result["chronicle"] = build_chronicle(root); write_chronicle(root)
-        self._progress_callback(42, "Temporal chronicle refreshed")
-        result["history"] = build_temporal_timeline(root); write_temporal_history(root)
-        self._progress_callback(54, "Temporal history refreshed")
-        result["domain"] = build_domain_evolution(root); write_domain_evolution(root)
-        self._progress_callback(66, "Domain evolution refreshed")
-        result["versions"] = build_version_diff_report(root); write_version_diff_report(root)
-        self._progress_callback(78, "Protocol versions refreshed")
-        result["promotion"] = build_promotion_engine(root); write_promotion_report(root)
-        self._progress_callback(88, "Promotion gates evaluated")
-        result["audit"] = audit_repo(root, self._progress_callback)
-        self._progress_callback(99, "Audit result assembled")
+        self._progress_callback(14, "Federation snapshot complete")
+
+        result["research"] = build_research_metrics(root)
+        write_longitudinal_report(root)
+        self._progress_callback(24, "Research intelligence complete")
+
+        result["chronicle"] = build_chronicle(root)
+        write_chronicle(root)
+        self._progress_callback(34, "Temporal chronicle complete")
+
+        result["history"] = build_temporal_timeline(root)
+        write_temporal_history(root)
+        self._progress_callback(44, "Temporal history complete")
+
+        result["domain"] = build_domain_evolution(root)
+        write_domain_evolution(root)
+        self._progress_callback(54, "Domain evolution complete")
+
+        result["versions"] = build_version_diff_report(root)
+        write_version_diff_report(root)
+        self._progress_callback(64, "Protocol versions complete")
+
+        result["promotion"] = build_promotion_engine(root)
+        write_promotion_report(root)
+        self._progress_callback(74, "Promotion gates complete")
+
+        result["audit"] = audit_repo(
+            root,
+            lambda percent, caption="": self._progress_callback(
+                74 + int(max(0, min(100, int(percent))) * 0.26),
+                caption or "Repository audit",
+            ),
+        )
+        self._progress_callback(100, "Full refresh complete")
         return result
 
 
@@ -1214,37 +1242,57 @@ class AtlasApp(tk.Tk):
             if widget is not None:
                 widget.configure(text="0")
 
+    def _apply_dashboard_metrics(self, inventory: object, graph: ResearchGraph, intakes: object, federation: object) -> None:
+        if not isinstance(inventory, dict):
+            self._reset_dashboard_metrics()
+            return
+        intake_rows = intakes if isinstance(intakes, list) else []
+        self.card_cases.configure(text=str(inventory.get("case_count", 0)))
+        self.card_intakes.configure(text=str(len(intake_rows)))
+        self.card_contracts.configure(text=str(sum(
+            int(x.get("summary", {}).get("contract_count", 0))
+            for x in intake_rows if isinstance(x, dict)
+        )))
+        self.card_nodes.configure(text=str(len(graph.nodes)))
+        self.card_edges.configure(text=str(len(graph.edges)))
+        federation = federation if isinstance(federation, dict) else {}
+        self.card_candidates.configure(text=str(federation.get("candidate_record_count", 0)))
+        knowledge = inventory.get("knowledge_registry_counts", {})
+        self.card_evidence.configure(text=str(knowledge.get("evidence", 0)))
+        self.card_invariants.configure(text=str(knowledge.get("invariants", 0)))
+
     def _apply_views(self, data: dict[str, object]) -> None:
         inventory = data["inventory"]
         graph: ResearchGraph = data["graph"]
         cases = data["cases"]
         intakes = data["intakes"]
-        if isinstance(inventory, dict):
-            self.card_cases.configure(text=str(inventory.get("case_count", "—")))
-            self.card_intakes.configure(text=str(len(intakes)))
-            self.card_contracts.configure(text=str(sum(
-                int(x.get("summary", {}).get("contract_count", 0)) for x in intakes
-            )))
-        self.card_nodes.configure(text=str(len(graph.nodes)))
-        self.card_edges.configure(text=str(len(graph.edges)))
-        candidate_count = read_report(self.repo, "reports/federation/snapshot.json", {}).get("candidate_record_count", "—")
-        self.card_candidates.configure(text=str(candidate_count))
-        self.card_evidence.configure(text=str((inventory or {}).get("knowledge_registry_counts", {}).get("evidence", "—")))
-        self.card_invariants.configure(text=str((inventory or {}).get("knowledge_registry_counts", {}).get("invariants", "—")))
+        if self.session_active:
+            self._apply_dashboard_metrics(inventory, graph, intakes, data.get("federation"))
+        else:
+            self._reset_dashboard_metrics()
         validation_ok = not data.get("validation_errors")
         ledger_ok = not data.get("ledger_errors")
         federation = data.get("federation") or {}
-        status_map = {
-            "Knowledge Graph": bool(graph.nodes),
-            "Temporal Ledger": ledger_ok,
-            "Federation Layer": federation.get("federation_health") == "ok",
-            "Research Intelligence": bool(data.get("intelligence")),
-            "Promotion Engine": bool(data.get("promotion")),
-            "Protocol Versions": bool(data.get("versions")),
-            "Audit & Validation": validation_ok and ledger_ok,
+        ledger_path = self.repo / "ledger" / "events.jsonl"
+        states = {
+            "Knowledge Graph": ("READY" if graph.nodes else "EMPTY", bool(graph.nodes)),
+            "Temporal Ledger": ("OK" if ledger_path.exists() and ledger_ok else ("EMPTY" if not ledger_path.exists() else "FAILED"), bool(ledger_path.exists() and ledger_ok)),
+            "Federation Layer": ("OK" if federation.get("federation_health") == "ok" else ("BLOCKED" if federation else "EMPTY"), federation.get("federation_health") == "ok"),
+            "Research Intelligence": ("READY" if data.get("intelligence") else "EMPTY", bool(data.get("intelligence"))),
+            "Promotion Engine": ("READY" if data.get("promotion") else "EMPTY", bool(data.get("promotion"))),
+            "Protocol Versions": ("READY" if data.get("versions") else "EMPTY", bool(data.get("versions"))),
+            "Audit & Validation": ("OK" if validation_ok and ledger_ok else "FAILED", validation_ok and ledger_ok),
         }
-        for label, ok in status_map.items():
-            self.system_checks[label].configure(fg="#48dca8" if ok else "#e7a64b")
+        for label, (state, ok) in states.items():
+            dot, state_label = self.system_checks[label]
+            if state == "EMPTY":
+                tone = "#7b91a1"
+            elif ok:
+                tone = "#48dca8"
+            else:
+                tone = "#e7a64b"
+            dot.configure(fg=tone)
+            state_label.configure(text=state, fg=tone)
         self.case_tree.delete(0, "end")
         for case in cases:
             self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
