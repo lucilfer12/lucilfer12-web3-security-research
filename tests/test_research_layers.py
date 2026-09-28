@@ -47,7 +47,8 @@ class ResearchLayersTests(unittest.TestCase):
             "validated_finding": {"id": "f-1"},
         })
         self.assertFalse(chain["allowed_validated"])
-        self.assertIsNone(chain["highest_proven_stage"])
+        self.assertEqual("target", chain["highest_proven_stage"])
+        self.assertTrue(chain["gaps"])
         fabric = build_evidence_fabric([
             {"id": "f-1", "target": {"sha256": "x"}, "signal": {"id": "tx-origin"}},
         ])
