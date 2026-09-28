@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -159,5 +159,43 @@ class QualityHardeningTests(unittest.TestCase):
         self.assertIn("candidate-is-not-validated", report["constitution"])
 
 
+    def test_regression_status_alone_cannot_be_passed_evidence(self):
+        from w3sec.regression_evidence import validate_regression_evidence
+        result = validate_regression_evidence({
+            "id": "r1",
+            "finding": "F-1",
+            "source_revision": "abc",
+            "environment_hash": "env",
+            "execution_id": "exec-1",
+            "status": "green",
+            "timestamp": "2026-09-28T09:00:00Z",
+        })
+        self.assertFalse(result["passed"])
+        self.assertEqual("invalid-status", result["reason"])
+
+    def test_evidence_graph_contains_regression_nodes(self):
+        import json
+        from w3sec.evidence import build_evidence_graph
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "corpus" / "knowledge").mkdir(parents=True)
+            (root / "reports" / "contract-audits").mkdir(parents=True)
+            (root / "corpus" / "knowledge" / "regressions.yaml").write_text(
+                "version: 1\nregressions:\n"
+                "  - id: r1\n    finding: F-1\n    status: passed\n"
+                "    source_revision: abc\n    patched_revision: def\n"
+                "    environment_hash: env\n    execution_id: exec-1\n"
+                "    timestamp: 2026-09-28T09:00:00Z\n", encoding="utf-8")
+            (root / "reports" / "contract-audits" / "audit.json").write_text(json.dumps({
+                "id": "audit-1", "findings": [{"id": "F-1", "file": "Vault.sol", "line": 1,
+                "source_hash": "a" * 64, "security_property": "authorization integrity"}]}), encoding="utf-8")
+            graph = build_evidence_graph(root)
+            self.assertEqual(1, graph["summary"]["regression_node_count"])
+            self.assertEqual(1, graph["summary"]["regression_counts"]["passed"])
+            self.assertTrue(any(e["relation"] == "regressed_by" for e in graph["edges"]))
+
+
 if __name__ == "__main__":
     unittest.main()
+
+

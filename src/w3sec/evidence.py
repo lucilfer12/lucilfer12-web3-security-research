@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 import json
@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .finding_gate import evaluate_finding
+from .regression_evidence import load_regression_evidence
 
 
 def _digest(value: Any) -> str:
@@ -34,7 +35,7 @@ def _audit_reports(root: Path) -> list[dict[str, Any]]:
 
 
 def _promotion_snapshot(root: Path) -> dict[str, Any]:
-    from .promotion import build_promotion_engine
+    from .promotion_verified import build_promotion_engine
     report = build_promotion_engine(root)
     return {
         "promotable_count": report["promotable_count"],
@@ -51,8 +52,6 @@ def _chronicle_snapshot(root: Path) -> dict[str, Any]:
         "first_timestamp": report["ledger"]["first_timestamp"],
         "last_timestamp": report["ledger"]["last_timestamp"],
     }
-
-
 def build_evidence_graph(root: Path) -> dict[str, Any]:
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, str]] = []
@@ -83,11 +82,28 @@ def build_evidence_graph(root: Path) -> dict[str, Any]:
             for missing in result.missing:
                 debt.append({"finding": finding_id, "dimension": missing, "status": "open"})
 
+    regression_records = load_regression_evidence(root)
+    regression_counts = {"attempted": 0, "passed": 0, "failed": 0, "inconclusive": 0}
+    for regression in regression_records:
+        status = str(regression.get("status", "")).lower()
+        if status in regression_counts:
+            regression_counts[status] += 1
+        rid = str(regression["evidence_id"])
+        rn = _node("regression", rid, status=status, valid=regression["validation"]["valid"], passed=regression["validation"]["passed"], source_revision=regression.get("source_revision"), patched_revision=regression.get("patched_revision"), environment_hash=regression.get("environment_hash"), execution_id=regression.get("execution_id"), artifact_hashes=regression.get("artifact_hashes", []), timestamp=str(regression.get("timestamp")) if regression.get("timestamp") is not None else None)
+        nodes[rn["id"]] = rn
+        finding_id = regression.get("finding")
+        if finding_id and f"finding:{finding_id}" in nodes:
+            edges.append({"source": f"finding:{finding_id}", "relation": "regressed_by", "target": rn["id"]})
+        elif regression.get("case"):
+            debt.append({"regression": rid, "dimension": "finding-link", "status": "open", "case": regression.get("case")})
+        if not regression["validation"]["passed"]:
+            debt.append({"regression": rid, "dimension": "regression-proof", "status": "open", "missing": regression["validation"]["missing"]})
+
     document = {
-        "schema": "atlas.evidence-graph.v1",
+        "schema": "atlas.evidence-graph.v2",
         "nodes": list(nodes.values()),
         "edges": edges,
-        "summary": {"finding_count": findings, "validated_count": validated, "proof_node_count": sum(1 for n in nodes.values() if n["kind"] == "proof"), "research_debt_count": len(debt)},
+        "summary": {"finding_count": findings, "validated_count": validated, "proof_node_count": sum(1 for n in nodes.values() if n["kind"] == "proof"), "regression_node_count": sum(1 for n in nodes.values() if n["kind"] == "regression"), "regression_counts": regression_counts, "research_debt_count": len(debt)},
         "research_debt": debt,
         "promotion": _promotion_snapshot(root),
         "chronicle": _chronicle_snapshot(root),
@@ -104,3 +120,5 @@ def write_evidence_graph(root: Path, path: Path | None = None) -> Path:
 
 
 __all__ = ["build_evidence_graph", "write_evidence_graph"]
+
+
