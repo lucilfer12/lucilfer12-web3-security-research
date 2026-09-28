@@ -97,12 +97,14 @@ class IntakeTests(unittest.TestCase):
                 "contract Bom { function f() public { require(tx.origin == msg.sender); } }\n",
                 encoding="utf-8-sig",
             )
-            report = build_contract_audit(source, root / "research")
+            archive = root / "bom.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.write(source, arcname="Bom.sol")
+            report = build_contract_audit(archive, root / "research")
             encoded = json.dumps(report, ensure_ascii=False)
             self.assertNotIn("\ufeff", encoded)
             self.assertEqual("tx_origin", report["findings"][0]["signal"])
             self.assertEqual("tx_origin", report["engine_scan"]["engine_findings"][0]["signal"])
-
 
     def test_engine_rules_produce_target_derived_evidence(self):
         with tempfile.TemporaryDirectory() as td:

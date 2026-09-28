@@ -131,7 +131,7 @@ def _unit_for_line(units: list[dict[str, Any]], line: int, file_rel: str) -> str
 def _snippet(root_target: Path, rel: str, line: int) -> str | None:
     try:
         path = root_target / rel if root_target.is_dir() else root_target.parent / rel
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
         if 1 <= line <= len(lines):
             return lines[line - 1].strip()[:320]
     except Exception:

@@ -79,6 +79,84 @@ Write-Host "== Packaged smoke tests =="
 & ".\dist\atlas-cli.exe" --version
 if ($LASTEXITCODE -ne 0) { throw "Packaged CLI --version failed" }
 
+# Real packaged audit smoke test: a UTF-8-BOM Solidity file inside ZIP must be
+# extracted, parsed, scanned, and serialized without encoding corruption.
+$SmokeDir = Join-Path $Stage "packaged-smoke"
+$SmokeZip = Join-Path $Stage "packaged-smoke.zip"
+$SmokeJson = Join-Path $Stage "packaged-smoke.json"
+$SmokeDirPosix = $SmokeDir -replace '\\','/'
+$SmokeZipPosix = $SmokeZip -replace '\\','/'
+$SmokeJsonPosix = $SmokeJson -replace '\\','/'
+New-Item -ItemType Directory -Force $SmokeDir | Out-Null
+$SmokePy = Join-Path $Stage "make_smoke.py"
+@'
+from pathlib import Path
+import zipfile
+
+root = Path(r"__SMOKE_DIR__")
+source = root / "Risky.sol"
+source.write_text(
+    "pragma solidity ^0.8.20;\n"
+    "contract Risky { function f() public { require(tx.origin == msg.sender); } }\n",
+    encoding="utf-8-sig",
+)
+with zipfile.ZipFile(r"__SMOKE_ZIP__", "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    zf.write(source, "Risky.sol")
+'@.Replace("__SMOKE_DIR__", $SmokeDirPosix).Replace("__SMOKE_ZIP__", $SmokeZipPosix) | Set-Content $SmokePy -Encoding utf8
+python $SmokePy
+if ($LASTEXITCODE -ne 0) { throw "Packaged audit smoke fixture creation failed" }
+$AuditPy = Join-Path $Stage "run_smoke_audit.py"
+@'
+import subprocess
+import sys
+
+exe = sys.argv[1]
+archive = sys.argv[2]
+repo = sys.argv[3]
+out_path = sys.argv[4]
+proc = subprocess.run(
+    [exe, "audit-contract", archive, "--os-root", repo, "--json"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    check=False,
+)
+if proc.returncode != 0:
+    sys.stderr.buffer.write(proc.stderr)
+    raise SystemExit(proc.returncode or 1)
+with open(out_path, "wb") as handle:
+    handle.write(proc.stdout)
+'@ | Set-Content $AuditPy -Encoding utf8
+python $AuditPy (Join-Path $Root "dist\atlas-cli.exe") $SmokeZip $Root $SmokeJson
+if ($LASTEXITCODE -ne 0) { throw "Packaged CLI audit smoke test failed" }
+$SmokeCheck = @'
+import json
+from pathlib import Path
+
+path = Path(r"__SMOKE_JSON__")
+raw = path.read_text(encoding="utf-8")
+if "\ufeff" in raw:
+    raise SystemExit("BOM leaked into packaged audit JSON")
+report = json.loads(raw)
+summary = report["summary"]
+assert report["target"]["archive_format"] == "zip", report["target"]
+assert summary["file_count"] == 1, summary
+assert summary["source_file_count"] == 1, summary
+assert summary["contract_count"] == 1, summary
+assert summary["function_count"] == 1, summary
+assert summary["finding_count"] == 1, summary
+assert summary["engine_finding_count"] == 1, summary
+assert any(
+    item.get("engine") == "atlas-rules"
+    and item.get("signal") == "tx_origin"
+    for item in report["engine_scan"]["engine_findings"]
+), report["engine_scan"]
+print("PACKAGED AUDIT SMOKE: OK")
+'@.Replace("__SMOKE_JSON__", $SmokeJsonPosix) | Set-Content (Join-Path $Stage "check_smoke.py") -Encoding utf8
+python (Join-Path $Stage "check_smoke.py")
+if ($LASTEXITCODE -ne 0) { throw "Packaged audit smoke assertions failed" }
+Remove-Item $SmokePy, $AuditPy, (Join-Path $Stage "check_smoke.py"), $SmokeJson, $SmokeZip -Force -ErrorAction SilentlyContinue
+Remove-Item $SmokeDir -Recurse -Force -ErrorAction SilentlyContinue
+
 $selfTest = Start-Process -FilePath ".\dist\ATLAS.exe" -WorkingDirectory $Stage -ArgumentList "--self-test" -PassThru
 if (-not $selfTest.WaitForExit(120000)) {
     Stop-Process -Id $selfTest.Id -Force -ErrorAction SilentlyContinue
