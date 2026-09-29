@@ -8,7 +8,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from .atlas_ui_runtime import (
+from .atlas_ui import (
     APP_NAME,
     APP_TAGLINE,
     AtlasApp as _AtlasApp,
