@@ -317,7 +317,15 @@ def _files(target: Path) -> list[Path]:
     return found
 
 def _configs(target: Path) -> list[dict[str, str]]:
-    root = target if target.is_dir() else target.parent
+    if target.is_file():
+        root = target.parent
+        result = []
+        for name in sorted(CONFIG_NAMES):
+            path = root / name
+            if path.is_file():
+                result.append({"path": name, "name": name})
+        return result
+    root = target
     result = []
     for base, dirs, names in os.walk(root):
         dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
