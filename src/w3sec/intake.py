@@ -231,7 +231,14 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None, cance
                         (staging / name).mkdir(parents=True, exist_ok=True)
                         continue
                     mode = (member.external_attr >> 16) & 0o177777
-                    if stat.S_ISLNK(mode) or stat.S_ISFIFO(mode) or stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
+                    # Repository archives may legitimately contain symlink metadata.
+                    # Never follow archive symlinks: skip them and continue auditing.
+                    # Other special file types remain rejected because materializing them is unsafe.
+                    if stat.S_ISLNK(mode):
+                        if progress:
+                            progress(int(7 * index / total_members), f"Skipping archive symlink {member.filename}")
+                        continue
+                    if stat.S_ISFIFO(mode) or stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
                         raise ValueError(f"Special ZIP member is not accepted: {member.filename}")
                     count += 1
                     _, total = _archive_limits(count, total, member.file_size, member.compress_size, member.filename)
@@ -266,8 +273,12 @@ def _safe_extract_archive(archive: Path, destination: Path, progress=None, cance
                 if folded in seen:
                     raise ValueError(f"Duplicate/case-colliding archive member: {member.name}")
                 seen.add(folded)
-                if member.issym() or member.islnk() or not (member.isdir() or member.isfile()):
-                    raise ValueError(f"Archive link/special file is not accepted: {member.name}")
+                if member.issym() or member.islnk():
+                    if progress:
+                        progress(int(7 * index / total_members), f"Skipping archive link {member.name}")
+                    continue
+                if not (member.isdir() or member.isfile()):
+                    raise ValueError(f"Archive special file is not accepted: {member.name}")
                 if member.isdir():
                     (staging / name).mkdir(parents=True, exist_ok=True)
                     continue
@@ -562,6 +573,8 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
                     "max_total_bytes": ARCHIVE_MAX_TOTAL_BYTES,
                     "max_compression_ratio": ARCHIVE_MAX_COMPRESSION_RATIO,
                     "links_allowed": False,
+                    "links_followed": False,
+                    "links_skipped": True,
                     "special_files_allowed": False,
                     "atomic_extraction": True,
                 },
