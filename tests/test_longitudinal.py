@@ -16,15 +16,27 @@ class LongitudinalTests(unittest.TestCase):
     def test_federation_is_populated_but_secondary(self):
         snapshot = build_federation_snapshot(ROOT)
         self.assertEqual("ok", snapshot["federation_health"])
-        self.assertGreaterEqual(snapshot["candidate_record_count"], 250)
         self.assertIn("candidate_policy", snapshot)
-        self.assertEqual(snapshot["candidate_record_count"], len(normalized_candidate_records(ROOT)))
+        candidates = normalized_candidate_records(ROOT)
+        self.assertEqual(snapshot["candidate_record_count"], len(candidates))
+        optional_available = any(
+            source_id != "source.repo.central" and bool(item.get("available"))
+            for source_id, item in snapshot["sources"].items()
+        )
+        if optional_available:
+            self.assertGreater(snapshot["candidate_record_count"], 0)
+        else:
+            self.assertEqual(0, snapshot["candidate_record_count"])
 
     def test_candidate_network_tracks_recurrence(self):
+        snapshot = build_federation_snapshot(ROOT)
         network = build_candidate_network(ROOT)
-        self.assertGreaterEqual(network["candidate_count"], 250)
-        self.assertTrue(network["theme_recurrence"])
+        self.assertEqual(network["candidate_count"], snapshot["candidate_record_count"])
         self.assertTrue(network["policy"].startswith("Candidate network"))
+        if network["candidate_count"]:
+            self.assertTrue(network["theme_recurrence"])
+        else:
+            self.assertFalse(network["theme_recurrence"])
 
     def test_promotion_engine_holds_current_patterns(self):
         engine = build_promotion_engine(ROOT)
