@@ -819,7 +819,36 @@ class AtlasApp(tk.Tk):
             self.active_target_label.configure(text=f"ACTIVE TARGET  ·  {target.name}")
         if hasattr(self, "finding_target_label"):
             self.finding_target_label.configure(text=f"TARGET  ·  {target}")
+        self._refresh_cases_target_banner()
         return target
+
+    def _refresh_cases_target_banner(self) -> None:
+        label = getattr(self, "cases_target_label", None)
+        detail = getattr(self, "cases_target_detail", None)
+        if label is None or detail is None:
+            return
+        target = self.current_target
+        report = self.current_target_report if isinstance(self.current_target_report, dict) else {}
+        summary = report.get("summary", {}) if isinstance(report.get("summary", {}), dict) else {}
+        if target is None:
+            label.configure(text="CURRENT TARGET  ·  NONE")
+            detail.configure(text="No target selected.")
+            return
+        if not report:
+            label.configure(text=f"CURRENT TARGET  ·  {target.name}  ·  AUDIT NOT RUN")
+            detail.configure(text=str(target))
+            return
+        label.configure(text=f"CURRENT TARGET  ·  {target.name}  ·  AUDIT READY")
+        detail.configure(text=(
+            f"{target}  ·  SOURCE FILES {summary.get('source_file_count', 0)}  ·  CONTRACTS {summary.get('contract_count', 0)}  ·  FUNCTIONS {summary.get('function_count', 0)}  ·  FINDINGS {summary.get('finding_count', 0)}  ·  ENGINE FINDINGS {summary.get('engine_finding_count', 0)}"
+        ))
+
+    def _copy_current_target_report(self) -> None:
+        report = self.current_target_report if isinstance(self.current_target_report, dict) else self.last_audit
+        self.clipboard_clear()
+        self.clipboard_append(pretty(report) if report else "NO TARGET AUDIT RESULT")
+        self.update_idletasks()
+        self.status.set("Copied current target audit report to clipboard.")
 
     def _clear_target_result(self) -> None:
         self.last_audit = {}
@@ -1025,7 +1054,9 @@ class AtlasApp(tk.Tk):
         tk.Label(page, text="Audit Findings", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
         self.finding_target_label = tk.Label(page, text="TARGET  ·  NONE", fg="#46F0D2", bg="#06121f", font=("Segoe UI", 8, "bold"), anchor="w")
         self.finding_target_label.pack(fill="x", pady=(0, 3))
-        tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
+        tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
+        audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 8))
+        self._toolbar_button(audit_actions, "COPY CURRENT TARGET REPORT", self._copy_current_target_report)
         body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(body, "Findings", "PRIORITIZED", row=0, column=0, sticky="nsew", padx=(0, 5))
@@ -1046,27 +1077,29 @@ class AtlasApp(tk.Tk):
             self.case_tree.delete(0, "end")
             for case in cases:
                 self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
-            self.status.set(f"Cases loaded · {len(cases)} records")
+            self.status.set(f"Reference cases loaded · {len(cases)} records")
         except Exception as exc:
             self.status.set(f"Case search failed · {exc}")
 
-
     def _cases_page(self) -> None:
         page = self.pages["Cases"]
-        tk.Label(page, text="Research Cases", fg="#f2fbff", bg="#06121f",
-                 font=("Segoe UI", 20, "bold")).pack(anchor="w")
-        top = tk.Frame(page, bg="#06121f", highlightthickness=0)
-        top.pack(fill="x", pady=(8, 8))
-        self.case_query = tk.StringVar()
-        tk.Entry(top, textvariable=self.case_query, bg="#091a29", fg="#e8f7ff",
-                 insertbackground="#ffffff", relief="flat").pack(side="left", fill="x", expand=True, padx=10, ipady=8)
-        self._toolbar_button(top, "SEARCH", self.load_cases)
-        body = self._panel(page, "Case Corpus", "EVIDENCE-FIRST", fill="both", expand=True)
-        self.case_tree = tk.Listbox(body, bg="#07121d", fg="#c0dbe6", relief="flat",
-                                    selectbackground="#12496a", selectforeground="#ffffff",
-                                    font=("Consolas", 9))
+        tk.Label(page, text="Research Cases", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        target = tk.Frame(page, bg="#07121d", highlightthickness=1, highlightbackground="#163b55")
+        target.pack(fill="x", pady=(8, 8))
+        self.cases_target_label = tk.Label(target, text="CURRENT TARGET  ·  NONE", fg="#46F0D2", bg="#07121d", font=("Segoe UI", 9, "bold"), anchor="w")
+        self.cases_target_label.pack(fill="x", padx=12, pady=(9, 2))
+        self.cases_target_detail = tk.Label(target, text="No target selected.", fg="#b9d8e4", bg="#07121d", font=("Consolas", 9), justify="left", anchor="w")
+        self.cases_target_detail.pack(fill="x", padx=12, pady=(0, 8))
+        actions = tk.Frame(target, bg="#07121d"); actions.pack(fill="x", padx=8, pady=(0, 7))
+        self._toolbar_button(actions, "VIEW AUDIT FINDINGS", lambda: self.show_page("Audit Findings"))
+        self._toolbar_button(actions, "COPY TARGET REPORT", self._copy_current_target_report)
+        top = tk.Frame(page, bg="#06121f"); top.pack(fill="x", pady=(0, 8)); self.case_query = tk.StringVar()
+        tk.Entry(top, textvariable=self.case_query, bg="#091a29", fg="#e8f7ff", insertbackground="#ffffff", relief="flat").pack(side="left", fill="x", expand=True, padx=10, ipady=8)
+        self._toolbar_button(top, "SEARCH REFERENCE CASES", self.load_cases)
+        body = self._panel(page, "REFERENCE CASE CORPUS", "REPOSITORY RECORDS · NOT CURRENT TARGET FINDINGS", fill="both", expand=True)
+        self.case_tree = tk.Listbox(body, bg="#07121d", fg="#c0dbe6", relief="flat", selectbackground="#12496a", selectforeground="#ffffff", font=("Consolas", 9))
         self.case_tree.pack(fill="both", expand=True, padx=10, pady=10)
-
+        self._refresh_cases_target_banner()
 
     def _reports_pages(self) -> None:
         page_specs = {
@@ -1725,6 +1758,8 @@ class AtlasApp(tk.Tk):
                 ))
             else:
                 self.current_target_text.configure(text="NO TARGET SELECTED\\nChoose a file, archive, or directory to start a target-bound audit.")
+
+        self._refresh_cases_target_banner()
 
     def _apply_dashboard_metrics(self, inventory: object, graph: ResearchGraph, intakes: object, federation: object) -> None:
         if not isinstance(inventory, dict):
