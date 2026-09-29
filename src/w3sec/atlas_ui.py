@@ -211,6 +211,7 @@ class AtlasApp(tk.Tk):
         self.task_name = ""
         self.last_audit: dict[str, object] = {}
         self.current_target: Path | None = None
+        self.current_target_report: dict[str, object] = {}
         self.current_report_path: Path | None = None
         self.task_started: float | None = None
         self.job_history: list[dict[str, object]] = []
@@ -622,8 +623,8 @@ class AtlasApp(tk.Tk):
         for i in range(4):
             cards.columnconfigure(i, weight=1, uniform="metric")
         metrics = [
-            ("Cases", "cases"), ("Intakes", "intakes"), ("Contracts", "contracts"), ("Nodes", "nodes"),
-            ("Edges", "edges"), ("Candidates", "candidates"), ("Evidence", "evidence"), ("Invariants", "invariants"),
+            ("Historical Cases", "cases"), ("Historical Intakes", "intakes"), ("Historical Contracts", "contracts"), ("Historical Nodes", "nodes"),
+            ("Historical Edges", "edges"), ("Historical Candidates", "candidates"), ("Historical Evidence", "evidence"), ("Historical Invariants", "invariants"),
         ]
         for i, item in enumerate(metrics):
             self._card(cards, item[0], item[1], i % 4, i // 4)
@@ -632,6 +633,9 @@ class AtlasApp(tk.Tk):
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=2)
         body.rowconfigure(0, weight=1)
+        self.current_target_panel = self._panel(body, "Current Target", "TARGET-DERIVED", row=1, column=0, sticky="nsew", padx=(0, 5), pady=(8, 0))
+        self.current_target_text = tk.Label(self.current_target_panel, text="NO TARGET SELECTED", fg="#b9d8e4", bg="#06121f", justify="left", anchor="nw", font=("Consolas", 9))
+        self.current_target_text.pack(fill="both", expand=True, padx=14, pady=12)
         self._dashboard_system(body)
         self._dashboard_activity(body)
 
@@ -654,7 +658,7 @@ class AtlasApp(tk.Tk):
                              font=("Segoe UI", 8, "bold"), anchor="e")
             state.pack(side="right")
             self.system_checks[label] = (check, state)
-        tk.Label(panel, text="System state is derived from the current ATLAS repository; dashboard metrics remain session-zero until an action runs.",
+        tk.Label(panel, text="System state is derived from the ATLAS repository. Historical metrics are labeled as historical; current-target figures come only from the selected target audit.",
                  fg="#66899d", bg="#06121f", justify="left", wraplength=430,
                  font=("Segoe UI", 8)).pack(fill="x", padx=14, pady=(8, 14))
 
@@ -755,6 +759,7 @@ class AtlasApp(tk.Tk):
     def _set_current_target(self, target: Path) -> Path:
         target = target.expanduser().resolve()
         self.current_target = target
+        self.title(f"{APP_NAME} — {APP_TAGLINE} — {target.name}")
         if hasattr(self, "target_var"):
             self.target_var.set(str(target))
         if hasattr(self, "active_target_label"):
@@ -765,6 +770,7 @@ class AtlasApp(tk.Tk):
 
     def _clear_target_result(self) -> None:
         self.last_audit = {}
+        self.current_target_report = {}
         self.current_report_path = None
         if hasattr(self, "finding_tree"):
             self.finding_tree.delete(0, "end")
@@ -1488,6 +1494,7 @@ class AtlasApp(tk.Tk):
         if name == "AUDIT TARGET":
             report = value.get("report", {}) if isinstance(value, dict) else {}
             self.session_active = True
+            self.current_target_report = report
             self.last_audit = report
             self.current_report_path = Path(str(value.get("report_path"))) if value.get("report_path") else None
             target_info = report.get("target", {}) if isinstance(report, dict) else {}
@@ -1503,6 +1510,11 @@ class AtlasApp(tk.Tk):
         elif name == "IMPORT":
             report = value.get("report", {}) if isinstance(value, dict) else {}
             self.session_active = True
+            self.current_target_report = report
+            target_info = report.get("target", {}) if isinstance(report, dict) else {}
+            target_path = target_info.get("path") if isinstance(target_info, dict) else None
+            if target_path:
+                self._set_current_target(Path(str(target_path)))
             self.intake_detail.delete("1.0", "end")
             self.intake_detail.insert("end", pretty(report))
             self.show_page("Import / Intake")
@@ -1609,6 +1621,18 @@ class AtlasApp(tk.Tk):
         knowledge = inventory.get("knowledge_registry_counts", {})
         self.card_evidence.configure(text=str(knowledge.get("evidence", 0)))
         self.card_invariants.configure(text=str(knowledge.get("invariants", 0)))
+        target = self.current_target_report if isinstance(self.current_target_report, dict) else {}
+        target_info = target.get("target", {}) if isinstance(target.get("target", {}), dict) else {}
+        target_summary = target.get("summary", {}) if isinstance(target.get("summary", {}), dict) else {}
+        target_path = target_info.get("path") or (str(self.current_target) if self.current_target else None)
+        if target_path:
+            self.current_target_text.configure(text=(
+                f"TARGET  {target_path}\n"
+                f"SOURCE FILES  {target_summary.get('source_file_count', 0)}    CONTRACTS  {target_summary.get('contract_count', 0)}    FUNCTIONS  {target_summary.get('function_count', 0)}\n"
+                f"FINDINGS  {target_summary.get('finding_count', 0)}    ENGINE FINDINGS  {target_summary.get('engine_finding_count', 0)}"
+            ))
+        else:
+            self.current_target_text.configure(text="NO TARGET SELECTED\nChoose a file, archive, or directory to start a target-bound audit.")
 
     def _apply_views(self, data: dict[str, object]) -> None:
         inventory = data["inventory"]
