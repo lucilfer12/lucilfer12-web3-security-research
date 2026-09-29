@@ -6,6 +6,7 @@ import queue
 import threading
 import traceback
 import sys
+import shutil
 from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -209,6 +210,8 @@ class AtlasApp(tk.Tk):
         self.busy = False
         self.task_name = ""
         self.last_audit: dict[str, object] = {}
+        self.current_target: Path | None = None
+        self.current_report_path: Path | None = None
         self.task_started: float | None = None
         self.job_history: list[dict[str, object]] = []
         self.progress_value = 0
@@ -394,7 +397,7 @@ class AtlasApp(tk.Tk):
         actions.pack(side="right", padx=(4, 4))
         actions.pack_propagate(False)
         self._top_button(actions, "CHOOSE TARGET", self.choose_target, 0, 2, 78)
-        self._top_button(actions, "AUDIT", self.audit_repo, 82, 2, 50)
+        self._top_button(actions, "AUDIT", self.audit_selected, 82, 2, 50)
         self._top_button(actions, "FULL REFRESH", self.full_refresh, 140, 2, 92)
         self.stop_button = self._top_button(actions, "STOP", self.stop_current_task, 238, 2, 54)
         self._top_button(actions, "SETTINGS", lambda: self.show_page("Settings"), 300, 2, 54)
@@ -697,6 +700,10 @@ class AtlasApp(tk.Tk):
         self._apply_background(toolbar)
         toolbar.pack(fill="x", pady=(0, 8), ipady=6)
         self.target_var = tk.StringVar()
+        self.active_target_label = tk.Label(page, text="ACTIVE TARGET  ·  NONE",
+                                             fg="#46F0D2", bg="#06121f", font=("Segoe UI", 8, "bold"),
+                                             anchor="w")
+        self.active_target_label.pack(fill="x", pady=(0, 6))
         tk.Entry(toolbar, textvariable=self.target_var, bg="#091a29", fg="#e8f7ff",
                  insertbackground="#ffffff", relief="flat", highlightthickness=0).pack(side="left", fill="x", expand=True, padx=10, ipady=7)
         self._toolbar_button(toolbar, "FILES", self.choose_files)
@@ -712,7 +719,7 @@ class AtlasApp(tk.Tk):
         self._apply_background(body)
         body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
-        left = self._panel(body, "Registered Inputs", "HASHED", row=0, column=0, sticky="nsew", padx=(0, 5))
+        left = self._panel(body, "Historical Intakes", "HASHED", row=0, column=0, sticky="nsew", padx=(0, 5))
         right = self._panel(body, "Intake Snapshot", "STRUCTURAL", row=0, column=1, sticky="nsew", padx=(5, 0))
         self.intake_tree = tk.Listbox(left, bg="#07121d", fg="#b9d8e4", relief="flat",
                                       selectbackground="#12496a", selectforeground="#ffffff",
@@ -745,6 +752,25 @@ class AtlasApp(tk.Tk):
             self.intake_detail.insert("end", pretty(items[index]))
 
 
+    def _set_current_target(self, target: Path) -> Path:
+        target = target.expanduser().resolve()
+        self.current_target = target
+        if hasattr(self, "target_var"):
+            self.target_var.set(str(target))
+        if hasattr(self, "active_target_label"):
+            self.active_target_label.configure(text=f"ACTIVE TARGET  ·  {target.name}")
+        if hasattr(self, "finding_target_label"):
+            self.finding_target_label.configure(text=f"TARGET  ·  {target}")
+        return target
+
+    def _clear_target_result(self) -> None:
+        self.last_audit = {}
+        self.current_report_path = None
+        if hasattr(self, "finding_tree"):
+            self.finding_tree.delete(0, "end")
+        if hasattr(self, "finding_detail"):
+            self.finding_detail.delete("1.0", "end")
+
     def choose_target(self) -> None:
         """Open the real target picker; archives must remain visible/selectable."""
         path = filedialog.askopenfilename(
@@ -756,8 +782,8 @@ class AtlasApp(tk.Tk):
             ],
         )
         if path:
-            target = Path(path)
-            self.target_var.set(str(target))
+            self._set_current_target(Path(path))
+            self._clear_target_result()
             self.show_page("Import / Intake")
             self.audit_target()
 
@@ -782,8 +808,8 @@ class AtlasApp(tk.Tk):
             filetypes=[("Archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar"), ("All files", "*.*")]
         )
         if path:
-            target = Path(path)
-            self.target_var.set(str(target))
+            self._set_current_target(Path(path))
+            self._clear_target_result()
             self.show_page("Import / Intake")
             self.audit_target()
 
@@ -791,8 +817,8 @@ class AtlasApp(tk.Tk):
     def choose_directory(self) -> None:
         path = filedialog.askdirectory(title="Load contract repository")
         if path:
-            target = Path(path)
-            self.target_var.set(str(target))
+            target = self._set_current_target(Path(path))
+            self._clear_target_result()
             self.show_page("Import / Intake")
             self.audit_target()
 
@@ -932,6 +958,8 @@ class AtlasApp(tk.Tk):
     def _audit_findings_page(self) -> None:
         page = self.pages["Audit Findings"]
         tk.Label(page, text="Audit Findings", fg="#f2fbff", bg="#06121f", font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        self.finding_target_label = tk.Label(page, text="TARGET  ·  NONE", fg="#46F0D2", bg="#06121f", font=("Segoe UI", 8, "bold"), anchor="w")
+        self.finding_target_label.pack(fill="x", pady=(0, 3))
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 8))
         body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
@@ -1052,11 +1080,12 @@ class AtlasApp(tk.Tk):
 
     def _set_repo(self, repo: Path | None) -> None:
         self.repo = repo.resolve() if repo else None
-        # Selecting the repository alone does not start a research session.
-        # Metrics become live only after an explicit audit/import/refresh action.
-        self.session_active = bool(self.initial_target)
+        # The dashboard reflects the real selected repository immediately.
+        # An explicit target audit remains distinct from the repository audit.
+        self.session_active = bool(self.repo)
         self.repo_var.set(str(self.repo) if self.repo else "No repository selected")
-        self._reset_dashboard_metrics()
+        if not self.repo:
+            self._reset_dashboard_metrics()
         if self.repo:
             save_repo(self.repo)
             self.status.set(f"Repository selected · {self.repo}")
@@ -1070,7 +1099,8 @@ class AtlasApp(tk.Tk):
             if target.exists():
                 target = stage / f"{len(list(stage.iterdir()))}-{path.name}"
             shutil.copy2(path, target)
-        self.target_var.set(str(stage))
+        self._set_current_target(stage)
+        self._clear_target_result()
         self.show_page("Import / Intake")
         self.audit_target()
 
@@ -1079,7 +1109,8 @@ class AtlasApp(tk.Tk):
         if not target.exists():
             self.status.set("Initial target does not exist.")
             return
-        self.target_var.set(str(target))
+        target = self._set_current_target(target)
+        self._clear_target_result()
         self.show_page("Import / Intake")
         self._run_task("AUDIT TARGET", lambda: self._audit_target_worker(target), switch_to_import=True)
 
@@ -1088,8 +1119,9 @@ class AtlasApp(tk.Tk):
         if not target.exists():
             self.status.set("Import target does not exist.")
             return
+        target = self._set_current_target(target)
+        self._clear_target_result()
         self.show_page("Import / Intake")
-        self.target_var.set(str(target))
         self.status.set(f"Import queued · {target.name}")
         self._run_task("IMPORT", lambda: self._import_target(target))
 
@@ -1108,12 +1140,26 @@ class AtlasApp(tk.Tk):
             self.start_target_import(Path(raw).expanduser())
 
 
+    def audit_selected(self) -> None:
+        """Top-level AUDIT follows the selected target; otherwise audit the repository."""
+        raw = self.target_var.get().strip()
+        if raw:
+            target = Path(raw).expanduser()
+            if target.exists():
+                self.audit_target()
+                return
+            self.status.set("Selected target does not exist.")
+            return
+        self.audit_repo()
+
+
     def audit_target(self) -> None:
         raw = self.target_var.get().strip()
         if not raw:
             self.status.set("Select a contract file, archive, or repository first.")
             return
-        target = Path(raw).expanduser()
+        target = self._set_current_target(Path(raw).expanduser())
+        self._clear_target_result()
         self.show_page("Import / Intake")
         self._run_task("AUDIT TARGET", lambda: self._audit_target_worker(target), switch_to_import=True)
 
@@ -1443,6 +1489,11 @@ class AtlasApp(tk.Tk):
             report = value.get("report", {}) if isinstance(value, dict) else {}
             self.session_active = True
             self.last_audit = report
+            self.current_report_path = Path(str(value.get("report_path"))) if value.get("report_path") else None
+            target_info = report.get("target", {}) if isinstance(report, dict) else {}
+            target_path = target_info.get("path") if isinstance(target_info, dict) else None
+            if target_path:
+                self._set_current_target(Path(str(target_path)))
             self.finding_tree.delete(0, "end")
             for finding in report.get("findings", []):
                 self.finding_tree.insert("end", f"[{finding.get('priority','?').upper():8}] {finding.get('file')}:{finding.get('line')} · {finding.get('signal')}")
@@ -1564,10 +1615,7 @@ class AtlasApp(tk.Tk):
         graph: ResearchGraph = data["graph"]
         cases = data["cases"]
         intakes = data["intakes"]
-        if self.session_active:
-            self._apply_dashboard_metrics(inventory, graph, intakes, data.get("federation"))
-        else:
-            self._reset_dashboard_metrics()
+        self._apply_dashboard_metrics(inventory, graph, intakes, data.get("federation"))
         validation_ok = not data.get("validation_errors")
         ledger_ok = not data.get("ledger_errors")
         federation = data.get("federation") or {}
