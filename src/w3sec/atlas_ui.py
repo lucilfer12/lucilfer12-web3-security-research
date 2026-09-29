@@ -1801,8 +1801,9 @@ class AtlasApp(tk.Tk):
                 tone = "#e7a64b"
             dot.configure(fg=tone)
             state_label.configure(text=state, fg=tone)
-        # Cases page is target-facing. Reference cases are loaded only by SEARCH REFERENCE CASES,
-        # so a repository refresh cannot overwrite the current target context with historical records.
+        self.case_tree.delete(0, "end")
+        for case in cases:
+            self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
         self.intake_tree.delete(0, "end")
         for item in intakes:
             target = item.get("target", {})
