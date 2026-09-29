@@ -31,15 +31,6 @@ class AtlasApp(_AtlasApp):
             target = self.current_target
             self.after(500, lambda t=target: self._start_initial_target_audit(t))
 
-    def _show_target_scan_state(self, inventory, graph, intakes, federation) -> None:
-        _AtlasApp._apply_dashboard_metrics(self, inventory, graph, intakes, federation)
-        if self.current_target and not self.current_target_report and self.busy:
-            for key in ("target_files", "target_contracts", "target_functions",
-                        "target_findings", "engine_findings"):
-                card = getattr(self, f"card_{key}", None)
-                if card is not None:
-                    card.configure(text="SCAN")
-
     def _dashboard_activity(self, parent: tk.Frame) -> None:
         pane = tk.Frame(parent, bg="#06121f")
         self._apply_background(pane)
@@ -129,6 +120,19 @@ class AtlasApp(_AtlasApp):
         )
         button.pack(side="left", padx=4)
         return button
+
+
+def _show_target_scan_state(self, inventory, graph, intakes, federation) -> None:
+    _AtlasApp._apply_dashboard_metrics(self, inventory, graph, intakes, federation)
+    if self.current_target and not self.current_target_report and self.busy:
+        for key in ("target_files", "target_contracts", "target_functions",
+                    "target_findings", "engine_findings"):
+            card = getattr(self, f"card_{key}", None)
+            if card is not None:
+                card.configure(text="SCAN")
+
+
+AtlasApp._apply_dashboard_metrics = _show_target_scan_state
 
 
 W3SecApp = AtlasApp
