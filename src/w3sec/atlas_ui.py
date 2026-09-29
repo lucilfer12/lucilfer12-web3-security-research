@@ -51,6 +51,29 @@ def save_repo(repo: Path) -> None:
     path.write_text(json.dumps({"repo": str(repo)}, indent=2), encoding="utf-8")
 
 
+def target_state_path() -> Path:
+    return settings_path().parent / "target.json"
+
+
+def save_target_state(target: Path, report_path: Path | None = None) -> None:
+    path = target_state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"target": str(target.resolve())}
+    if report_path:
+        try:
+            payload["report_path"] = str(report_path.resolve())
+        except OSError:
+            payload["report_path"] = str(report_path)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def clear_target_state() -> None:
+    try:
+        target_state_path().unlink()
+    except FileNotFoundError:
+        pass
+
+
 def discover_repo() -> Path | None:
     # ATLAS has one canonical local checkout. A packaged EXE must not attach to
     # an old build/verify copy just because that path launched the process.
@@ -228,6 +251,10 @@ class AtlasApp(tk.Tk):
         self._build_shell()
         self._build_pages()
         self._set_repo(self.repo)
+        if self.initial_target:
+            self._set_current_target(self.initial_target)
+        else:
+            self._restore_saved_target()
         self.show_page("Dashboard")
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
@@ -623,8 +650,8 @@ class AtlasApp(tk.Tk):
         for i in range(4):
             cards.columnconfigure(i, weight=1, uniform="metric")
         metrics = [
-            ("Historical Cases", "cases"), ("Historical Intakes", "intakes"), ("Historical Contracts", "contracts"), ("Historical Nodes", "nodes"),
-            ("Historical Edges", "edges"), ("Historical Candidates", "candidates"), ("Historical Evidence", "evidence"), ("Historical Invariants", "invariants"),
+            ("Target Source Files", "target_files"), ("Target Contracts", "target_contracts"), ("Target Functions", "target_functions"), ("Target Findings", "target_findings"),
+            ("Engine Findings", "engine_findings"), ("Research Cases", "research_cases"), ("Research Candidates", "research_candidates"), ("Research Nodes", "research_nodes"),
         ]
         for i, item in enumerate(metrics):
             self._card(cards, item[0], item[1], i % 4, i // 4)
@@ -632,8 +659,9 @@ class AtlasApp(tk.Tk):
         body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=2)
-        body.rowconfigure(0, weight=1)
-        self.current_target_panel = self._panel(body, "Current Target", "TARGET-DERIVED", row=1, column=0, sticky="nsew", padx=(0, 5), pady=(8, 0))
+        body.rowconfigure(0, weight=3)
+        body.rowconfigure(1, weight=1)
+        self.current_target_panel = self._panel(body, "Current Target", "TARGET-DERIVED", row=1, column=0, columnspan=2, sticky="nsew", pady=(8, 0))
         self.current_target_text = tk.Label(self.current_target_panel, text="NO TARGET SELECTED", fg="#b9d8e4", bg="#06121f", justify="left", anchor="nw", font=("Consolas", 9))
         self.current_target_text.pack(fill="both", expand=True, padx=14, pady=12)
         self._dashboard_system(body)
@@ -676,7 +704,7 @@ class AtlasApp(tk.Tk):
         grid.pack(fill="both", expand=True, padx=10, pady=8)
         actions = [
             ("IMPORT CONTRACT / REPOSITORY", self.open_import),
-            ("AUDIT", self.audit_repo),
+            ("AUDIT", self.audit_selected),
             ("FULL REFRESH", self.full_refresh),
             ("FEDERATION", self.run_federation),
             ("CHRONICLE", self.run_chronicle),
@@ -694,6 +722,7 @@ class AtlasApp(tk.Tk):
                                          insertbackground="#ffffff", relief="flat",
                                          font=("Consolas", 9), height=8)
         self.activity_log.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(activity, self.activity_log)
     def _intake_page(self) -> None:
         page = self.pages["Import / Intake"]
         tk.Label(page, text="Contract Intake", fg="#f2fbff", bg="#06121f",
@@ -734,6 +763,7 @@ class AtlasApp(tk.Tk):
                                           insertbackground="#ffffff", relief="flat",
                                           font=("Consolas", 9))
         self.intake_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(right, self.intake_detail)
     def _action_button(self, parent: tk.Frame, text: str, command) -> GlassButton:
         return GlassButton(
             parent, text, command, self,
@@ -745,6 +775,26 @@ class AtlasApp(tk.Tk):
             parent, text, command, self,
             font=("Segoe UI", 8, "bold"), height=34, padx=10,
         )
+
+    def _copy_widget(self, widget: tk.Text) -> None:
+        try:
+            text = widget.get("1.0", "end-1c")
+        except tk.TclError:
+            text = ""
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.update_idletasks()
+        self.status.set(f"Copied {len(text)} characters to clipboard.")
+
+    def _copy_button(self, parent: tk.Widget, widget: tk.Text) -> tk.Button:
+        button = tk.Button(
+            parent, text="COPY", command=lambda: self._copy_widget(widget),
+            bg="#0b2940", fg="#bfeeff", activebackground="#12496a",
+            activeforeground="#ffffff", relief="flat", bd=0,
+            font=("Segoe UI", 8, "bold"), cursor="hand2",
+        )
+        button.pack(anchor="e", padx=10, pady=(0, 7))
+        return button
 
     def _intake_selected(self, _event=None) -> None:
         if not self.intake_tree.curselection():
@@ -758,7 +808,10 @@ class AtlasApp(tk.Tk):
 
     def _set_current_target(self, target: Path) -> Path:
         target = target.expanduser().resolve()
+        if not target.exists():
+            raise FileNotFoundError(target)
         self.current_target = target
+        save_target_state(target)
         self.title(f"{APP_NAME} — {APP_TAGLINE} — {target.name}")
         if hasattr(self, "target_var"):
             self.target_var.set(str(target))
@@ -772,6 +825,8 @@ class AtlasApp(tk.Tk):
         self.last_audit = {}
         self.current_target_report = {}
         self.current_report_path = None
+        if self.current_target:
+            save_target_state(self.current_target)
         if hasattr(self, "finding_tree"):
             self.finding_tree.delete(0, "end")
         if hasattr(self, "finding_detail"):
@@ -851,6 +906,7 @@ class AtlasApp(tk.Tk):
         self.run_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff",
                                        relief="flat", font=("Consolas", 9))
         self.run_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(right, self.run_detail)
 
     def _run_selected(self, _event=None) -> None:
         if not self.run_tree.curselection():
@@ -903,6 +959,7 @@ class AtlasApp(tk.Tk):
         self.evidence_detail = ScrolledText(body, bg="#07121d", fg="#b9d8e4",
                                             insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
         self.evidence_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(body, self.evidence_detail)
 
     def _differential_page(self) -> None:
         page = self.pages["Differential"]
@@ -922,6 +979,7 @@ class AtlasApp(tk.Tk):
         self.diff_tree.bind("<<ListboxSelect>>", self._diff_selected)
         self.diff_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", relief="flat", font=("Consolas", 8))
         self.diff_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(right, self.diff_detail)
 
     def _diff_selected(self, _event=None) -> None:
         if not self.diff_tree.curselection() or not self.repo:
@@ -950,6 +1008,7 @@ class AtlasApp(tk.Tk):
         self.negative_tree.bind("<<ListboxSelect>>", self._negative_selected)
         self.negative_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", relief="flat", font=("Consolas", 8))
         self.negative_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(right, self.negative_detail)
 
     def _negative_selected(self, _event=None) -> None:
         if not self.negative_tree.curselection() or not self.repo:
@@ -976,6 +1035,7 @@ class AtlasApp(tk.Tk):
         self.finding_tree.bind("<<ListboxSelect>>", self._finding_selected)
         self.finding_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
         self.finding_detail.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(right, self.finding_detail)
 
 
     def load_cases(self) -> None:
@@ -1025,6 +1085,7 @@ class AtlasApp(tk.Tk):
             widget = ScrolledText(text, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff",
                                   relief="flat", font=("Consolas", 9))
             widget.pack(fill="both", expand=True, padx=10, pady=10)
+            self._copy_button(text, widget)
             setattr(self, f"text_{name.replace(' ', '_').lower()}", widget)
             setattr(self, f"rel_{name.replace(' ', '_').lower()}", rel)
 
@@ -1042,6 +1103,7 @@ class AtlasApp(tk.Tk):
         self.graph_edges = ScrolledText(edges, bg="#07121d", fg="#b9d8e4", relief="flat",
                                         font=("Consolas", 8))
         self.graph_edges.pack(fill="both", expand=True, padx=10, pady=10)
+        self._copy_button(edges, self.graph_edges)
 
         frame = self.pages["Reports"]
         tk.Label(frame, text="Reports", fg="#f2fbff", bg="#06121f",
@@ -1168,6 +1230,37 @@ class AtlasApp(tk.Tk):
         self._clear_target_result()
         self.show_page("Import / Intake")
         self._run_task("AUDIT TARGET", lambda: self._audit_target_worker(target), switch_to_import=True)
+
+
+    def _restore_saved_target(self) -> None:
+        if not self.repo:
+            return
+        try:
+            state = json.loads(target_state_path().read_text(encoding="utf-8"))
+            target = Path(str(state.get("target", ""))).expanduser()
+            report_path = Path(str(state.get("report_path", ""))).expanduser() if state.get("report_path") else None
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return
+        if not target.exists():
+            clear_target_state()
+            return
+        self._set_current_target(target)
+        if report_path and report_path.exists() and self._report_matches_target(report_path, target):
+            report = read_report(self.repo, str(report_path.relative_to(self.repo)), {}) if report_path.is_relative_to(self.repo) else {}
+            if isinstance(report, dict) and report.get("target"):
+                self.current_target_report = report
+                self.last_audit = report
+                self.current_report_path = report_path
+                self._apply_target_report(report)
+
+    @staticmethod
+    def _report_matches_target(report_path: Path, target: Path) -> bool:
+        try:
+            value = json.loads(report_path.read_text(encoding="utf-8"))
+            actual = Path(str(value.get("target", {}).get("path", ""))).expanduser().resolve()
+            return actual == target.expanduser().resolve()
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return False
 
 
     def _audit_target_worker(self, target: Path) -> dict[str, object]:
@@ -1501,6 +1594,9 @@ class AtlasApp(tk.Tk):
             target_path = target_info.get("path") if isinstance(target_info, dict) else None
             if target_path:
                 self._set_current_target(Path(str(target_path)))
+            if self.current_target:
+                save_target_state(self.current_target, self.current_report_path)
+            self._apply_target_report(report)
             self.finding_tree.delete(0, "end")
             for finding in report.get("findings", []):
                 self.finding_tree.insert("end", f"[{finding.get('priority','?').upper():8}] {finding.get('file')}:{finding.get('line')} · {finding.get('signal')}")
@@ -1515,6 +1611,7 @@ class AtlasApp(tk.Tk):
             target_path = target_info.get("path") if isinstance(target_info, dict) else None
             if target_path:
                 self._set_current_target(Path(str(target_path)))
+            self._apply_target_report(report)
             self.intake_detail.delete("1.0", "end")
             self.intake_detail.insert("end", pretty(report))
             self.show_page("Import / Intake")
@@ -1598,41 +1695,47 @@ class AtlasApp(tk.Tk):
                 "runs": runs, "negative_results": negatives, "evidence_fabric": evidence_fabric,
                 "differential_paths": diff_paths}
     def _reset_dashboard_metrics(self) -> None:
-        for key in ("cases", "intakes", "contracts", "nodes", "edges", "candidates", "evidence", "invariants"):
+        for key in ("target_files", "target_contracts", "target_functions", "target_findings", "engine_findings",
+                    "research_cases", "research_candidates", "research_nodes"):
             widget = getattr(self, f"card_{key}", None)
             if widget is not None:
                 widget.configure(text="0")
+
+    def _apply_target_report(self, report: object) -> None:
+        target = report if isinstance(report, dict) else {}
+        target_info = target.get("target", {}) if isinstance(target.get("target", {}), dict) else {}
+        target_summary = target.get("summary", {}) if isinstance(target.get("summary", {}), dict) else {}
+        for key, value in (
+            ("target_files", target_summary.get("source_file_count", 0)),
+            ("target_contracts", target_summary.get("contract_count", 0)),
+            ("target_functions", target_summary.get("function_count", 0)),
+            ("target_findings", target_summary.get("finding_count", 0)),
+            ("engine_findings", target_summary.get("engine_finding_count", 0)),
+        ):
+            widget = getattr(self, f"card_{key}", None)
+            if widget is not None:
+                widget.configure(text=str(value))
+        target_path = target_info.get("path") or (str(self.current_target) if self.current_target else None)
+        if hasattr(self, "current_target_text"):
+            if target_path:
+                self.current_target_text.configure(text=(
+                    f"TARGET  {target_path}\\n"
+                    f"SOURCE FILES  {target_summary.get('source_file_count', 0)}    CONTRACTS  {target_summary.get('contract_count', 0)}    FUNCTIONS  {target_summary.get('function_count', 0)}\\n"
+                    f"FINDINGS  {target_summary.get('finding_count', 0)}    ENGINE FINDINGS  {target_summary.get('engine_finding_count', 0)}"
+                ))
+            else:
+                self.current_target_text.configure(text="NO TARGET SELECTED\\nChoose a file, archive, or directory to start a target-bound audit.")
 
     def _apply_dashboard_metrics(self, inventory: object, graph: ResearchGraph, intakes: object, federation: object) -> None:
         if not isinstance(inventory, dict):
             self._reset_dashboard_metrics()
             return
-        intake_rows = intakes if isinstance(intakes, list) else []
-        self.card_cases.configure(text=str(inventory.get("case_count", 0)))
-        self.card_intakes.configure(text=str(len(intake_rows)))
-        self.card_contracts.configure(text=str(sum(
-            int(x.get("summary", {}).get("contract_count", 0))
-            for x in intake_rows if isinstance(x, dict)
-        )))
-        self.card_nodes.configure(text=str(len(graph.nodes)))
-        self.card_edges.configure(text=str(len(graph.edges)))
         federation = federation if isinstance(federation, dict) else {}
-        self.card_candidates.configure(text=str(federation.get("candidate_record_count", 0)))
-        knowledge = inventory.get("knowledge_registry_counts", {})
-        self.card_evidence.configure(text=str(knowledge.get("evidence", 0)))
-        self.card_invariants.configure(text=str(knowledge.get("invariants", 0)))
         target = self.current_target_report if isinstance(self.current_target_report, dict) else {}
-        target_info = target.get("target", {}) if isinstance(target.get("target", {}), dict) else {}
-        target_summary = target.get("summary", {}) if isinstance(target.get("summary", {}), dict) else {}
-        target_path = target_info.get("path") or (str(self.current_target) if self.current_target else None)
-        if target_path:
-            self.current_target_text.configure(text=(
-                f"TARGET  {target_path}\n"
-                f"SOURCE FILES  {target_summary.get('source_file_count', 0)}    CONTRACTS  {target_summary.get('contract_count', 0)}    FUNCTIONS  {target_summary.get('function_count', 0)}\n"
-                f"FINDINGS  {target_summary.get('finding_count', 0)}    ENGINE FINDINGS  {target_summary.get('engine_finding_count', 0)}"
-            ))
-        else:
-            self.current_target_text.configure(text="NO TARGET SELECTED\nChoose a file, archive, or directory to start a target-bound audit.")
+        self._apply_target_report(target)
+        self.card_research_cases.configure(text=str(inventory.get("case_count", 0)))
+        self.card_research_candidates.configure(text=str(federation.get("candidate_record_count", 0)))
+        self.card_research_nodes.configure(text=str(len(graph.nodes)))
 
     def _apply_views(self, data: dict[str, object]) -> None:
         inventory = data["inventory"]
