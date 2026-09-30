@@ -1,0 +1,17 @@
+schema_version: 1
+case_id: nearcore-total-supply-8790
+repository: near/nearcore
+pre_fix_commit: 5727fef42cb3f54b57d8b0a5cd6ec4cf84b0521d
+fix_commit: 16494072cb10d602e299895b0840d123099fe4df
+fixed_paths:
+  - chain/chain/src/chain.rs
+  - core/primitives/src/block.rs
+property: "new_total_supply = prev.total_supply + minted_amount - balance_burnt"
+expected_pre_fix_signal:
+  rule_id: atlas.rust.consensus_invariant_gap
+  confidence: high
+  reachability: consensus-validation
+expected_fixed_signal: absent
+evidence:
+  upstream_fix: "Commit 16494072 adds block total-supply verification before challenge/block completion."
+  test_strategy: "Scan a minimal faithful pre-fix validation seam and a corrected seam; assert recall then precision."

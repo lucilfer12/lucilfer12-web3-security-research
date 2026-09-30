@@ -4,9 +4,10 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from w3sec.contract_audit import build_contract_audit
+from w3sec.contract_audit import build_contract_audit, write_contract_audit
 from w3sec.graph import ResearchGraph
 from w3sec.intake import OperationCancelled, build_intake, write_intake_report
+from w3sec.scanner import _production_path
 
 
 class IntakeTests(unittest.TestCase):
@@ -34,6 +35,133 @@ class IntakeTests(unittest.TestCase):
             self.assertIn("low_level_call", value["summary"]["security_signal_kinds"])
             self.assertEqual(["./IERC20.sol"], value["files"][0]["imports"])
 
+    def test_rust_signals_are_language_specific_and_comment_safe(self):
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "module.rs"
+            target.write_text(
+                "// unsafe call assembly unchecked low_level_call\n"
+                "/// docs mention unsafe and .call()\n"
+                "pub fn parse(input: &[u8]) {\n"
+                "    let _ = input.len();\n"
+                "    unsafe { core::ptr::read(input.as_ptr()) };\n"
+                "    let _ = input.len().unwrap_or(0);\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            value = build_intake(target)
+            signals = {item["id"] for item in value["files"][0]["signals"]}
+            self.assertIn("rust_unsafe_block", signals)
+            self.assertNotIn("low_level_call", signals)
+            self.assertNotIn("assembly", signals)
+            self.assertNotIn("unchecked", signals)
+            self.assertEqual(0, value["summary"]["contract_count"])
+            self.assertEqual(1, value["summary"]["source_unit_count"])
+
+    def test_rust_production_path_excludes_test_aggregator_files(self):
+        self.assertFalse(_production_path("chain/chain/src/runtime/tests.rs"))
+        self.assertFalse(_production_path("chain/chain/src/runtime/test_helpers.rs"))
+        self.assertFalse(_production_path("chain/chain/src/runtime/foo_test.rs"))
+        self.assertFalse(_production_path("chain/chain/src/runtime/mod_tests.rs"))
+        self.assertFalse(_production_path("chain/network/build.rs"))
+        self.assertFalse(_production_path("chain/network/src/network_protocol/testonly.rs"))
+        self.assertFalse(_production_path("runtime/near-test-contracts/estimator-contract/src/lib.rs"))
+        self.assertFalse(_production_path("test-loop-tests/src/utils/node.rs"))
+        self.assertFalse(_production_path("benchmarks/synth-bm/src/account.rs"))
+        self.assertTrue(_production_path("chain/chain/src/runtime/host.rs"))
+
+    def test_contract_audit_retains_rust_supporting_evidence_end_to_end(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "src" / "runtime").mkdir(parents=True)
+            (root / "Cargo.toml").write_text(
+                "[package]\nname = \"neard\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+                encoding="utf-8",
+            )
+            (root / "src" / "main.rs").write_text("fn main() {}\n", encoding="utf-8")
+            (root / "src" / "runtime" / "tests.rs").write_text(
+                "pub fn should_not_scan(input: &[u8]) { unsafe { core::ptr::read(input.as_ptr()) }; }\n",
+                encoding="utf-8",
+            )
+            (root / "fuzz").mkdir()
+            (root / "fuzz" / "fuzz_targets.rs").write_text(
+                "pub fn fuzz_target(input: &[u8]) { input.get(0).unwrap(); }\n",
+                encoding="utf-8",
+            )
+            (root / "benchmarks").mkdir()
+            (root / "benchmarks" / "bench.rs").write_text(
+                "pub fn bench_target(input: &[u8]) { unsafe { core::ptr::read(input.as_ptr()) }; }\n",
+                encoding="utf-8",
+            )
+            (root / "src" / "runtime" / "host.rs").write_text(
+                "pub fn host(input: &[u8]) { unsafe { core::ptr::read(input.as_ptr()) }; }\n",
+                encoding="utf-8",
+            )
+            (root / "src" / "runtime" / "safe_boundary.rs").write_text(
+                "pub fn validate(request: &Request) { let fixed = NonZeroUsize::new(100).unwrap(); let guard = mutex.lock().unwrap(); let _ = (fixed, guard, request); }\n",
+                encoding="utf-8",
+            )
+            report = build_contract_audit(root, root / "research")
+            engine_files = [x.get("file") for x in report["engine_scan"]["engine_findings"]]
+            self.assertIn("src/runtime/host.rs", engine_files)
+            self.assertIn("src/runtime/tests.rs", engine_files)
+            self.assertIn("fuzz/fuzz_targets.rs", engine_files)
+            self.assertIn("benchmarks/bench.rs", engine_files)
+            supporting = [x for x in report["findings"] if x.get("scope") == "supporting"]
+            self.assertTrue(supporting)
+            self.assertTrue(all(x.get("scope") == "supporting" for x in supporting))
+            self.assertFalse(any(
+                x.get("signal") == "panic_on_input" and x.get("file") == "src/runtime/safe_boundary.rs"
+                for x in report["findings"]
+            ))
+            assert any(
+                x.get("signal") == "panic_on_input" and x.get("file") == "fuzz/fuzz_targets.rs"
+                for x in report["findings"]
+            )
+
+    def test_nearcore_total_supply_recall_detector(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "chain" / "chain" / "src").mkdir(parents=True)
+            (root / "Cargo.toml").write_text(
+                "[package]\nname = \"neard\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+                encoding="utf-8",
+            )
+            (root / "src" / "main.rs").parent.mkdir(parents=True, exist_ok=True)
+            (root / "src" / "main.rs").write_text("fn main() {}\n", encoding="utf-8")
+            (root / "chain" / "chain" / "src" / "chain.rs").write_text(
+                "pub fn validate_header(block: &Block) -> Result<(), Error> {\n"
+                "    block.validate_with(|b| validate_block_impl(b))?;\n"
+                "    if !block.verify_gas_price() { return Err(Error); }\n"
+                "    verify_challenges(block.challenges())?;\n"
+                "    validate_chunk_headers(block)?;\n"
+                "    Ok(())\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            report = build_contract_audit(root, root / "research")
+            hits = [x for x in report["findings"] if x.get("signal") == "consensus_invariant_gap"]
+            self.assertEqual(1, len(hits))
+            self.assertEqual("high", hits[0]["severity_hint"])
+            self.assertEqual("medium", hits[0]["priority"])
+            self.assertEqual("high", hits[0]["confidence"])
+            self.assertEqual("consensus-validation", hits[0]["reachability"])
+            self.assertGreaterEqual(hits[0]["triage_score"], 60)
+
+            fixed = root / "chain" / "chain" / "src" / "chain.rs"
+            fixed.write_text(
+                "pub fn validate_header(block: &Block) -> Result<(), Error> {\n"
+                "    block.validate_with(|b| validate_block_impl(b))?;\n"
+                "    if !block.verify_gas_price() { return Err(Error); }\n"
+                "    verify_challenges(block.challenges())?;\n"
+                "    validate_chunk_headers(block)?;\n"
+                "    if !block.verify_total_supply(prev_total_supply, minted_amount) { return Err(Error); }\n"
+                "    Ok(())\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            fixed_report = build_contract_audit(root, root / "research-fixed")
+            self.assertFalse(any(x.get("signal") == "consensus_invariant_gap" for x in fixed_report["findings"]))
+
     def test_zip_bundle_supports_multiple_contract_languages(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -57,7 +185,8 @@ class IntakeTests(unittest.TestCase):
             self.assertEqual("zip", value["target"]["archive_format"])
             self.assertEqual(5, value["summary"]["source_file_count"])
             self.assertEqual({"Solidity", "Vyper", "Move", "Rust (Solana/CosmWasm/ink!/generic)", "Cairo"}, set(value["summary"]["languages"]))
-            self.assertGreaterEqual(value["summary"]["contract_count"], 5)
+            self.assertEqual(4, value["summary"]["contract_count"])
+            self.assertEqual(5, value["summary"]["source_unit_count"])
 
     def test_archive_path_traversal_is_rejected(self):
         with tempfile.TemporaryDirectory() as td:
@@ -84,6 +213,7 @@ class IntakeTests(unittest.TestCase):
                 encoding="utf-8",
             )
             report = build_contract_audit(target, research)
+            write_contract_audit(research, report)
             self.assertGreaterEqual(report["summary"]["finding_count"], 1)
             self.assertTrue(any(x["signal"] == "low_level_call" for x in report["findings"]))
             graph = ResearchGraph.from_repo(research)

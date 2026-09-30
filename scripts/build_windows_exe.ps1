@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $Root
 
-Write-Host "== ATLAS Windows build (clean staging) =="
+Write-Host "== ATLAS Windows build (active repository) =="
 python --version
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-build.txt
@@ -11,48 +11,18 @@ Get-Process | Where-Object { $_.ProcessName -in @("ATLAS", "atlas-cli") } |
     Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 300
 
-$Stage = Join-Path $env:TEMP ("ATLAS-build-" + [guid]::NewGuid().ToString("N"))
-if (Test-Path $Stage) { Remove-Item $Stage -Recurse -Force }
-
-$Commit = (git rev-parse HEAD).Trim()
-Write-Host "Base commit: $Commit"
-git clone --no-local --no-hardlinks $Root $Stage
-if ($LASTEXITCODE -ne 0) { throw "Unable to create clean staging checkout" }
-
+$Commit = (git -C $Root rev-parse HEAD).Trim()
+$Branch = (git -C $Root branch --show-current).Trim()
 $changed = @(git -C $Root status --porcelain=v1 --untracked-files=all)
-$skipped = @()
-foreach ($line in $changed) {
-    if ($line.Length -lt 4) { continue }
-    $rel = $line.Substring(3).Trim().Trim('"').Replace("/", "\")
-    if ($rel -match " -> ") { $rel = (($rel -split " -> ")[-1]).Trim().Trim('"').Replace("/", "\") }
-    if ($rel.StartsWith(".git\")) { continue }
-    if ($rel.StartsWith("build\")) { continue }
-    if ($rel.StartsWith("dist\")) { continue }
-    if ($rel -like "*.bak*") { continue }
+Write-Host "Build source: $Root"
+Write-Host "Branch: $Branch"
+Write-Host "Commit: $Commit"
+Write-Host "Working-tree changes: $($changed.Count)"
 
-    $src = Join-Path $Root $rel
-    $dest = Join-Path $Stage $rel
-    try {
-        if (Test-Path -LiteralPath $src -PathType Leaf) {
-            $parent = Split-Path -Parent $dest
-            if ($parent) { New-Item -ItemType Directory -Force $parent | Out-Null }
-            Copy-Item -LiteralPath $src -Destination $dest -Force -ErrorAction Stop
-        } elseif (Test-Path -LiteralPath $src -PathType Container) {
-            New-Item -ItemType Directory -Force $dest | Out-Null
-            Copy-Item -LiteralPath (Join-Path $src "*") -Destination $dest -Recurse -Force -ErrorAction Stop
-        }
-    } catch {
-        if ($rel -eq "src\w3sec\audit.py") {
-            $skipped += $rel
-            Write-Warning "Using committed HEAD copy for locked/unreadable $rel"
-        } else {
-            throw "Unable to stage working-tree change $rel : $($_.Exception.Message)"
-        }
-    }
-}
-
-Set-Location $Stage
-$env:PYTHONPATH = Join-Path $Stage "src"
+# Build directly from the active repository tree.
+# No staging clone and no copy-back step.
+Set-Location $Root
+$env:PYTHONPATH = Join-Path $Root "src"
 $env:ATLAS_FEDERATION_BASE = $Root
 python -m py_compile src\w3sec\audit.py src\w3sec\atlas_ui.py src\w3sec\finding_gate.py
 if ($LASTEXITCODE -ne 0) { throw "Python compile preflight failed" }
@@ -61,10 +31,10 @@ python -c "import w3sec.audit, w3sec.finding_gate; print('imports=OK')"
 if ($LASTEXITCODE -ne 0) { throw "Package import preflight failed" }
 
 python -m w3sec validate
-if ($LASTEXITCODE -ne 0) { throw "Repository validation failed in clean staging tree" }
+if ($LASTEXITCODE -ne 0) { throw "Repository validation failed in active repository tree" }
 
 python -m unittest discover -s tests -v
-if ($LASTEXITCODE -ne 0) { throw "Unit test suite failed in clean staging tree" }
+if ($LASTEXITCODE -ne 0) { throw "Unit test suite failed in active repository tree" }
 
 python -m PyInstaller --clean --noconfirm w3sec-gui.spec
 if ($LASTEXITCODE -ne 0) { throw "GUI PyInstaller build failed" }
@@ -81,14 +51,16 @@ if ($LASTEXITCODE -ne 0) { throw "Packaged CLI --version failed" }
 
 # Real packaged audit smoke test: a UTF-8-BOM Solidity file inside ZIP must be
 # extracted, parsed, scanned, and serialized without encoding corruption.
-$SmokeDir = Join-Path $Stage "packaged-smoke"
-$SmokeZip = Join-Path $Stage "packaged-smoke.zip"
-$SmokeJson = Join-Path $Stage "packaged-smoke.json"
+$SmokeWork = Join-Path $env:TEMP ("ATLAS-packaged-smoke-" + [guid]::NewGuid().ToString("N"))
+$SmokeDir = Join-Path $SmokeWork "fixture"
+$SmokeZip = Join-Path $SmokeWork "packaged-smoke.zip"
+$SmokeJson = Join-Path $SmokeWork "packaged-smoke.json"
+New-Item -ItemType Directory -Force $SmokeWork | Out-Null
 $SmokeDirPosix = $SmokeDir -replace '\\','/'
 $SmokeZipPosix = $SmokeZip -replace '\\','/'
 $SmokeJsonPosix = $SmokeJson -replace '\\','/'
 New-Item -ItemType Directory -Force $SmokeDir | Out-Null
-$SmokePy = Join-Path $Stage "make_smoke.py"
+$SmokePy = Join-Path $SmokeWork "make_smoke.py"
 @'
 from pathlib import Path
 import zipfile
@@ -105,7 +77,7 @@ with zipfile.ZipFile(r"__SMOKE_ZIP__", "w", compression=zipfile.ZIP_DEFLATED) as
 '@.Replace("__SMOKE_DIR__", $SmokeDirPosix).Replace("__SMOKE_ZIP__", $SmokeZipPosix) | Set-Content $SmokePy -Encoding utf8
 python $SmokePy
 if ($LASTEXITCODE -ne 0) { throw "Packaged audit smoke fixture creation failed" }
-$AuditPy = Join-Path $Stage "run_smoke_audit.py"
+$AuditPy = Join-Path $SmokeWork "run_smoke_audit.py"
 @'
 import subprocess
 import sys
@@ -126,7 +98,7 @@ if proc.returncode != 0:
 with open(out_path, "wb") as handle:
     handle.write(proc.stdout)
 '@ | Set-Content $AuditPy -Encoding utf8
-python $AuditPy (Join-Path $Stage "dist\atlas-cli.exe") $SmokeZip $Root $SmokeJson
+python $AuditPy (Join-Path $Root "dist\atlas-cli.exe") $SmokeZip $Root $SmokeJson
 if ($LASTEXITCODE -ne 0) { throw "Packaged CLI audit smoke test failed" }
 $SmokeCheck = @'
 import json
@@ -151,13 +123,12 @@ assert any(
     for item in report["engine_scan"]["engine_findings"]
 ), report["engine_scan"]
 print("PACKAGED AUDIT SMOKE: OK")
-'@.Replace("__SMOKE_JSON__", $SmokeJsonPosix) | Set-Content (Join-Path $Stage "check_smoke.py") -Encoding utf8
-python (Join-Path $Stage "check_smoke.py")
+'@.Replace("__SMOKE_JSON__", $SmokeJsonPosix) | Set-Content (Join-Path $SmokeWork "check_smoke.py") -Encoding utf8
+python (Join-Path $SmokeWork "check_smoke.py")
 if ($LASTEXITCODE -ne 0) { throw "Packaged audit smoke assertions failed" }
-Remove-Item $SmokePy, $AuditPy, (Join-Path $Stage "check_smoke.py"), $SmokeJson, $SmokeZip -Force -ErrorAction SilentlyContinue
-Remove-Item $SmokeDir -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $SmokeWork -Recurse -Force -ErrorAction SilentlyContinue
 
-$selfTest = Start-Process -FilePath ".\dist\ATLAS.exe" -WorkingDirectory $Stage -ArgumentList "--self-test" -PassThru
+$selfTest = Start-Process -FilePath ".\dist\ATLAS.exe" -WorkingDirectory $Root -ArgumentList "--self-test" -PassThru
 if (-not $selfTest.WaitForExit(120000)) {
     Stop-Process -Id $selfTest.Id -Force -ErrorAction SilentlyContinue
     throw "Packaged GUI self-test timed out after 120 seconds"
@@ -167,27 +138,6 @@ if ($selfTest.ExitCode -ne 0) { throw "Packaged GUI self-test failed with exit c
 Set-Location $Root
 $Out = Join-Path $Root "dist"
 New-Item -ItemType Directory -Force $Out | Out-Null
-
-Get-Process ATLAS, "atlas-cli" -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -like "$Stage\dist\*" -or $_.Path -like "$Out\*" } |
-    Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 500
-
-function Copy-WithRetry([string]$Source, [string]$Destination) {
-    for ($attempt = 1; $attempt -le 12; $attempt++) {
-        try {
-            Copy-Item -LiteralPath $Source -Destination $Destination -Force -ErrorAction Stop
-            return
-        } catch {
-            if ($attempt -eq 12) { throw }
-            Start-Sleep -Milliseconds (250 * $attempt)
-        }
-    }
-}
-
-foreach ($name in @("ATLAS.exe","atlas-cli.exe")) {
-    Copy-WithRetry (Join-Path $Stage "dist\$name") (Join-Path $Out $name)
-}
 
 $Gui = Get-Item (Join-Path $Out "ATLAS.exe")
 $Cli = Get-Item (Join-Path $Out "atlas-cli.exe")
@@ -207,8 +157,7 @@ Set-Content (Join-Path $Out "atlas-cli.exe.sha256") "$CliHash  atlas-cli.exe" -E
     "pyinstaller=$(& python -m PyInstaller --version)"
     "gui_sha256=$GuiHash"
     "cli_sha256=$CliHash"
-    "clean_staging=true"
-    "skipped_locked_files=$($skipped -join ',')"
+    "build_source=active-repository"
     "working_tree_changes=$($changed.Count)"
 ) | Set-Content (Join-Path $Out "BUILD-MANIFEST.txt") -Encoding utf8
 
@@ -228,12 +177,5 @@ Write-Host "GUI SHA256: $GuiHash"
 Write-Host "Built CLI: $($Cli.FullName)"
 Write-Host "CLI bytes: $($Cli.Length)"
 Write-Host "CLI SHA256: $CliHash"
-Write-Host "Clean staging: $Stage"
-Write-Host "Skipped locked files: $($skipped -join ', ')"
-
-try {
-    Remove-Item $Stage -Recurse -Force -ErrorAction Stop
-} catch {
-    Write-Warning "Build staging cleanup deferred: $($_.Exception.Message)"
-}
+Write-Host "Build source: $Root"
 Write-Host "== ATLAS Windows build complete =="

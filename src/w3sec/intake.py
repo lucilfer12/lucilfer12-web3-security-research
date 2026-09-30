@@ -52,7 +52,7 @@ LANGUAGES = {
     ".asm": "Assembly", ".js": "JavaScript/TypeScript", ".ts": "TypeScript",
     ".go": "Go / chain tooling",
 }
-SIGNAL_PATTERNS = {
+SOLIDITY_SIGNAL_PATTERNS = {
     "delegatecall": r"\bdelegatecall\b",
     "low_level_call": r"\.\s*call\s*(?:\{|\()",
     "staticcall": r"\bstaticcall\b",
@@ -67,11 +67,30 @@ SIGNAL_PATTERNS = {
     "fallback": r"\bfallback\s*\(",
     "receive": r"\breceive\s*\(",
     "upgrade": r"\b(?:upgradeTo|upgradeToAndCall|UUPS|TransparentUpgradeableProxy|BeaconProxy|initializer)\b",
-    "unsafe": r"\bunsafe\b",
+}
+
+RUST_SIGNAL_PATTERNS = {
+    "rust_unsafe_block": r"\bunsafe\s*\{",
+    "rust_unsafe_impl": r"\bunsafe\s+impl\b",
+    "rust_unwrap_expect": (
+        r"(?:\b(?:input|request|message|payload|raw|bytes|data|tx|transaction|receipt|action|block|chunk|"
+        r"account|gas|balance|signature|params|args)\b[^\n]{0,120}\b(?:unwrap|expect)\s*\()"
+        r"|(?:\b(?:unwrap|expect)\s*\([^\n)]*\)[^\n]{0,120}\b(?:input|request|message|payload|raw|bytes|data|tx|"
+        r"transaction|receipt|action|block|chunk|account|gas|balance|signature|params|args)\b)"
+    ),
+    "rust_input_sized_allocation": (
+        r"\b(?:Vec::with_capacity|reserve|reserve_exact)\s*\([^\n)]*"
+        r"\b(?:len|size|count|length)\b[^\n)]*\)"
+    ),
+}
+
+GENERIC_SIGNAL_PATTERNS = {
     "invoke_signed": r"\binvoke_signed\b",
     "raw_call": r"\braw_call\b",
     "sysvar": r"\bsysvar\b",
 }
+
+SIGNAL_PATTERNS = {**SOLIDITY_SIGNAL_PATTERNS, **GENERIC_SIGNAL_PATTERNS}
 
 def _sha256(path: Path, cancel=None) -> str:
     _check_cancel(cancel)
@@ -384,15 +403,42 @@ def _pragmas(text: str) -> list[str]:
 def _imports(text: str) -> list[str]:
     return sorted(set(re.findall(r'\bimport\s+(?:[^;]*?\s+from\s+)?["\']([^"\']+)["\']\s*;', text)))
 
-def _signals(text: str) -> list[dict[str, Any]]:
+def _mask_non_code(text: str) -> str:
+    def _blank(match: re.Match[str]) -> str:
+        value = match.group(0)
+        return "".join("\n" if char == "\n" else " " for char in value)
+
+    patterns = (
+        r"/\*[\s\S]*?\*/",
+        r"//[^\n]*",
+        r'"(?:\\.|[^"\\])*"',
+        r"'(?:\\.|[^'\\])*'",
+        r'r#*"[\s\S]*?"#*',
+    )
+    masked = text
+    for pattern in patterns:
+        masked = re.sub(pattern, _blank, masked, flags=re.MULTILINE)
+    return masked
+
+
+def _signals(text: str, ext: str) -> list[dict[str, Any]]:
+    ext = ext.lower()
+    if ext == ".rs":
+        patterns = RUST_SIGNAL_PATTERNS
+    elif ext in {".sol", ".yul"}:
+        patterns = SOLIDITY_SIGNAL_PATTERNS
+    else:
+        patterns = GENERIC_SIGNAL_PATTERNS
+
+    masked = _mask_non_code(text)
     result = []
-    for name, pattern in SIGNAL_PATTERNS.items():
-        matches = list(re.finditer(pattern, text, flags=re.MULTILINE))
+    for name, pattern in patterns.items():
+        matches = list(re.finditer(pattern, masked, flags=re.MULTILINE))
         if matches:
             result.append({
                 "id": name,
                 "count": len(matches),
-                "lines": [text.count("\n", 0, m.start()) + 1 for m in matches[:50]],
+                "lines": [masked.count("\n", 0, m.start()) + 1 for m in matches[:50]],
             })
     return result
 def _functions(text: str, ext: str) -> list[dict[str, Any]]:
@@ -423,6 +469,12 @@ def _functions(text: str, ext: str) -> list[dict[str, Any]]:
 def _units(path: Path, text: str) -> list[dict[str, Any]]:
     ext = path.suffix.lower()
     result: list[dict[str, Any]] = []
+    contract_exts = {
+        ".sol", ".yul", ".vy", ".move", ".cairo", ".sway", ".fe", ".huff",
+        ".clar", ".clarity", ".scilla", ".func", ".fc", ".tolk", ".tact",
+        ".tsol", ".teal", ".pyteal", ".tz", ".michelson", ".rholang",
+    }
+    unit_type = "contract" if ext in contract_exts else "source_unit"
     if ext in {".sol", ".yul"}:
         pattern = re.compile(
             r"\b(?P<kind>abstract\s+contract|contract|interface|library)\s+"
@@ -434,6 +486,7 @@ def _units(path: Path, text: str) -> list[dict[str, Any]]:
                 "id": _safe_id(f"{path.as_posix()}::{m.group('name')}"),
                 "name": m.group("name"),
                 "kind": re.sub(r"\s+", " ", m.group("kind")),
+                "unit_type": unit_type,
                 "line": text.count("\n", 0, m.start()) + 1,
                 "bases": [x.strip() for x in (m.group("bases") or "").split(",") if x.strip()],
                 "offset": m.start(),
@@ -444,6 +497,7 @@ def _units(path: Path, text: str) -> list[dict[str, Any]]:
             "id": _safe_id(f"{path.as_posix()}::module"),
             "name": path.stem,
             "kind": f"{_language(path)} source unit",
+            "unit_type": unit_type,
             "line": first_line,
             "bases": [],
             "offset": 0,
@@ -480,7 +534,7 @@ def _record_file(path: Path, root: Path) -> tuple[dict[str, Any], list[dict[str,
         unit["file"] = rel
         unit["function_count"] = len(local)
         unit["functions"] = local
-        unit["signals"] = _signals(text[start:end]) if source else []
+        unit["signals"] = _signals(text[start:end], ext) if source else []
         unit_by_index.append(unit)
     file_record = {
         "path": rel,
@@ -490,8 +544,9 @@ def _record_file(path: Path, root: Path) -> tuple[dict[str, Any], list[dict[str,
         "language": _language(path),
         "pragma_solidity": _pragmas(text) if ext == ".sol" else [],
         "imports": _imports(text) if ext == ".sol" else [],
-        "signals": _signals(text) if source else [],
-        "contract_count": len(unit_by_index),
+        "signals": _signals(text, ext) if source else [],
+        "unit_count": len(unit_by_index),
+        "contract_count": sum(x.get("unit_type") == "contract" for x in unit_by_index),
         "function_count": len(funcs),
         "source": source,
         "artifact": ext in ARTIFACT_EXTENSIONS,
@@ -538,6 +593,7 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
         mark(12, f"Discovered {len(source_files)} files")
         aggregate = hashlib.sha256()
         files: list[dict[str, Any]] = []
+        source_units: list[dict[str, Any]] = []
         contracts: list[dict[str, Any]] = []
         total_files = max(1, len(source_files))
         for index, path in enumerate(source_files, 1):
@@ -545,7 +601,8 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
             mark(12 + int(43 * index / total_files), f"Indexing {path.name}")
             record, units = _record_file(path, record_root)
             files.append(record)
-            contracts.extend(units)
+            source_units.extend(units)
+            contracts.extend(x for x in units if x.get("unit_type") == "contract")
             aggregate.update(record["path"].encode("utf-8"))
             aggregate.update(record["sha256"].encode("ascii"))
         source_hash = aggregate.hexdigest()
@@ -584,6 +641,7 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
             "summary": {
                 "file_count": len(files),
                 "source_file_count": sum(bool(x.get("source")) for x in files),
+                "source_unit_count": len(source_units),
                 "contract_count": len(contracts),
                 "function_count": sum(int(x.get("function_count", 0)) for x in files),
                 "total_bytes": sum(int(x["bytes"]) for x in files),
@@ -593,6 +651,7 @@ def build_intake(target: Path, progress=None, cancel=None) -> dict[str, Any]:
                 "manifest_sha256": manifest_sha256,
             },
             "files": files,
+            "source_units": source_units,
             "contracts": contracts,
         }
         mark(100, "Intake complete")

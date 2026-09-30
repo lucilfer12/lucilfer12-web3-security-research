@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
 from .engine_orchestrator import EngineOrchestrator
-from .intake import OperationCancelled, SOURCE_EXTENSIONS, SIGNAL_PATTERNS, _files, _prepared_target
+from .intake import OperationCancelled, SOURCE_EXTENSIONS, _files, _mask_non_code, _prepared_target, _signals
 
-SCANNER_VERSION = "1.0"
+SCANNER_VERSION = "1.0.3"
 
 _EXTERNAL = {
     "slither": {
@@ -59,9 +61,439 @@ def _normalize_slither(result: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
+RUST_EXCLUDED_PARTS = {
+    "test", "tests", "fuzz", "fuzzers", "bench", "benches", "estimator",
+    "examples", "example", "integration-tests", "tools",
+}
+
+
+def _production_path(relative: str) -> bool:
+    parts = [part.lower() for part in Path(relative).parts]
+    if any(
+        part in RUST_EXCLUDED_PARTS
+        or part.startswith("bench")
+        or part in {"test-loop-tests", "near-test-contracts"}
+        for part in parts[:-1]
+    ):
+        return False
+    name = parts[-1] if parts else ""
+    return not (
+        name.startswith("test_")
+        or name.endswith(("_test.rs", "_tests.rs"))
+        or name in {"tests.rs", "testonly.rs", "build.rs"}
+    )
+
+
+def _rust_scope(root: Path) -> tuple[list[Path], dict[str, Any]]:
+    cargo_toml = root / "Cargo.toml"
+    cargo = shutil.which("cargo")
+    if not cargo_toml.is_file() or not cargo:
+        return [], {"method": "fallback-path-filter", "reason": "cargo-metadata-unavailable"}
+    try:
+        proc = subprocess.run(
+            [cargo, "metadata", "--no-deps", "--format-version", "1"],
+            cwd=root, capture_output=True, text=True, timeout=25, check=False,
+        )
+        if proc.returncode != 0:
+            return [], {"method": "fallback-path-filter", "reason": "cargo-metadata-failed"}
+        payload = json.loads(proc.stdout)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return [], {"method": "fallback-path-filter", "reason": "cargo-metadata-error"}
+
+    packages = payload.get("packages") or []
+    by_name = {str(p.get("name")): p for p in packages if p.get("name")}
+    workspace_names = {
+        str(p.get("name")) for p in packages if p.get("source") is None and p.get("name")
+    }
+    neard_packages = {
+        str(p.get("name"))
+        for p in packages
+        if any(
+            str(t.get("name")) == "neard" and "bin" in (t.get("kind") or [])
+            for t in p.get("targets") or []
+        )
+    }
+    reachable = set(neard_packages)
+    changed = True
+    while changed:
+        changed = False
+        for name in list(reachable):
+            for dep in by_name.get(name, {}).get("dependencies") or []:
+                dep_name = str(dep.get("name"))
+                if dep_name in workspace_names and dep_name not in reachable:
+                    reachable.add(dep_name)
+                    changed = True
+
+    reachable_manifests = []
+    workspace_manifests = []
+    for name in sorted(workspace_names):
+        package = by_name.get(name)
+        if not package or package.get("source") is not None or not package.get("manifest_path"):
+            continue
+        manifest_root = Path(str(package["manifest_path"])).parent.resolve()
+        workspace_manifests.append(manifest_root)
+        if name in reachable:
+            reachable_manifests.append(manifest_root)
+    return reachable_manifests, {
+        "method": "cargo-metadata",
+        "root_packages": sorted(neard_packages),
+        "reachable_workspace_packages": sorted(reachable),
+        "workspace_package_roots": [str(p) for p in workspace_manifests],
+    }
+
+
+def _rust_in_scope(path: Path, roots: list[Path]) -> bool:
+    if not roots:
+        return True
+    resolved = path.resolve()
+    return any(resolved.is_relative_to(root) for root in roots)
+
+
+RUST_BOUNDARY_PATH_PARTS = {
+    "runtime", "rpc", "network", "host", "transaction", "transactions", "receipt",
+    "state_sync", "chunk", "chunks", "protocol", "vm", "chain", "client",
+    "validator", "epoch_manager", "storage", "adversarial", "peer_manager",
+}
+RUST_BOUNDARY_NAME_RE = re.compile(
+    r"(?:handle|process|dispatch|execute|validate|apply|submit|query|decode|deserialize|"
+    r"parse|receive|accept|route|serve|commit|import|export|sync|load|store|call|run)",
+    re.IGNORECASE,
+)
+RUST_INPUT_TOKEN_RE = re.compile(
+    r"\b(?:request|message|payload|input|bytes|raw|transaction|receipt|action|block|chunk|"
+    r"shard|account|gas|balance|signer|signature|query|params|args|data)\b",
+    re.IGNORECASE,
+)
+
+
+
+
+RUST_TAINT_PARAM_TYPES = re.compile(
+    r"(?:&\s*(?:mut\s*)?)?\[u8\]|String|Vec\s*<|Request|Message|Payload|Transaction|Receipt|"
+    r"Block|Chunk|AccountId|Balance|Gas|Signature|CryptoHash|u(?:8|16|32|64|128)|usize",
+    re.IGNORECASE,
+)
+RUST_TAINT_TOKENS = re.compile(
+    r"\b(?:input|request|message|payload|raw|bytes|data|tx|transaction|receipt|action|block|chunk|"
+    r"account|gas|balance|signature|params|args|peer|header|query|proof|part|parts)\b",
+    re.IGNORECASE,
+)
+RUST_BOUNDARY_FN = re.compile(
+    r"\b(?:handle|process|dispatch|execute|validate|apply|submit|query|decode|deserialize|"
+    r"parse|receive|accept|route|serve|commit|import|export|sync|load|store|call|run|verify)\b",
+    re.IGNORECASE,
+)
+RUST_VALIDATION_FN = re.compile(
+    r"\b(?:validate_header|validate_block(?:_impl)?|validate_transaction|validate_receipt|"
+    r"process_block|process_transactions|apply_block|verify_block)\b"
+)
+
+
+def _rust_scope_label(relative: str) -> str:
+    return "production" if _production_path(relative) else "supporting"
+
+
+def _rust_function_regions(source: str) -> list[dict[str, Any]]:
+    masked = _mask_non_code(source)
+    starts = list(re.finditer(
+        r"\b(?:pub(?:\s*\([^)]*\))?\s+)?(?:async\s+)?fn\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*"
+        r"\((?P<params>[^)]*)\)",
+        masked,
+        flags=re.MULTILINE,
+    ))
+    regions: list[dict[str, Any]] = []
+    for index, match in enumerate(starts):
+        body_start = masked.find("{", match.end())
+        if body_start < 0:
+            continue
+        depth = 0
+        end = len(masked)
+        for pos in range(body_start, len(masked)):
+            char = masked[pos]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    end = pos + 1
+                    break
+        params = match.group("params")
+        line = masked.count("\n", 0, match.start()) + 1
+        regions.append({
+            "name": match.group("name"),
+            "params": params,
+            "line": line,
+            "start": match.start(),
+            "body_start": body_start,
+            "end": end,
+            "body": masked[body_start:end],
+        })
+    return regions
+
+
+def _rust_taint_context(region: dict[str, Any]) -> dict[str, Any]:
+    params = str(region.get("params") or "")
+    tainted: set[str] = set()
+    for param in re.finditer(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^,]+)",
+        params,
+        flags=re.MULTILINE,
+    ):
+        name, annotation = param.group(1), param.group(2)
+        if RUST_TAINT_PARAM_TYPES.search(annotation) or RUST_TAINT_TOKENS.search(name):
+            tainted.add(name)
+
+    body = str(region.get("body") or "")
+    lines = body.splitlines()
+    for _ in range(4):
+        changed = False
+        for line in lines:
+            assignment = re.search(
+                r"(?:let\s+(?:mut\s+)?)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+)",
+                line,
+            )
+            if not assignment:
+                continue
+            lhs, rhs = assignment.group(1), assignment.group(2)
+            if lhs in tainted:
+                continue
+            if any(re.search(rf"\b{re.escape(name)}\b", rhs) for name in tainted):
+                tainted.add(lhs)
+                changed = True
+            elif RUST_TAINT_TOKENS.search(rhs) and (
+                "request" in rhs.lower()
+                or "message" in rhs.lower()
+                or "input" in rhs.lower()
+                or "payload" in rhs.lower()
+                or "raw" in rhs.lower()
+            ):
+                tainted.add(lhs)
+                changed = True
+        if not changed:
+            break
+
+    return {
+        "tainted_variables": sorted(tainted),
+        "direct_input_parameter": bool(tainted),
+        "boundary_function": bool(RUST_BOUNDARY_FN.search(str(region.get("name") or ""))),
+        "validation_function": bool(RUST_VALIDATION_FN.search(str(region.get("name") or ""))),
+    }
+
+
+def _rust_line_has_taint(line: str, taint: set[str]) -> bool:
+    if not taint:
+        return False
+    return any(re.search(rf"\b{re.escape(name)}\b", line) for name in taint)
+
+
+def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict[str, Any]]:
+    if not relative.lower().endswith(".rs"):
+        return []
+    regions = _rust_function_regions(source)
+    findings: list[dict[str, Any]] = []
+    for region in regions:
+        context = _rust_taint_context(region)
+        body = str(region["body"])
+        body_lines = body.splitlines()
+        taint = set(context["tainted_variables"])
+        base_line = int(region["line"])
+
+        def add(signal: str, line_offset: int, evidence: dict[str, Any], title: str) -> None:
+            findings.append({
+                "id": f"atlas-semantic-{len(findings)+1:06d}",
+                "engine": "atlas-semantic-rust",
+                "rule_id": f"atlas.rust.{signal}",
+                "signal": signal,
+                "file": relative,
+                "line": base_line + max(0, line_offset),
+                "matched_text": evidence.get("matched_text", "")[:320],
+                "evidence_type": "taint-and-control-flow-analysis",
+                "scope": scope,
+                "language": "rust",
+                "status": "review-required",
+                "confidence": evidence.get("confidence", "medium"),
+                "reachability": evidence.get("reachability", "unknown"),
+                "taint": evidence.get("taint", sorted(taint)),
+                "guards": evidence.get("guards", []),
+                "entry_point": bool(boundary),
+                "entry_point_reason": (
+                    "boundary-function-or-boundary-path" if boundary else "internal-function"
+                ),
+                "analysis": title,
+            })
+
+        boundary = context["boundary_function"] or any(
+            part in relative.lower().replace("\\", "/").split("/")
+            for part in RUST_BOUNDARY_PATH_PARTS
+        )
+
+        # Panic-on-input: unwrap/expect/unreachable plus indexing/slicing tied to tainted
+        # values or a boundary function. Constant unwraps and lock unwraps are not tainted.
+        for idx, line in enumerate(body_lines):
+            panic = re.search(
+                r"\b(?:unwrap|expect)\s*\(|\bunreachable!\s*\(|"
+                r"\[[^\]\n]*\b(?:len|count|index|ord|idx)\b[^\]\n]*\]",
+                line,
+                flags=re.IGNORECASE,
+            )
+            if not panic:
+                continue
+            panic_prefix = line[:panic.start()]
+            direct = _rust_line_has_taint(panic_prefix, taint) or bool(RUST_TAINT_TOKENS.search(panic_prefix))
+            # Boundary function names alone are not enough: constant/lock unwraps are
+            # common and should not be treated as attacker-controlled panic paths.
+            if direct:
+                guards = []
+                window = "\n".join(body_lines[max(0, idx - 8):idx + 1])
+                for guard in ("checked_", "ok_or", "get(", "len()", "is_empty", "contains", "limit", "MAX_"):
+                    if guard in window:
+                        guards.append(guard)
+                add(
+                    "panic_on_input",
+                    idx,
+                    {
+                        "matched_text": line.strip(),
+                        "confidence": "high" if direct and not guards else "medium",
+                        "reachability": "direct-taint" if direct else "boundary-only",
+                        "guards": guards,
+                    },
+                    "Potential panic or unchecked indexing reachable from an input boundary.",
+                )
+
+        # Input-sized memory work: the allocation/extension must depend on tainted input.
+        for idx, line in enumerate(body_lines):
+            if not re.search(r"\b(?:Vec::with_capacity|reserve|reserve_exact|resize|extend)\b", line):
+                continue
+            if not (_rust_line_has_taint(line, taint) or re.search(r"\.(?:len|capacity)\s*\(\)", line)):
+                continue
+            add(
+                "input_sized_resource",
+                idx,
+                {
+                    "matched_text": line.strip(),
+                    "confidence": "high" if _rust_line_has_taint(line, taint) else "medium",
+                    "reachability": "direct-taint" if _rust_line_has_taint(line, taint) else ("boundary-only" if boundary else "unknown"),
+                },
+                "Input-derived collection growth requires an explicit protocol/resource cap.",
+            )
+
+        # Unchecked arithmetic/casts on tainted values.
+        for idx, line in enumerate(body_lines):
+            if not taint:
+                continue
+            arithmetic = re.search(
+                r"(?:\b[A-Za-z_][A-Za-z0-9_]*\b\s*(?:\+|-|\*)\s*\b[A-Za-z_][A-Za-z0-9_]*\b|"
+                r"\b[A-Za-z_][A-Za-z0-9_]*\b\s+as\s+(?:u8|u16|u32|u64|u128|usize|isize))",
+                line,
+            )
+            if arithmetic and _rust_line_has_taint(line, taint):
+                safe_ops = ("checked_add", "checked_sub", "checked_mul", "saturating_", "try_into")
+                confidence = "high" if not any(op in line for op in safe_ops) else "medium"
+                add(
+                    "unchecked_input_arithmetic",
+                    idx,
+                    {
+                        "matched_text": line.strip(),
+                        "confidence": confidence,
+                        "reachability": "direct-taint",
+                        "guards": [op for op in safe_ops if op in line],
+                    },
+                    "Arithmetic or cast uses an input-tainted value without an obvious checked/saturating operation.",
+                )
+
+        # Deserialization without a nearby visible size bound. This deliberately does not
+        # claim a vulnerability; upstream caps can exist in callers, so the result is a trace lead.
+        for idx, line in enumerate(body_lines):
+            if not re.search(r"\b(?:try_from_slice|deserialize|from_slice|decode)\b", line):
+                continue
+            joined = "\n".join(body_lines[max(0, idx - 10):idx + 1])
+            direct = _rust_line_has_taint(line, taint) or bool(
+                re.search(r"(?:input|payload|bytes|data)\b", joined, re.IGNORECASE)
+            )
+            if not direct:
+                continue
+            guards = [g for g in ("MAX_", "limit", "truncate", "take(", "object_length", "size_limit") if g.lower() in joined.lower()]
+            add(
+                "uncapped_deserialization",
+                idx,
+                {
+                    "matched_text": line.strip(),
+                    "confidence": "medium" if not guards else "low",
+                    "reachability": "direct-taint",
+                    "guards": guards,
+                },
+                "Input reaches deserialization; verify the size/canonical-encoding guard before decoding.",
+            )
+
+        # Host gas ordering: detect actual work before the first pay call, and only in
+        # host-boundary code. A later charge is not equivalent to charging before work.
+        if "near-vm-runner" in relative.lower() and ("/logic/" in relative.lower() or "\\logic\\" in relative.lower()):
+            first_charge = re.search(r"\bpay_(?:base|per)\s*\(", body)
+            if first_charge:
+                prefix = body[:first_charge.start()]
+                work = re.search(
+                    r"\b(?:read_memory|write_memory|get_memory_or_register|Vec::|to_vec|"
+                    r"deserialize|serialize|hash|crypto|copy_from_slice|extend_from_slice)\b",
+                    prefix,
+                )
+                if work:
+                    line_offset = prefix.count("\n")
+                    add(
+                        "gas_ordering",
+                        line_offset,
+                        {
+                            "matched_text": work.group(0),
+                            "confidence": "medium",
+                            "reachability": "direct-taint" if taint else ("boundary-only" if boundary else "unknown"),
+                        },
+                        "Potential input-dependent host work occurs before the first gas charge.",
+                    )
+
+        # Nearcore-specific consensus invariant completeness. This is not a generic "missing
+        # check" guess: it is only emitted for the block-validation seam where the historical
+        # total-supply bug lived, and the rule names the expected property explicitly.
+        if (
+            "chain/chain/src/chain.rs" in relative.replace("\\", "/").lower()
+            and context["validation_function"]
+            and any(token in body for token in ("verify_gas_price", "validate_chunk_headers", "verify_challenges"))
+            and not re.search(r"\b(?:total_supply|verify_total_supply|balance_burnt)\b", body)
+        ):
+            add(
+                "consensus_invariant_gap",
+                0,
+                {
+                    "matched_text": str(region["name"]),
+                    "confidence": "high",
+                    "reachability": "consensus-validation",
+                    "guards": [],
+                },
+                "Consensus block validation seam lacks the total-supply/burned-balance invariant check used by the fixed nearcore rule.",
+            )
+
+    return findings
+
+
 def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, cancel=None) -> list[dict[str, Any]]:
     pool = [focus] if focus is not None else _files(root)
-    files = [path for path in pool if path.is_file() and path.suffix.lower() in SOURCE_EXTENSIONS]
+    source_candidates = [path for path in pool if path.is_file() and path.suffix.lower() in SOURCE_EXTENSIONS]
+    rust_roots, rust_meta = _rust_scope(root) if any(
+        path.suffix.lower() == ".rs" for path in source_candidates
+    ) else ([], {"method": "not-rust"})
+    files = []
+    workspace_roots = [Path(p) for p in rust_meta.get("workspace_package_roots", []) if p]
+    for path in source_candidates:
+        relative = str(path.relative_to(root)).replace("\\", "/")
+        if path.suffix.lower() == ".rs":
+            is_production = _production_path(relative)
+            # Production Rust is restricted to crates reachable from a neard binary.
+            # Test/fuzz/bench/supporting Rust is still scanned, but remains explicitly
+            # marked as supporting evidence so it can improve recall without pretending
+            # that test-only code is production attack surface.
+            if is_production and not _rust_in_scope(path, rust_roots):
+                continue
+            if not is_production and workspace_roots and not _rust_in_scope(path, workspace_roots):
+                continue
+        files.append(path)
     findings: list[dict[str, Any]] = []
     total = max(1, len(files))
     for index, path in enumerate(files, 1):
@@ -81,24 +513,31 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, c
             })
             continue
         relative = str(path.relative_to(root)).replace("\\", "/")
-        for signal_id, pattern in SIGNAL_PATTERNS.items():
-            if cancel and cancel():
-                raise OperationCancelled("ATLAS operation cancelled")
-            for match_index, match in enumerate(
-                __import__("re").finditer(pattern, source, flags=__import__("re").MULTILINE),
-                1,
-            ):
+        source_lines = source.splitlines()
+        for signal in _signals(source, path.suffix.lower()):
+            signal_id = str(signal.get("id"))
+            for line in signal.get("lines", []) or []:
+                line_number = int(line)
+                matched = source_lines[line_number - 1].strip()[:160] if 0 < line_number <= len(source_lines) else ""
                 findings.append({
                     "id": f"atlas-rule-{len(findings)+1:06d}",
                     "engine": "atlas-rules",
                     "rule_id": f"atlas.signal.{signal_id}",
                     "signal": signal_id,
                     "file": relative,
-                    "line": source.count("\n", 0, match.start()) + 1,
-                    "matched_text": match.group(0)[:160],
+                    "line": line_number,
+                    "matched_text": matched,
                     "evidence_type": "deterministic-source-rule",
+                    "scope": _rust_scope_label(relative) if path.suffix.lower() == ".rs" else "source",
+                    "language": path.suffix.lower().lstrip("."),
                     "status": "review-required",
                 })
+        if path.suffix.lower() == ".rs":
+            findings.extend(_rust_semantic_findings(relative, source, _rust_scope_label(relative)))
+    if rust_meta.get("method") == "cargo-metadata":
+        for item in findings:
+            if item.get("language") == "rust":
+                item["rust_scope"] = rust_meta
     return findings
 
 

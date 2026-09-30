@@ -8,7 +8,7 @@ from typing import Any
 
 from .finding_gate import attach_gate, gate_summary
 from .intake import OperationCancelled, _prepared_target, build_intake, write_intake_report
-from .scanner import run_security_scan
+from .scanner import _production_path, _rust_in_scope, _rust_scope, run_security_scan
 
 
 PRIORITY = {
@@ -26,6 +26,11 @@ PRIORITY = {
     "fallback": "medium",
     "receive": "low",
     "unsafe": "high",
+    "rust_unsafe_block": "medium",
+    "rust_unsafe_impl": "medium",
+    "rust_unwrap_expect": "medium",
+    "rust_input_sized_allocation": "medium",
+    "rust_gas_ordering": "medium",
     "invoke_signed": "high",
     "raw_call": "high",
     "sysvar": "medium",
@@ -55,7 +60,12 @@ TITLES = {
     "block_number": "Block number dependency requires temporal-assumption review",
     "fallback": "Fallback dispatch path requires reachability / value-flow review",
     "receive": "Receive path requires unsolicited-value-flow review",
-    "unsafe": "Unsafe primitive requires manual memory / authority review",
+    "unsafe": "Legacy generic unsafe signal requires language-specific review",
+    "rust_unsafe_block": "Rust unsafe block requires memory-safety and authority review",
+    "rust_unsafe_impl": "Rust unsafe trait implementation requires invariant review",
+    "rust_unwrap_expect": "Rust panic path requires attacker-input reachability review",
+    "rust_input_sized_allocation": "Rust input-sized allocation requires resource-limit review",
+    "rust_gas_ordering": "Rust host work before gas charge requires ordering review",
     "invoke_signed": "Program-derived authority invocation requires signer-seed review",
     "raw_call": "Raw external-call primitive requires value / target / callback review",
     "sysvar": "System-variable dependency requires freshness and authority review",
@@ -71,34 +81,39 @@ TITLES = {
     "storage_write": "Direct storage mutation requires invariant review",
 }
 
-RESEARCH_HINTS = {
-    "delegatecall": ["upgrade", "lifecycle", "authorization"],
-    "selfdestruct": ["lifecycle"],
-    "tx_origin": ["authorization", "privileged"],
-    "upgrade": ["lifecycle", "authorization"],
-    "low_level_call": ["accounting", "state", "call"],
-    "assembly": ["state", "accounting"],
-    "unchecked": ["accounting", "arithmetic"],
-    "ecrecover": ["replay", "authorization"],
-    "create2": ["lifecycle", "replay"],
-    "timestamp": ["temporal"],
-    "block_number": ["temporal"],
-    "fallback": ["reachability", "lifecycle"],
-    "receive": ["reachability"],
-    "unsafe": ["state", "memory"],
-    "invoke_signed": ["authorization"],
-    "raw_call": ["call", "authorization"],
-    "sysvar": ["temporal", "authorization"],
-    "account_info": ["authorization", "state"],
-    "entry_point": ["authorization", "reachability"],
-    "contract_call": ["call", "state"],
-    "as_contract": ["authorization"],
-    "tx_sender": ["authorization"],
-    "gtxn": ["replay"],
-    "itxn": ["call", "value"],
-    "ensure_signed": ["authorization"],
-    "get_caller_address": ["authorization"],
-    "storage_write": ["state", "accounting"],
+RESEARCH_PATTERN_MAP = {
+    "delegatecall": ["pattern.lifecycle-reachability-destruction", "pattern.unbounded-privileged-input"],
+    "selfdestruct": ["pattern.lifecycle-reachability-destruction"],
+    "tx_origin": ["pattern.unbounded-privileged-input"],
+    "upgrade": ["pattern.lifecycle-reachability-destruction", "pattern.replay-state-reset"],
+    "low_level_call": ["pattern.silent-accounting-shortfall"],
+    "assembly": ["pattern.silent-accounting-shortfall"],
+    "unchecked": ["pattern.silent-accounting-shortfall"],
+    "ecrecover": ["pattern.replay-state-reset"],
+    "create2": ["pattern.lifecycle-reachability-destruction", "pattern.replay-state-reset"],
+    "timestamp": ["pattern.replay-state-reset"],
+    "block_number": ["pattern.replay-state-reset"],
+    "fallback": ["pattern.lifecycle-reachability-destruction"],
+    "receive": ["pattern.lifecycle-reachability-destruction"],
+    "unsafe": ["pattern.unbounded-privileged-input"],
+    "rust_unsafe_block": ["pattern.unbounded-privileged-input"],
+    "rust_unsafe_impl": ["pattern.unbounded-privileged-input"],
+    "rust_unwrap_expect": ["pattern.unbounded-privileged-input"],
+    "rust_input_sized_allocation": ["pattern.unbounded-privileged-input"],
+    "rust_gas_ordering": ["pattern.silent-accounting-shortfall"],
+    "invoke_signed": ["pattern.unbounded-privileged-input"],
+    "raw_call": ["pattern.unbounded-privileged-input"],
+    "sysvar": ["pattern.replay-state-reset"],
+    "account_info": ["pattern.unbounded-privileged-input"],
+    "entry_point": ["pattern.unbounded-privileged-input"],
+    "contract_call": ["pattern.silent-accounting-shortfall"],
+    "as_contract": ["pattern.unbounded-privileged-input"],
+    "tx_sender": ["pattern.unbounded-privileged-input"],
+    "gtxn": ["pattern.replay-state-reset"],
+    "itxn": ["pattern.silent-accounting-shortfall"],
+    "ensure_signed": ["pattern.unbounded-privileged-input"],
+    "get_caller_address": ["pattern.unbounded-privileged-input"],
+    "storage_write": ["pattern.silent-accounting-shortfall"],
 }
 
 def _load_patterns(root: Path) -> list[dict[str, Any]]:
@@ -113,20 +128,52 @@ def _load_patterns(root: Path) -> list[dict[str, Any]]:
         return []
 
 def _find_related_patterns(root: Path, signal: str) -> list[str]:
-    hints = RESEARCH_HINTS.get(signal, [])
-    result = []
-    for item in _load_patterns(root):
-        hay = json.dumps(item, ensure_ascii=False).lower()
-        if any(term in hay for term in hints):
-            if item.get("id"):
-                result.append(str(item["id"]))
-    return sorted(set(result))[:8]
+    available = {str(item.get("id")) for item in _load_patterns(root) if item.get("id")}
+    mapped = RESEARCH_PATTERN_MAP.get(signal, [])
+    return [pattern_id for pattern_id in mapped if pattern_id in available]
 
 def _unit_for_line(units: list[dict[str, Any]], line: int, file_rel: str) -> str | None:
     candidates = [u for u in units if u.get("file") == file_rel and int(u.get("line", 0)) <= line]
     if not candidates:
         return None
     return max(candidates, key=lambda x: int(x.get("line", 0))).get("name")
+
+def _static_priority(signal: str) -> str:
+    """Static/heuristic rules are review leads until evidence gates are satisfied."""
+    priority = PRIORITY.get(signal, "low")
+    return "medium" if priority in {"critical", "high"} else priority
+
+
+SEMANTIC_PRIORITY = {
+    "consensus_invariant_gap": "high",
+    "panic_on_input": "medium",
+    "input_sized_resource": "medium",
+    "unchecked_input_arithmetic": "medium",
+    "uncapped_deserialization": "medium",
+    "gas_ordering": "medium",
+}
+
+
+def _semantic_priority(signal: str, scope: str) -> str:
+    hint = SEMANTIC_PRIORITY.get(signal, "low")
+    if scope != "production" and hint in {"high", "medium"}:
+        return "low"
+    return "medium" if hint == "high" else hint
+
+
+def _triage_score(item: dict[str, Any]) -> int:
+    score = int(item.get("triage_score") or 0)
+    if score:
+        return max(0, min(100, score))
+    confidence = str(item.get("confidence") or "").lower()
+    reachability = str(item.get("reachability") or "").lower()
+    scope = str(item.get("scope") or "").lower()
+    score += {"high": 30, "medium": 18, "low": 8}.get(confidence, 0)
+    score += {"direct-taint": 35, "consensus-validation": 35, "boundary-only": 18}.get(reachability, 0)
+    score += 15 if scope == "production" else 4
+    score += 8 if not item.get("guards") else 0
+    return max(0, min(100, score))
+
 
 def _snippet(root_target: Path, rel: str, line: int) -> str | None:
     try:
@@ -160,6 +207,8 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
     with _prepared_target(target, cancel=cancel) as (scan_root, _archive_format):
         root_for_snippet = scan_root
         files = intake.get("files", []) or []
+        rust_roots, rust_meta = _rust_scope(scan_root)
+        rust_workspace_roots = [Path(p) for p in rust_meta.get("workspace_package_roots", []) if p]
         total_files = max(1, len(files))
         for file_index, file_info in enumerate(files, 1):
             if cancel and cancel():
@@ -167,6 +216,13 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             rel_preview = str(file_info.get("path", ""))
             mark(25 + int(65 * file_index / total_files), f"Scanning {rel_preview}")
             rel = str(file_info.get("path", ""))
+            is_rust = Path(rel).suffix.lower() == ".rs"
+            if is_rust:
+                production = _production_path(rel)
+                if production and not _rust_in_scope(scan_root / rel, rust_roots):
+                    continue
+                if not production and rust_workspace_roots and not _rust_in_scope(scan_root / rel, rust_workspace_roots):
+                    continue
             for signal in file_info.get("signals", []) or []:
                 sid = str(signal.get("id", ""))
                 lines = [int(x) for x in signal.get("lines", []) if isinstance(x, int) or str(x).isdigit()]
@@ -180,25 +236,99 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
                     continue
                 if sid not in PRIORITY:
                     continue
-                unit = _unit_for_line(intake.get("contracts", []) or [], lines[0], rel) if lines else None
+                unit = _unit_for_line(
+                    intake.get("source_units") or intake.get("contracts") or [],
+                    lines[0],
+                    rel,
+                ) if lines else None
                 for line in lines[:50]:
+                    scope = "production" if _production_path(rel) else "supporting"
                     findings.append({
                         "id": f"atlas-review-{len(findings)+1:04d}",
-                        "priority": PRIORITY[sid],
-                        "status": "review-required",
+                        "priority": _static_priority(sid) if scope == "production" else "low",
+                        "severity_hint": PRIORITY[sid],
+                        "status": "review-required" if scope == "production" else "supporting-evidence",
                         "evidence_type": "static-structural-signal",
                         "signal": sid,
                         "title": TITLES[sid],
                         "file": rel,
                         "line": line,
+                        "scope": scope,
                         "contract_or_unit": unit,
                         "snippet": _snippet(root_for_snippet, rel, line),
                         "related_research_patterns": _find_related_patterns(research_root, sid),
-                        "limitation": "This is a deterministic source signal, not proof that an exploitable vulnerability exists.",
+                        "triage_score": 20 if scope == "production" else 5,
+                        "limitation": (
+                            "Static/heuristic review lead only. A high/critical severity hint "
+                            "is not asserted until security-property, reproduction, impact, and "
+                            "independent-verification gates are evidenced. Supporting-scope code "
+                            "is retained as evidence but is not treated as production attack surface."
+                        ),
                     })
 
-    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    findings.sort(key=lambda x: (priority_order[x["priority"]], x["file"], x["line"], x["signal"]))
+    # The semantic engine runs after the intake pass so its richer taint/control-flow
+    # evidence can be merged into the user-visible audit findings instead of being hidden
+    # only inside engine_scan.
+    engine_scan = run_security_scan(target, progress=mark, cancel=cancel)
+    semantic_findings = []
+    for item in engine_scan.get("engine_findings", []) or []:
+        if item.get("engine") != "atlas-semantic-rust":
+            continue
+        signal = str(item.get("signal") or "")
+        scope = str(item.get("scope") or "supporting")
+        triage = _triage_score(item)
+        semantic_findings.append({
+            "id": f"atlas-review-semantic-{len(semantic_findings)+1:04d}",
+            "priority": _semantic_priority(signal, scope),
+            "severity_hint": SEMANTIC_PRIORITY.get(signal, "medium"),
+            "status": "review-required" if scope == "production" else "supporting-evidence",
+            "evidence_type": item.get("evidence_type", "taint-and-control-flow-analysis"),
+            "signal": signal,
+            "title": item.get("analysis") or f"Semantic Rust finding: {signal}",
+            "file": item.get("file"),
+            "line": item.get("line"),
+            "scope": scope,
+            "contract_or_unit": _unit_for_line(
+                intake.get("source_units") or intake.get("contracts") or [],
+                int(item.get("line", 0) or 0),
+                str(item.get("file") or ""),
+            ),
+            "snippet": _snippet(
+                scan_root if "scan_root" in locals() else target,
+                str(item.get("file") or ""),
+                int(item.get("line", 0) or 0),
+            ) or item.get("matched_text"),
+            "confidence": item.get("confidence"),
+            "reachability": item.get("reachability"),
+            "taint": item.get("taint", []),
+            "guards": item.get("guards", []),
+            "entry_point": item.get("entry_point", False),
+            "entry_point_reason": item.get("entry_point_reason"),
+            "triage_score": triage,
+            "source_hash": intake["target"]["source_hash"],
+            "analysis": item.get("analysis"),
+            "limitation": (
+                "Semantic analysis narrows reachability and evidence but does not prove exploitability. "
+                "Promotion still requires a stated security property, local reproduction, measured impact, "
+                "and independent verification."
+            ),
+        })
+    findings.extend(semantic_findings)
+
+    # Deduplicate the same file/line/signal emitted by overlapping static passes.
+    deduped = {}
+    for item in findings:
+        key = (item.get("file"), item.get("line"), item.get("signal"), item.get("scope"))
+        existing = deduped.get(key)
+        if existing is None or _triage_score(item) > _triage_score(existing):
+            deduped[key] = item
+    findings = list(deduped.values())
+
+    # Triage order is intentionally evidence-driven rather than "all medium": direct taint,
+    # consensus-boundary reachability, missing guards, and production scope move candidates up.
+    for item in findings:
+        item["triage_score"] = _triage_score(item)
+    findings.sort(key=lambda x: (-int(x.get("triage_score", 0)), x.get("file") or "", int(x.get("line", 0) or 0), x.get("signal") or ""))
     for i, item in enumerate(findings, 1):
         item["id"] = f"atlas-review-{i:04d}"
         item["source_hash"] = intake["target"]["source_hash"]
@@ -206,6 +336,15 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
 
     report = {
         "schema_version": 1,
+        "finding_policy": {
+            "static_priority_cap": "medium",
+            "promotion_requires": [
+                "security_property",
+                "reproduction",
+                "impact",
+                "independent_verification",
+            ],
+        },
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "id": f"atlas-audit-{intake['target']['source_hash'][:16]}",
         "target": intake["target"],
@@ -229,18 +368,22 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             "source_file_count": intake["summary"]["source_file_count"],
             "contract_count": intake["summary"]["contract_count"],
             "function_count": intake["summary"]["function_count"],
+            "production_finding_count": sum(x.get("scope") == "production" for x in findings),
+            "supporting_finding_count": sum(x.get("scope") == "supporting" for x in findings),
+            "semantic_finding_count": sum(str(x.get("evidence_type", "")).startswith("taint-and-control-flow") for x in findings),
+            "high_confidence_count": sum(x.get("confidence") == "high" for x in findings),
+            "direct_taint_count": sum(x.get("reachability") == "direct-taint" for x in findings),
+            "entry_point_count": sum(bool(x.get("entry_point")) for x in findings),
         },
         "controls_observed": controls,
         "findings": findings,
         "verification": gate_summary(findings),
         "intake": intake,
+        "engine_scan": engine_scan,
     }
-    engine_scan = run_security_scan(target, progress=mark, cancel=cancel)
-    report["engine_scan"] = engine_scan
     report["summary"]["engine_finding_count"] = int(engine_scan.get("engine_finding_count", 0))
 
-    mark(99, "Writing audit findings")
-    write_contract_audit(research_root, report)
+    mark(99, "Audit findings ready")
     mark(100, "Audit complete")
     return report
 

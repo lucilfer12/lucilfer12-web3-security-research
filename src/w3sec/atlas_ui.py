@@ -1632,7 +1632,13 @@ class AtlasApp(tk.Tk):
             self._apply_target_report(report)
             self.finding_tree.delete(0, "end")
             for finding in report.get("findings", []):
-                self.finding_tree.insert("end", f"[{finding.get('priority','?').upper():8}] {finding.get('file')}:{finding.get('line')} · {finding.get('signal')}")
+                score = finding.get("triage_score", 0)
+                scope = finding.get("scope", "?")
+                self.finding_tree.insert(
+                    "end",
+                    f"[{finding.get('priority','?').upper():8}] [{scope[:10]:10}] S{score:02} "
+                    f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
+                )
             self.show_page("Audit Findings")
             self.finding_detail.delete("1.0", "end")
             self.finding_detail.insert("end", pretty(report))
@@ -1801,9 +1807,8 @@ class AtlasApp(tk.Tk):
                 tone = "#e7a64b"
             dot.configure(fg=tone)
             state_label.configure(text=state, fg=tone)
-        self.case_tree.delete(0, "end")
-        for case in cases:
-            self.case_tree.insert("end", f"{case.get('id')}  ·  {case.get('status')}  ·  {case.get('stage')}  ·  {case.get('title')}")
+        # Cases page is target-facing. Reference cases are loaded only by SEARCH REFERENCE CASES,
+        # so a repository refresh cannot overwrite the current target context with historical records.
         self.intake_tree.delete(0, "end")
         for item in intakes:
             target = item.get("target", {})
