@@ -129,16 +129,9 @@ class IntakeTests(unittest.TestCase):
             )
             (root / "src" / "main.rs").parent.mkdir(parents=True, exist_ok=True)
             (root / "src" / "main.rs").write_text("fn main() {}\n", encoding="utf-8")
-            (root / "chain" / "chain" / "src" / "chain.rs").write_text(
-                "pub fn validate_header(block: &Block) -> Result<(), Error> {\n"
-                "    block.validate_with(|b| validate_block_impl(b))?;\n"
-                "    if !block.verify_gas_price() { return Err(Error); }\n"
-                "    verify_challenges(block.challenges())?;\n"
-                "    validate_chunk_headers(block)?;\n"
-                "    Ok(())\n"
-                "}\n",
-                encoding="utf-8",
-            )
+            corpus_root = Path(__file__).resolve().parents[1] / "corpus" / "recall" / "nearcore"
+            pre_fix = (corpus_root / "total_supply_8790_pre_fix_chain.rs").read_text(encoding="utf-8")
+            (root / "chain" / "chain" / "src" / "chain.rs").write_text(pre_fix, encoding="utf-8")
             report = build_contract_audit(root, root / "research")
             hits = [x for x in report["findings"] if x.get("signal") == "consensus_invariant_gap"]
             self.assertEqual(1, len(hits))
@@ -150,14 +143,7 @@ class IntakeTests(unittest.TestCase):
 
             fixed = root / "chain" / "chain" / "src" / "chain.rs"
             fixed.write_text(
-                "pub fn validate_header(block: &Block) -> Result<(), Error> {\n"
-                "    block.validate_with(|b| validate_block_impl(b))?;\n"
-                "    if !block.verify_gas_price() { return Err(Error); }\n"
-                "    verify_challenges(block.challenges())?;\n"
-                "    validate_chunk_headers(block)?;\n"
-                "    if !block.verify_total_supply(prev_total_supply, minted_amount) { return Err(Error); }\n"
-                "    Ok(())\n"
-                "}\n",
+                (corpus_root / "total_supply_8790_fixed_chain.rs").read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
             fixed_report = build_contract_audit(root, root / "research-fixed")
