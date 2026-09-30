@@ -21,7 +21,7 @@ from .rust_analysis import (
     upper_bound_proofs,
 )
 
-SCANNER_VERSION = "1.0.6"
+SCANNER_VERSION = "1.0.7"
 
 _EXTERNAL = {
     "slither": {

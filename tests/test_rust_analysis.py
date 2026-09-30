@@ -142,6 +142,34 @@ pub fn process(ctx: &mut HostCtx, input: &[u8]) {
         self.assertEqual(1, len(gas_hits))
         self.assertIn("read_memory", gas_hits[0]["matched_text"])
 
+    def test_register_get_is_recognized_as_gas_charged_work(self):
+        source = """
+fn read_memory(gas_counter: &mut GasCounter, memory: &[u8]) -> Result<&[u8]> {
+    gas_counter.pay_base(read_memory_base)?;
+    Ok(memory)
+}
+
+fn get_memory_or_register(
+    gas_counter: &mut GasCounter,
+    memory: &[u8],
+    registers: &Registers,
+    ptr: u64,
+    len: u64,
+) -> Result<&[u8]> {
+    if len == u64::MAX {
+        registers.get(gas_counter, ptr)
+    } else {
+        read_memory(gas_counter, memory)
+    }
+}
+"""
+        index = RustIndex()
+        index.add_file("host.rs", function_regions(_mask_non_code(source)))
+        index.finalize()
+        self.assertIn("get_memory_or_register", index.charge_proof)
+        self.assertEqual(["registers.get"],
+                         index.charge_proof["get_memory_or_register"])
+
     def test_triage_score_uses_security_signal_and_guard_evidence(self):
         base = {
             "confidence": "high",

@@ -126,7 +126,12 @@ def iter_calls(body: str):
         close = match_close(body, open_pos, "(")
         if close < 0:
             continue
-        yield name, body[open_pos + 1:close], m.start("name"), bool(m.group("dot"))
+        receiver = None
+        if m.group("dot"):
+            prefix = body[:m.start("dot")].rstrip()
+            rm = re.search(r"\b([A-Za-z_]\w*)$", prefix)
+            receiver = rm.group(1) if rm else None
+        yield name, body[open_pos + 1:close], m.start("name"), bool(m.group("dot")), receiver
 
 
 # ---------------------------------------------------------------------------
@@ -188,8 +193,12 @@ class RustIndex:
         for m in _CHARGE_DIRECT.finditer(text):
             if dm.depth(m.start()) == 0:
                 return [m.group(0).rstrip("( \t")]
-        for name, args, pos, _ in iter_calls(text):
-            if dm.depth(pos) == 0 and name != self_name and name in self.charge_proof and _GAS_ARG.search(args):
+        for name, args, pos, _, receiver in iter_calls(text):
+            if dm.depth(pos) != 0 or name == self_name or not _GAS_ARG.search(args):
+                continue
+            if receiver == "registers" and name == "get":
+                return ["registers.get"]
+            if name in self.charge_proof:
                 return [name] + self.charge_proof[name]
         for m in re.finditer(r"\bif\b", text):
             if dm.depth(m.start()) == 0:
@@ -255,10 +264,10 @@ def analyse_gas(body: str, index: "RustIndex | None") -> dict[str, Any]:
     for m in _CHARGE_DIRECT.finditer(body):
         events.append((m.start(), dm.depth(m.start()), "direct", [m.group(0).rstrip("( \t")]))
     if index is not None:
-        for name, args, pos, _ in iter_calls(body):
-            chain = index.charge_proof.get(name)
+        for name, args, pos, _, receiver in iter_calls(body):
+            chain = ["registers.get"] if receiver == "registers" and name == "get" else index.charge_proof.get(name)
             if chain and _GAS_ARG.search(args):
-                events.append((pos, dm.depth(pos), "callee", [name] + chain))
+                events.append((pos, dm.depth(pos), "callee", ([name] + chain) if chain[0] != "registers.get" else chain))
                 callee_pos.add(pos)
     events.sort(key=lambda e: e[0])
     top = [e for e in events if e[1] == 1]
