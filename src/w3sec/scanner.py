@@ -10,7 +10,7 @@ from typing import Any
 from .engine_orchestrator import EngineOrchestrator
 from .intake import OperationCancelled, SOURCE_EXTENSIONS, _files, _mask_non_code, _prepared_target, _signals
 
-SCANNER_VERSION = "1.0.4"
+SCANNER_VERSION = "1.0.5"
 
 _EXTERNAL = {
     "slither": {

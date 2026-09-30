@@ -107,16 +107,18 @@ class IntakeTests(unittest.TestCase):
             self.assertIn("src/runtime/tests.rs", engine_files)
             self.assertIn("fuzz/fuzz_targets.rs", engine_files)
             self.assertIn("benchmarks/bench.rs", engine_files)
-            supporting = [x for x in report["findings"] if x.get("scope") == "supporting"]
+            supporting = report["supporting_evidence"]
             self.assertTrue(supporting)
             self.assertTrue(all(x.get("scope") == "supporting" for x in supporting))
+            self.assertTrue(all(x.get("scope") == "production" for x in report["findings"]))
+            self.assertEqual(len(supporting), report["summary"]["supporting_finding_count"])
             self.assertFalse(any(
                 x.get("signal") == "panic_on_input" and x.get("file") == "src/runtime/safe_boundary.rs"
                 for x in report["findings"]
             ))
             assert any(
                 x.get("signal") == "panic_on_input" and x.get("file") == "fuzz/fuzz_targets.rs"
-                for x in report["findings"]
+                for x in report["supporting_evidence"]
             )
 
     def test_nearcore_total_supply_recall_detector(self):

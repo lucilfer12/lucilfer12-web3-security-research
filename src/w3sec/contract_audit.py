@@ -189,6 +189,16 @@ def _snippet(root_target: Path, rel: str, line: int) -> str | None:
     except Exception:
         return None
     return None
+def _assert_production_only(findings: list[dict[str, Any]]) -> None:
+    """Post-condition: nothing outside production scope may reach `findings`."""
+    leaked = [
+        f"{x.get('file')}:{x.get('line')}" for x in findings
+        if x.get("scope") != "production" or not _production_path(str(x.get("file") or ""))
+    ]
+    if leaked:
+        raise AssertionError(f"{len(leaked)} non-production finding(s) escaped the scope filter: {leaked[:5]}")
+
+
 def build_contract_audit(target: Path, research_root: Path, progress=None, cancel=None) -> dict[str, Any]:
     def mark(percent: int, label: str) -> None:
         if cancel and cancel():
@@ -334,6 +344,23 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             deduped[key] = item
     findings = list(deduped.values())
 
+    # Scope contract: only production-scope findings may appear in `findings` or be counted
+    # in finding_count. Tests, benchmarks and tooling stay available as separate evidence.
+    def _is_production(item: dict[str, Any]) -> bool:
+        return item.get("scope") == "production" and _production_path(str(item.get("file") or ""))
+
+    supporting_evidence = [
+        {
+            "id": f"atlas-support-{i:04d}", "file": x.get("file"), "line": x.get("line"),
+            "signal": x.get("signal"), "scope": "supporting", "priority": "low",
+            "status": "supporting-evidence", "evidence_type": x.get("evidence_type"),
+            "title": x.get("title"),
+        }
+        for i, x in enumerate([y for y in findings if not _is_production(y)], 1)
+    ]
+    findings = [y for y in findings if _is_production(y)]
+    _assert_production_only(findings)
+
     # Triage order is intentionally evidence-driven rather than "all medium": direct taint,
     # consensus-boundary reachability, missing guards, and production scope move candidates up.
     for item in findings:
@@ -379,14 +406,15 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             "contract_count": intake["summary"]["contract_count"],
             "function_count": intake["summary"]["function_count"],
             "production_finding_count": sum(x.get("scope") == "production" for x in findings),
-            "supporting_finding_count": sum(x.get("scope") == "supporting" for x in findings),
+            "supporting_finding_count": len(supporting_evidence),
             "semantic_finding_count": sum(str(x.get("evidence_type", "")).startswith("taint-and-control-flow") for x in findings),
             "high_confidence_count": sum(x.get("confidence") == "high" for x in findings),
-            "direct_taint_count": sum(x.get("reachability") == "direct-taint" for x in findings),
+            "direct_taint_count": sum(x.get("reachability") == "entry-point-direct" for x in findings),
             "entry_point_count": sum(bool(x.get("entry_point")) for x in findings),
         },
         "controls_observed": controls,
         "findings": findings,
+        "supporting_evidence": supporting_evidence,
         "verification": gate_summary(findings),
         "intake": intake,
         "engine_scan": engine_scan,
