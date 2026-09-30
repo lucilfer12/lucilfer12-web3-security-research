@@ -168,8 +168,13 @@ def _triage_score(item: dict[str, Any]) -> int:
     confidence = str(item.get("confidence") or "").lower()
     reachability = str(item.get("reachability") or "").lower()
     scope = str(item.get("scope") or "").lower()
-    score += {"high": 30, "medium": 18, "low": 8}.get(confidence, 0)
-    score += {"direct-taint": 35, "consensus-validation": 35, "boundary-only": 18}.get(reachability, 0)
+    score += {"high": 24, "medium": 14, "low": 6}.get(confidence, 0)
+    score += {
+        "entry-point-direct": 38,
+        "consensus-validation": 38,
+        "boundary-only": 14,
+        "internal-taint": 4,
+    }.get(reachability, 0)
     score += 15 if scope == "production" else 4
     score += 8 if not item.get("guards") else 0
     return max(0, min(100, score))
@@ -235,6 +240,11 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
                     })
                     continue
                 if sid not in PRIORITY:
+                    continue
+                # The semantic Rust pass supersedes broad unwrap/allocation matches in
+                # production code. Keep the raw signals in engine evidence, but avoid
+                # double-counting them as primary audit findings.
+                if is_rust and production and sid in {"rust_unwrap_expect", "rust_input_sized_allocation"}:
                     continue
                 unit = _unit_for_line(
                     intake.get("source_units") or intake.get("contracts") or [],

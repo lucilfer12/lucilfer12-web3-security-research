@@ -10,7 +10,7 @@ from typing import Any
 from .engine_orchestrator import EngineOrchestrator
 from .intake import OperationCancelled, SOURCE_EXTENSIONS, _files, _mask_non_code, _prepared_target, _signals
 
-SCANNER_VERSION = "1.0.3"
+SCANNER_VERSION = "1.0.4"
 
 _EXTERNAL = {
     "slither": {
@@ -80,7 +80,7 @@ def _production_path(relative: str) -> bool:
     return not (
         name.startswith("test_")
         or name.endswith(("_test.rs", "_tests.rs"))
-        or name in {"tests.rs", "testonly.rs", "build.rs"}
+        or name in {"test.rs", "tests.rs", "testonly.rs", "build.rs"}
     )
 
 
@@ -173,6 +173,28 @@ RUST_TAINT_PARAM_TYPES = re.compile(
     r"Block|Chunk|AccountId|Balance|Gas|Signature|CryptoHash|u(?:8|16|32|64|128)|usize",
     re.IGNORECASE,
 )
+RUST_RAW_PARAM_TYPES = re.compile(
+    r"(?:&\s*(?:mut\s*)?)?\[u8\]|String|Vec\s*<|Request|Message|Payload",
+    re.IGNORECASE,
+)
+RUST_STRUCTURED_INPUT_TYPES = re.compile(
+    r"Transaction|Receipt|Block|Chunk|AccountId|Balance|Gas|Signature|CryptoHash",
+    re.IGNORECASE,
+)
+RUST_INPUT_NAME_HINTS = re.compile(
+    r"\b(?:input|request|message|payload|raw|bytes|data|tx|transaction|receipt|action|block|chunk|"
+    r"account|gas|balance|signature|params|args|peer|header|query|proof|part|parts|len|length|"
+    r"count|index|idx|offset|limit|ptr|size)\b",
+    re.IGNORECASE,
+)
+RUST_DIRECT_INPUT_NAMES = re.compile(
+    r"\b(?:input|request|message|payload|raw|bytes|data|tx|transaction|receipt|action|peer|query|params|args|proof)\b",
+    re.IGNORECASE,
+)
+RUST_BOUNDARY_SCALAR_NAMES = re.compile(
+    r"\b(?:len|length|count|index|idx|offset|limit|ptr|size|value|amount|gas|balance)\b",
+    re.IGNORECASE,
+)
 RUST_TAINT_TOKENS = re.compile(
     r"\b(?:input|request|message|payload|raw|bytes|data|tx|transaction|receipt|action|block|chunk|"
     r"account|gas|balance|signature|params|args|peer|header|query|proof|part|parts)\b",
@@ -231,7 +253,7 @@ def _rust_function_regions(source: str) -> list[dict[str, Any]]:
     return regions
 
 
-def _rust_taint_context(region: dict[str, Any]) -> dict[str, Any]:
+def _rust_taint_context(region: dict[str, Any], boundary: bool = False) -> dict[str, Any]:
     params = str(region.get("params") or "")
     tainted: set[str] = set()
     for param in re.finditer(
@@ -240,7 +262,12 @@ def _rust_taint_context(region: dict[str, Any]) -> dict[str, Any]:
         flags=re.MULTILINE,
     ):
         name, annotation = param.group(1), param.group(2)
-        if RUST_TAINT_PARAM_TYPES.search(annotation) or RUST_TAINT_TOKENS.search(name):
+        raw = bool(RUST_RAW_PARAM_TYPES.search(annotation))
+        structured = bool(RUST_STRUCTURED_INPUT_TYPES.search(annotation))
+        direct_named = bool(RUST_DIRECT_INPUT_NAMES.search(name))
+        boundary_scalar = bool(RUST_BOUNDARY_SCALAR_NAMES.search(name))
+        scalar = bool(re.search(r"\b(?:u8|u16|u32|u64|u128|usize|isize)\b", annotation))
+        if raw or direct_named or (boundary and structured) or (boundary and scalar and boundary_scalar):
             tainted.add(name)
 
     body = str(region.get("body") or "")
@@ -260,22 +287,13 @@ def _rust_taint_context(region: dict[str, Any]) -> dict[str, Any]:
             if any(re.search(rf"\b{re.escape(name)}\b", rhs) for name in tainted):
                 tainted.add(lhs)
                 changed = True
-            elif RUST_TAINT_TOKENS.search(rhs) and (
-                "request" in rhs.lower()
-                or "message" in rhs.lower()
-                or "input" in rhs.lower()
-                or "payload" in rhs.lower()
-                or "raw" in rhs.lower()
-            ):
-                tainted.add(lhs)
-                changed = True
         if not changed:
             break
 
     return {
         "tainted_variables": sorted(tainted),
         "direct_input_parameter": bool(tainted),
-        "boundary_function": bool(RUST_BOUNDARY_FN.search(str(region.get("name") or ""))),
+        "boundary_function": bool(boundary),
         "validation_function": bool(RUST_VALIDATION_FN.search(str(region.get("name") or ""))),
     }
 
@@ -292,11 +310,18 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
     regions = _rust_function_regions(source)
     findings: list[dict[str, Any]] = []
     for region in regions:
-        context = _rust_taint_context(region)
         body = str(region["body"])
         body_lines = body.splitlines()
-        taint = set(context["tainted_variables"])
         base_line = int(region["line"])
+        path_parts = set(relative.lower().replace("\\", "/").split("/"))
+        boundary = bool(RUST_BOUNDARY_FN.search(str(region.get("name") or ""))) or bool(
+            path_parts.intersection({
+                "near-vm-runner", "logic", "network", "jsonrpc", "rpc", "state_sync",
+                "chunk", "chunks", "receipt", "transaction", "transactions", "peer_manager",
+            })
+        )
+        context = _rust_taint_context(region, boundary=boundary)
+        taint = set(context["tainted_variables"])
 
         def add(signal: str, line_offset: int, evidence: dict[str, Any], title: str) -> None:
             findings.append({
@@ -322,11 +347,6 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 "analysis": title,
             })
 
-        boundary = context["boundary_function"] or any(
-            part in relative.lower().replace("\\", "/").split("/")
-            for part in RUST_BOUNDARY_PATH_PARTS
-        )
-
         # Panic-on-input: unwrap/expect/unreachable plus indexing/slicing tied to tainted
         # values or a boundary function. Constant unwraps and lock unwraps are not tainted.
         for idx, line in enumerate(body_lines):
@@ -339,7 +359,7 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
             if not panic:
                 continue
             panic_prefix = line[:panic.start()]
-            direct = _rust_line_has_taint(panic_prefix, taint) or bool(RUST_TAINT_TOKENS.search(panic_prefix))
+            direct = _rust_line_has_taint(panic_prefix, taint)
             # Boundary function names alone are not enough: constant/lock unwraps are
             # common and should not be treated as attacker-controlled panic paths.
             if direct:
@@ -353,8 +373,8 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                     idx,
                     {
                         "matched_text": line.strip(),
-                        "confidence": "high" if direct and not guards else "medium",
-                        "reachability": "direct-taint" if direct else "boundary-only",
+                        "confidence": "high" if direct and boundary and not guards else "medium",
+                        "reachability": ("entry-point-direct" if boundary else "internal-taint") if direct else "boundary-only",
                         "guards": guards,
                     },
                     "Potential panic or unchecked indexing reachable from an input boundary.",
@@ -371,8 +391,8 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 idx,
                 {
                     "matched_text": line.strip(),
-                    "confidence": "high" if _rust_line_has_taint(line, taint) else "medium",
-                    "reachability": "direct-taint" if _rust_line_has_taint(line, taint) else ("boundary-only" if boundary else "unknown"),
+                    "confidence": "high" if _rust_line_has_taint(line, taint) and boundary else "medium",
+                    "reachability": ("entry-point-direct" if boundary else "internal-taint") if _rust_line_has_taint(line, taint) else ("boundary-only" if boundary else "unknown"),
                 },
                 "Input-derived collection growth requires an explicit protocol/resource cap.",
             )
@@ -388,14 +408,14 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
             )
             if arithmetic and _rust_line_has_taint(line, taint):
                 safe_ops = ("checked_add", "checked_sub", "checked_mul", "saturating_", "try_into")
-                confidence = "high" if not any(op in line for op in safe_ops) else "medium"
+                confidence = "high" if boundary and not any(op in line for op in safe_ops) else "medium"
                 add(
                     "unchecked_input_arithmetic",
                     idx,
                     {
                         "matched_text": line.strip(),
                         "confidence": confidence,
-                        "reachability": "direct-taint",
+                        "reachability": "entry-point-direct" if boundary else "internal-taint",
                         "guards": [op for op in safe_ops if op in line],
                     },
                     "Arithmetic or cast uses an input-tainted value without an obvious checked/saturating operation.",
@@ -418,8 +438,8 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 idx,
                 {
                     "matched_text": line.strip(),
-                    "confidence": "medium" if not guards else "low",
-                    "reachability": "direct-taint",
+                    "confidence": "medium" if boundary and not guards else "low",
+                    "reachability": "entry-point-direct" if boundary else "internal-taint",
                     "guards": guards,
                 },
                 "Input reaches deserialization; verify the size/canonical-encoding guard before decoding.",
@@ -444,7 +464,7 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                         {
                             "matched_text": work.group(0),
                             "confidence": "medium",
-                            "reachability": "direct-taint" if taint else ("boundary-only" if boundary else "unknown"),
+                            "reachability": "entry-point-direct" if boundary and taint else ("internal-taint" if taint else ("boundary-only" if boundary else "unknown")),
                         },
                         "Potential input-dependent host work occurs before the first gas charge.",
                     )

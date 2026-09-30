@@ -59,6 +59,7 @@ class IntakeTests(unittest.TestCase):
 
     def test_rust_production_path_excludes_test_aggregator_files(self):
         self.assertFalse(_production_path("chain/chain/src/runtime/tests.rs"))
+        self.assertFalse(_production_path("core/async/src/multithread/test.rs"))
         self.assertFalse(_production_path("chain/chain/src/runtime/test_helpers.rs"))
         self.assertFalse(_production_path("chain/chain/src/runtime/foo_test.rs"))
         self.assertFalse(_production_path("chain/chain/src/runtime/mod_tests.rs"))

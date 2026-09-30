@@ -92,11 +92,13 @@ Impact -> Mitigation -> Regression -> Generalize
 Research stages are explicit. Missing stages are reported as research debt, not silently
 invented. Candidate patterns remain candidates until stronger evidence supports promotion.
 
-The contract-audit layer reports deterministic source signals only. A signal such as
-tx.origin, delegatecall, selfdestruct or a low-level call is a review lead; it is not a
-validated vulnerability. The finding gate requires a pinned source, security property,
-concrete reproduction, impact evidence and independent verification before validation,
-with regression tracked separately.
+The contract-audit layer combines deterministic source signals with a semantic Rust pass.
+Rust production code is scoped from Cargo metadata; fuzz/tests/benchmarks and other supporting
+Rust remain analyzable evidence instead of being silently discarded. Semantic findings carry
+entry-point reachability, taint, guards, confidence and triage metadata. A detector result is
+still a review lead, not a validated vulnerability. The finding gate requires a pinned source,
+security property, concrete reproduction, impact evidence and independent verification before
+validation, with regression tracked separately.
 
 Run the integrated constitution check with:
 
@@ -151,11 +153,10 @@ Build both binaries from Windows:
 
     powershell -ExecutionPolicy Bypass -File scripts/build_windows_exe.ps1
 
-The production build script creates an isolated clean staging checkout under %TEMP%,
-overlays readable working-tree changes, falls back to the committed HEAD copy only when a
-known file is unreadable/locked, then compiles, validates, runs the full unit suite and
-builds both PyInstaller executables. BUILD-MANIFEST.txt records the commit, hashes,
-platform and any skipped locked files.
+The production build script builds directly from the active repository checkout with no
+staging clone and no copy-back overlay. It compiles, validates, runs the full unit suite and
+builds both PyInstaller executables. BUILD-MANIFEST.txt records the source commit, hashes,
+platform and working-tree change count.
 
 The resulting dist/ bundle contains ATLAS.exe, atlas-cli.exe, both SHA-256 files,
 BUILD-MANIFEST.txt, and ATLAS-windows-x64.zip.
