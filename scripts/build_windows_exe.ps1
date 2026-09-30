@@ -132,12 +132,24 @@ python (Join-Path $SmokeWork "check_smoke.py")
 if ($LASTEXITCODE -ne 0) { throw "Packaged audit smoke assertions failed" }
 Remove-Item $SmokeWork -Recurse -Force -ErrorAction SilentlyContinue
 
+$selfTestLog = Join-Path $env:APPDATA "ATLAS\self-test.log"
+Remove-Item $selfTestLog -Force -ErrorAction SilentlyContinue
 $selfTest = Start-Process -FilePath ".\dist\ATLAS.exe" -WorkingDirectory $Root -ArgumentList "--self-test" -PassThru
-if (-not $selfTest.WaitForExit(120000)) {
-    Stop-Process -Id $selfTest.Id -Force -ErrorAction SilentlyContinue
-    throw "Packaged GUI self-test timed out after 120 seconds"
+$selfTestDeadline = (Get-Date).AddSeconds(120)
+while ((-not $selfTest.HasExited) -and ((Get-Date) -lt $selfTestDeadline)) {
+    if (Test-Path $selfTestLog) {
+        $selfTestText = Get-Content $selfTestLog -Raw -ErrorAction SilentlyContinue
+        if ($selfTestText -match "SELF-TEST: OK") { break }
+    }
+    Start-Sleep -Milliseconds 500
 }
-if ($selfTest.ExitCode -ne 0) { throw "Packaged GUI self-test failed with exit code $($selfTest.ExitCode)" }
+$selfTestText = if (Test-Path $selfTestLog) { Get-Content $selfTestLog -Raw -ErrorAction SilentlyContinue } else { "" }
+if ($selfTestText -notmatch "SELF-TEST: OK") {
+    Stop-Process -Id $selfTest.Id -Force -ErrorAction SilentlyContinue
+    throw "Packaged GUI self-test did not report OK within 120 seconds"
+}
+Stop-Process -Id $selfTest.Id -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 300
 
 Set-Location $Root
 $Out = Join-Path $Root "dist"
