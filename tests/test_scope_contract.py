@@ -30,6 +30,13 @@ class ScopeContractTests(unittest.TestCase):
             self.assertEqual(len(report["supporting_evidence"]),
                              report["summary"]["supporting_finding_count"])
             self.assertTrue(any(x["file"] == "benchmarks/bench.rs" for x in report["supporting_evidence"]))
+            semantic_support = [
+                x for x in report["supporting_evidence"]
+                if x.get("evidence_type") == "taint-and-control-flow-analysis"
+            ]
+            if semantic_support:
+                self.assertTrue(all("confidence" in x for x in semantic_support))
+                self.assertTrue(all("taint" in x for x in semantic_support))
 
     def test_guard_rejects_a_leak(self):
         with self.assertRaises(AssertionError):

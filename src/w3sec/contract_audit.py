@@ -168,6 +168,8 @@ def _triage_score(item: dict[str, Any]) -> int:
     confidence = str(item.get("confidence") or "").lower()
     reachability = str(item.get("reachability") or "").lower()
     scope = str(item.get("scope") or "").lower()
+    signal = str(item.get("signal") or "")
+    evidence_type = str(item.get("evidence_type") or "")
     score += {"high": 24, "medium": 14, "low": 6}.get(confidence, 0)
     score += {
         "entry-point-direct": 38,
@@ -176,7 +178,18 @@ def _triage_score(item: dict[str, Any]) -> int:
         "internal-taint": 4,
     }.get(reachability, 0)
     score += 15 if scope == "production" else 4
-    score += 8 if not item.get("guards") else 0
+    score += {
+        "consensus_invariant_gap": 8,
+        "gas_ordering": 7,
+        "uncapped_deserialization": 6,
+        "input_sized_resource": 5,
+        "unchecked_input_arithmetic": 5,
+        "panic_on_input": 3,
+    }.get(signal, 0)
+    score += 2 if evidence_type.startswith("taint-and-control-flow") else 0
+    score += 2 if item.get("taint") else 0
+    score += 2 if item.get("entry_point_reason") == "boundary-function-or-boundary-path" else 0
+    score -= min(8, 4 * len(item.get("guards") or []))
     return max(0, min(100, score))
 
 
@@ -351,10 +364,28 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
 
     supporting_evidence = [
         {
-            "id": f"atlas-support-{i:04d}", "file": x.get("file"), "line": x.get("line"),
-            "signal": x.get("signal"), "scope": "supporting", "priority": "low",
-            "status": "supporting-evidence", "evidence_type": x.get("evidence_type"),
+            "id": f"atlas-support-{i:04d}",
+            "file": x.get("file"),
+            "line": x.get("line"),
+            "signal": x.get("signal"),
+            "scope": "supporting",
+            "priority": x.get("priority", "low"),
+            "severity_hint": x.get("severity_hint"),
+            "status": "supporting-evidence",
+            "evidence_type": x.get("evidence_type"),
             "title": x.get("title"),
+            "matched_text": x.get("matched_text"),
+            "snippet": x.get("snippet"),
+            "confidence": x.get("confidence"),
+            "reachability": x.get("reachability"),
+            "taint": x.get("taint", []),
+            "guards": x.get("guards", []),
+            "entry_point": x.get("entry_point", False),
+            "entry_point_reason": x.get("entry_point_reason"),
+            "triage_score": x.get("triage_score"),
+            "analysis": x.get("analysis"),
+            "related_research_patterns": x.get("related_research_patterns", []),
+            "limitation": x.get("limitation"),
         }
         for i, x in enumerate([y for y in findings if not _is_production(y)], 1)
     ]
@@ -407,6 +438,13 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             "function_count": intake["summary"]["function_count"],
             "production_finding_count": sum(x.get("scope") == "production" for x in findings),
             "supporting_finding_count": len(supporting_evidence),
+            "supporting_semantic_finding_count": sum(
+                str(x.get("evidence_type", "")).startswith("taint-and-control-flow")
+                for x in supporting_evidence
+            ),
+            "supporting_high_confidence_count": sum(
+                x.get("confidence") == "high" for x in supporting_evidence
+            ),
             "semantic_finding_count": sum(str(x.get("evidence_type", "")).startswith("taint-and-control-flow") for x in findings),
             "high_confidence_count": sum(x.get("confidence") == "high" for x in findings),
             "direct_taint_count": sum(x.get("reachability") == "entry-point-direct" for x in findings),

@@ -9,8 +9,19 @@ from typing import Any
 
 from .engine_orchestrator import EngineOrchestrator
 from .intake import OperationCancelled, SOURCE_EXTENSIONS, _files, _mask_non_code, _prepared_target, _signals
+from .rust_analysis import (
+    RustIndex,
+    analyse_gas,
+    cast_report,
+    function_regions,
+    length_upper_bound_proofs,
+    line_depths,
+    local_types,
+    size_bound_proofs,
+    upper_bound_proofs,
+)
 
-SCANNER_VERSION = "1.0.5"
+SCANNER_VERSION = "1.0.6"
 
 _EXTERNAL = {
     "slither": {
@@ -308,6 +319,9 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
     if not relative.lower().endswith(".rs"):
         return []
     regions = _rust_function_regions(source)
+    gas_index = RustIndex()
+    gas_index.add_file(relative, function_regions(_mask_non_code(source)))
+    gas_index.finalize()
     findings: list[dict[str, Any]] = []
     for region in regions:
         body = str(region["body"])
@@ -322,6 +336,8 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
         )
         context = _rust_taint_context(region, boundary=boundary)
         taint = set(context["tainted_variables"])
+        depths = line_depths(body_lines)
+        local_int_types = local_types(str(region.get("params") or ""), body)
 
         def add(signal: str, line_offset: int, evidence: dict[str, Any], title: str) -> None:
             findings.append({
@@ -380,11 +396,15 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                     "Potential panic or unchecked indexing reachable from an input boundary.",
                 )
 
-        # Input-sized memory work: the allocation/extension must depend on tainted input.
+        # Input-sized memory work: retain the signal unless a machine-checkable size
+        # proof shows a constant or an explicit dominating input bound.
         for idx, line in enumerate(body_lines):
             if not re.search(r"\b(?:Vec::with_capacity|reserve|reserve_exact|resize|extend)\b", line):
                 continue
             if not (_rust_line_has_taint(line, taint) or re.search(r"\.(?:len|capacity)\s*\(\)", line)):
+                continue
+            proofs = size_bound_proofs(body_lines, depths, idx, line, taint)
+            if proofs:
                 continue
             add(
                 "input_sized_resource",
@@ -393,20 +413,32 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                     "matched_text": line.strip(),
                     "confidence": "high" if _rust_line_has_taint(line, taint) and boundary else "medium",
                     "reachability": ("entry-point-direct" if boundary else "internal-taint") if _rust_line_has_taint(line, taint) else ("boundary-only" if boundary else "unknown"),
+                    "guards": [],
                 },
                 "Input-derived collection growth requires an explicit protocol/resource cap.",
             )
 
-        # Unchecked arithmetic/casts on tainted values.
+        # Unchecked arithmetic/casts on tainted values. Only the actual arithmetic
+        # expression or narrowing cast must contain the tainted variable; unrelated arithmetic
+        # elsewhere on the same line is not enough.
         for idx, line in enumerate(body_lines):
             if not taint:
                 continue
-            arithmetic = re.search(
-                r"(?:\b[A-Za-z_][A-Za-z0-9_]*\b\s*(?:\+|-|\*)\s*\b[A-Za-z_][A-Za-z0-9_]*\b|"
-                r"\b[A-Za-z_][A-Za-z0-9_]*\b\s+as\s+(?:u8|u16|u32|u64|u128|usize|isize))",
+            binary_matches = list(re.finditer(
+                r"\b[A-Za-z_][A-Za-z0-9_]*\b\s*(?:\+|-|\*)\s*"
+                r"(?:\b[A-Za-z_][A-Za-z0-9_]*\b|\d[\d_]*)",
                 line,
+            ))
+            tainted_binary = any(
+                any(re.search(rf"\b{re.escape(name)}\b", line[m.start():m.end()]) for name in taint)
+                for m in binary_matches
             )
-            if arithmetic and _rust_line_has_taint(line, taint):
+            _, unproven_casts = cast_report(line, local_int_types)
+            tainted_cast = any(
+                any(re.search(rf"\b{re.escape(name)}\b", item) for name in taint)
+                for item in unproven_casts
+            )
+            if tainted_binary or tainted_cast:
                 safe_ops = ("checked_add", "checked_sub", "checked_mul", "saturating_", "try_into")
                 confidence = "high" if boundary and not any(op in line for op in safe_ops) else "medium"
                 add(
@@ -432,6 +464,17 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
             )
             if not direct:
                 continue
+            bounded = False
+            for name in taint:
+                if re.search(rf"\b{re.escape(name)}\b", joined):
+                    if upper_bound_proofs(body_lines, depths, idx, name):
+                        bounded = True
+                        break
+                    if length_upper_bound_proofs(body_lines, depths, idx, f"{name}.len()"):
+                        bounded = True
+                        break
+            if bounded:
+                continue
             guards = [g for g in ("MAX_", "limit", "truncate", "take(", "object_length", "size_limit") if g.lower() in joined.lower()]
             add(
                 "uncapped_deserialization",
@@ -445,29 +488,27 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 "Input reaches deserialization; verify the size/canonical-encoding guard before decoding.",
             )
 
-        # Host gas ordering: detect actual work before the first pay call, and only in
-        # host-boundary code. A later charge is not equivalent to charging before work.
+        # Host gas ordering: use a same-file interprocedural charge summary so a helper
+        # that always charges is treated as an effective charge at its call site.
         if "near-vm-runner" in relative.lower() and ("/logic/" in relative.lower() or "\\logic\\" in relative.lower()):
-            first_charge = re.search(r"\bpay_(?:base|per)\s*\(", body)
-            if first_charge:
-                prefix = body[:first_charge.start()]
-                work = re.search(
-                    r"\b(?:read_memory|write_memory|get_memory_or_register|Vec::|to_vec|"
-                    r"deserialize|serialize|hash|crypto|copy_from_slice|extend_from_slice)\b",
-                    prefix,
+            gas = analyse_gas(body, gas_index)
+            work = gas.get("work")
+            if gas.get("status") == "ordering" and work is not None and taint:
+                line_offset = body[:work.start()].count("\n")
+                first = gas.get("first")
+                charge_chain = first[3] if isinstance(first, tuple) and len(first) == 4 else []
+                add(
+                    "gas_ordering",
+                    line_offset,
+                    {
+                        "matched_text": work.group(0),
+                        "confidence": "high" if boundary else "medium",
+                        "reachability": "entry-point-direct" if boundary else "internal-taint",
+                        "gas_status": gas.get("status"),
+                        "charge_chain": charge_chain,
+                    },
+                    "Input-dependent host work occurs before the first effective gas charge.",
                 )
-                if work:
-                    line_offset = prefix.count("\n")
-                    add(
-                        "gas_ordering",
-                        line_offset,
-                        {
-                            "matched_text": work.group(0),
-                            "confidence": "medium",
-                            "reachability": "entry-point-direct" if boundary and taint else ("internal-taint" if taint else ("boundary-only" if boundary else "unknown")),
-                        },
-                        "Potential input-dependent host work occurs before the first gas charge.",
-                    )
 
         # Nearcore-specific consensus invariant completeness. This is not a generic "missing
         # check" guess: it is only emitted for the block-validation seam where the historical
