@@ -12,7 +12,8 @@ Get-Process | Where-Object { $_.ProcessName -in @("ATLAS", "atlas-cli") } |
 Start-Sleep -Milliseconds 300
 
 $Commit = (git -C $Root rev-parse HEAD).Trim()
-$Branch = (git -C $Root branch --show-current).Trim()
+$BranchRaw = git -C $Root branch --show-current
+$Branch = if ($null -ne $BranchRaw) { $BranchRaw.Trim() } else { "" }
 if ([string]::IsNullOrWhiteSpace($Branch)) {
     $Branch = "detached:$((git -C $Root rev-parse --short HEAD).Trim())"
 }
