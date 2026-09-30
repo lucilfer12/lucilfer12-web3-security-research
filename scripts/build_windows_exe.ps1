@@ -13,6 +13,9 @@ Start-Sleep -Milliseconds 300
 
 $Commit = (git -C $Root rev-parse HEAD).Trim()
 $Branch = (git -C $Root branch --show-current).Trim()
+if ([string]::IsNullOrWhiteSpace($Branch)) {
+    $Branch = "detached:$((git -C $Root rev-parse --short HEAD).Trim())"
+}
 $changed = @(git -C $Root status --porcelain=v1 --untracked-files=all)
 Write-Host "Build source: $Root"
 Write-Host "Branch: $Branch"
