@@ -454,7 +454,9 @@ def main() -> int:
     if args.command == "verify-finding":
         report_path = _root(args.report)
         try:
-            report = json.loads(report_path.read_text(encoding="utf-8"))
+            # Windows PowerShell may emit UTF-8 with a BOM; reports from external
+            # tools must remain readable without changing their evidence semantics.
+            report = json.loads(report_path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError) as exc:
             print(f"ERROR: cannot read audit report: {exc}")
             return 2

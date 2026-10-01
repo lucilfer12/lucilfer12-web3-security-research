@@ -191,7 +191,7 @@ class VerificationTests(unittest.TestCase):
                     "source_hash": "c" * 64,
                     "signal": "test_failure",
                 }],
-            }), encoding="utf-8")
+            }), encoding="utf-8-sig")
             output = io.StringIO()
             argv = [
                 "w3sec", "verify-finding", str(report_path), "F-CLI",

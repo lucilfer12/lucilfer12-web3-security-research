@@ -359,7 +359,7 @@ def write_verification_result(
 
 def _attach_to_report(report_path: Path, verification: dict[str, Any]) -> None:
     try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report = json.loads(report_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return
     findings = report.get("findings", [])
