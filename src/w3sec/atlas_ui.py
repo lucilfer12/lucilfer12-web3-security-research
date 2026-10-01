@@ -7,6 +7,7 @@ import threading
 import traceback
 import sys
 import shutil
+import tempfile
 from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -2206,6 +2207,30 @@ class AtlasApp(tk.Tk):
         self.destroy()
 
 
+def _run_local_self_test_fixture(research_root: Path) -> dict[str, object]:
+    """Exercise the audit pipeline on a disposable fixture, never on the user's repository."""
+    with tempfile.TemporaryDirectory(prefix="atlas-self-test-") as td:
+        fixture_root = Path(td)
+        target = fixture_root / "Smoke.sol"
+        target.write_text(
+            "pragma solidity ^0.8.20; "
+            "contract AtlasSelfTest { "
+            "uint256 public x; "
+            "function ping(uint256 v) external { x = v; } "
+            "}",
+            encoding="utf-8",
+        )
+        report = build_contract_audit(target, fixture_root)
+        summary = report.get("summary", {}) if isinstance(report, dict) else {}
+        return {
+            "finding_count": int(summary.get("finding_count", 0)),
+            "contract_count": int(summary.get("contract_count", 0)),
+            "function_count": int(summary.get("function_count", 0)),
+            "source_file_count": int(summary.get("source_file_count", 0)),
+            "target_path": str(target),
+        }
+
+
 def run_self_test() -> int:
     root = discover_repo()
     log_dir = settings_path().parent
@@ -2218,14 +2243,19 @@ def run_self_test() -> int:
     if errors:
         log_file.write_text("SELF-TEST: validation failed\n" + "\n".join(errors), encoding="utf-8")
         return 1
-    audit = audit_repo(root)
-    if not audit.get("ok"):
-        log_file.write_text("SELF-TEST: audit failed\n" + pretty(audit), encoding="utf-8")
+    try:
+        fixture = _run_local_self_test_fixture(root)
+        ResearchGraph.from_repo(root)
+        build_inventory(root)
+    except Exception as exc:
+        log_file.write_text("SELF-TEST: fixture failed\n" + pretty({"error": repr(exc)}), encoding="utf-8")
         return 1
-    ResearchGraph.from_repo(root)
-    build_inventory(root)
     log_file.write_text(
-        f"SELF-TEST: OK\ncases={audit['graph']['node_count']} nodes={audit['graph']['node_count']} edges={audit['graph']['edge_count']}\n",
+        "SELF-TEST: OK\n"
+        f"fixture_contracts={fixture['contract_count']} "
+        f"fixture_functions={fixture['function_count']} "
+        f"fixture_findings={fixture['finding_count']}\n"
+        "startup_target_audit=DISABLED\n",
         encoding="utf-8",
     )
     return 0

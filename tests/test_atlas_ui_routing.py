@@ -173,6 +173,17 @@ def test_saved_target_with_report_only_restores_selection_not_previous_audit(tmp
     assert "without executing an audit" in app.status.value
 
 
+def test_self_test_uses_disposable_fixture_not_canonical_repo(tmp_path):
+    from w3sec.atlas_ui import _run_local_self_test_fixture
+
+    before = set(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+    result = _run_local_self_test_fixture(tmp_path)
+    after = set(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+    assert result["contract_count"] == 1
+    assert result["function_count"] == 1
+    assert before == after
+
+
 def test_choose_target_does_not_execute_audit_implicitly(tmp_path, monkeypatch):
     target = tmp_path / "selected.sol"
     target.write_text("contract Selected {}", encoding="utf-8")
