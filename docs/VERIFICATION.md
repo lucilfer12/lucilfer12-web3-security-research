@@ -91,4 +91,16 @@ Use `verify-finding` for a single-state reproduction. Use `verify-proof` when a 
 
 A proof result is evidence for the declared security property and exact source states; impact and independent verification remain explicit evidence gates in the broader ATLAS model.
 Proof verification also records the source/input binding, execution timing, test counts, and the exact reproducer SHA256.
+
+## State-transition effect witnesses
+
+For economic or invariant bypasses, exit codes alone can be too coarse. A finding may declare an `effect_witness` policy with exact fields that the reproducer must emit as a machine-readable state transition:
+
+    ATLAS-EFFECT:{"breach":true,"shadow_path":true,"user_asset_delta":10000}
+
+The value is parsed from stdout/stderr and recorded in the proof result. Missing or mismatched required fields prevent `CONFIRMED`; ATLAS never infers an effect from a passing test or from the finding description.
+
+For a solvency-gate bypass such as the RAIN-USDR finding, the intended witness shape can distinguish the two economic paths without depending on prose: the vulnerable run must show the breach state plus the unauthorized/shadow path and positive user-asset extraction, while the fixed run must show the same breach state with the shadow path disabled and zero extraction. The official path's revert expectation remains a separate assertion in the same reproducer.
+
+This creates a stronger evidence chain: source binding → healthy baseline → target engagement → exact security property → state-transition witness → vulnerable/fixed differential → evidence bundle. It is still evidence for the declared property, not a claim of universal exploitability across all environments.
 Each verification now carries a `toolchain_manifest` containing the detected ATLAS toolchains, available tool versions (for example `forge`, `cargo`, `rustc`, `pytest`, `python`, and `solc`), and SHA256 hashes of dependency/lock manifests such as `Cargo.lock`, `foundry.lock`, `pyproject.toml`, and `requirements.txt`. This metadata is observational: ATLAS never installs dependencies during proof execution.

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
+from .effect_witness import compare_effects, extract_effect_witness
 from .verification import VerificationResult, run_verification
 
 PROOF_MARKER_PREFIX = "ATLAS-PROOF:"
@@ -35,6 +36,7 @@ class ProofVerificationResult:
     fixed_target_hash: str
     fixed_target_hash_claim: str | None
     source_states_differ: bool
+    effect_comparison: dict[str, Any]
     duration_seconds: float
 
     @property
@@ -66,13 +68,15 @@ class ProofVerificationResult:
                 else self.fixed_target_hash == self.fixed_target_hash_claim
             ),
             "source_states_differ": self.source_states_differ,
+            "effect_comparison": self.effect_comparison,
             "duration_seconds": round(self.duration_seconds, 6),
             "vulnerable": self.vulnerable.as_dict(),
             "fixed": self.fixed.as_dict(),
             "proof_policy": (
                 "confirmed only when the same reproducer executes tests on both source states, "
                 "both baselines are healthy, the target-engagement marker appears in both runs, "
-                "and the vulnerable/fixed exit expectations are both satisfied"
+                "and the vulnerable/fixed exit expectations are both satisfied; when an effect witness policy is present, "
+                "the reproducer must also emit matching ATLAS-EFFECT state-transition evidence"
             ),
         }
 def _file_hash(path: Path) -> str:
@@ -179,6 +183,16 @@ def run_proof_verification(
         trusted_target_code=trusted_target_code,
     )
     fixed_marker = _marker_present(fixed, marker)
+    effect_policy = finding.get("effect_witness")
+    effect_policy = effect_policy if isinstance(effect_policy, dict) else {}
+    vulnerable_required = effect_policy.get("vulnerable") if isinstance(effect_policy.get("vulnerable"), dict) else {}
+    fixed_required = effect_policy.get("fixed") if isinstance(effect_policy.get("fixed"), dict) else {}
+    effect_comparison = compare_effects(
+        extract_effect_witness(vulnerable.stdout, vulnerable.stderr),
+        extract_effect_witness(fixed.stdout, fixed.stderr),
+        vulnerable_required=vulnerable_required,
+        fixed_required=fixed_required,
+    )
     vulnerable_target_hash = _target_hash(target)
     actual_fixed_hash = _target_hash(fixed_target)
     source_states_differ = vulnerable_target_hash != actual_fixed_hash
@@ -191,6 +205,11 @@ def run_proof_verification(
     vulnerable_marker = _marker_present(vulnerable, marker)
     vulnerable_baseline_healthy = bool(vulnerable.baseline and vulnerable.baseline.get("healthy"))
     fixed_baseline_healthy = bool(fixed.baseline and fixed.baseline.get("healthy"))
+    effect_required = bool(vulnerable_required or fixed_required)
+    effect_ok = (
+        not effect_required
+        or (effect_comparison["vulnerable_valid"] and effect_comparison["fixed_valid"])
+    )
     vulnerable_ok = (
         vulnerable.returncode == vulnerable_expected_exit
         and not vulnerable.timed_out
@@ -198,6 +217,7 @@ def run_proof_verification(
         and vulnerable_marker
         and vulnerable_baseline_healthy
         and _binding_ok(vulnerable)
+        and (not effect_required or effect_comparison["vulnerable_valid"])
     )
     fixed_hash_ok = not fixed_target_hash_claim or actual_fixed_hash == fixed_target_hash_claim
     fixed_ok = (
@@ -208,6 +228,7 @@ def run_proof_verification(
         and fixed_baseline_healthy
         and fixed_hash_ok
         and _binding_ok(fixed)
+        and (not effect_required or effect_comparison["fixed_valid"])
     )
     if vulnerable_ok and fixed_ok:
         outcome = "confirmed"
@@ -232,6 +253,7 @@ def run_proof_verification(
         fixed_target_hash=actual_fixed_hash,
         fixed_target_hash_claim=fixed_target_hash_claim,
         source_states_differ=source_states_differ,
+        effect_comparison=effect_comparison,
         duration_seconds=time.perf_counter() - started,
     )
 

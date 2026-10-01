@@ -129,5 +129,93 @@ class ProofVerification(unittest.TestCase):
             self.assertFalse(result.fixed_marker_present)
 
 
+    def test_effect_witness_is_required_when_policy_declares_state_transition(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            vulnerable = self._target(root, "vulnerable")
+            fixed = self._target(root, "fixed")
+            reproducer = root / "test_effect.py"
+            reproducer.write_text(
+                "import os\n"
+                "import json\n"
+                "import unittest\n"
+                "from pathlib import Path\n\n"
+                "print(os.environ['ATLAS_PROOF_MARKER'])\n"
+                "state = Path('state.txt').read_text().strip()\n"
+                "print('ATLAS-EFFECT:' + json.dumps({'breach': True, 'shadow_path': state == 'vulnerable', 'user_asset_delta': 100 if state == 'vulnerable' else 0}))\n"
+                "class TestEffect(unittest.TestCase):\n"
+                "    def test_property(self):\n"
+                "        self.assertEqual(state, 'fixed')\n",
+                encoding="utf-8",
+            )
+            finding = {
+                "id": "F-EFFECT",
+                "file": "state.txt",
+                "line": 1,
+                "effect_witness": {
+                    "vulnerable": {"breach": True, "shadow_path": True, "user_asset_delta": 100},
+                    "fixed": {"breach": True, "shadow_path": False, "user_asset_delta": 0},
+                },
+            }
+            with mock.patch.dict(
+                os.environ, {ATTEST_ENV: "github-actions-ephemeral-vm"}, clear=False
+            ):
+                result = run_proof_verification(
+                    vulnerable,
+                    fixed,
+                    finding,
+                    ("python", "-m", "unittest", "discover", "-s", "tests"),
+                    vulnerable_expected_exit=1,
+                    fixed_expected_exit=0,
+                    security_property="a breach must not permit the shadow redemption state transition",
+                    reproducer=reproducer,
+                    timeout_seconds=30,
+                )
+            self.assertTrue(result.confirmed)
+            self.assertTrue(result.effect_comparison["vulnerable_valid"])
+            self.assertTrue(result.effect_comparison["fixed_valid"])
+            self.assertEqual(100, result.effect_comparison["vulnerable"]["user_asset_delta"])
+            self.assertEqual(0, result.effect_comparison["fixed"]["user_asset_delta"])
+
+    def test_effect_witness_mismatch_blocks_confirmation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            vulnerable = self._target(root, "vulnerable")
+            fixed = self._target(root, "fixed")
+            reproducer = root / "test_effect.py"
+            reproducer.write_text(
+                "import os, json, unittest\n"
+                "print(os.environ['ATLAS_PROOF_MARKER'])\n"
+                "print('ATLAS-EFFECT:' + json.dumps({'breach': True, 'user_asset_delta': 0}))\n"
+                "class TestEffect(unittest.TestCase):\n"
+                "    def test_property(self): self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            finding = {
+                "id": "F-EFFECT-MISMATCH",
+                "effect_witness": {
+                    "vulnerable": {"breach": True, "user_asset_delta": 100},
+                    "fixed": {"breach": True, "user_asset_delta": 0},
+                },
+            }
+            with mock.patch.dict(
+                os.environ, {ATTEST_ENV: "github-actions-ephemeral-vm"}, clear=False
+            ):
+                result = run_proof_verification(
+                    vulnerable,
+                    fixed,
+                    finding,
+                    ("python", "-m", "unittest", "discover", "-s", "tests"),
+                    vulnerable_expected_exit=0,
+                    fixed_expected_exit=0,
+                    security_property="the effect witness must match the claimed state transition",
+                    reproducer=reproducer,
+                    timeout_seconds=30,
+                )
+            self.assertEqual("not-confirmed", result.outcome)
+            self.assertFalse(result.effect_comparison["vulnerable_valid"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
