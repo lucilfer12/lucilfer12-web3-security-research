@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from w3sec.gui import AtlasApp
@@ -96,7 +97,7 @@ def test_dashboard_target_metrics_are_not_repository_case_metrics():
     assert app.card_research_candidates.text == "262"
     assert app.card_research_nodes.text == "2"
     assert "uploaded.sol" in app.current_target_text.text
-    assert "FINDINGS  3" in app.current_target_text.text
+    assert "PRIMARY FINDINGS  3" in app.current_target_text.text
 
 
 def test_audit_selected_rejects_missing_target_without_running_audit(tmp_path):
@@ -111,13 +112,85 @@ def test_audit_selected_rejects_missing_target_without_running_audit(tmp_path):
 
 def test_saved_target_without_report_is_not_audited_on_startup(tmp_path, monkeypatch):
     target = tmp_path / "saved.sol"
+    state = tmp_path / "target.json"
     target.write_text("contract Saved {}", encoding="utf-8")
+    state.write_text(json.dumps({"target": str(target)}), encoding="utf-8")
+    monkeypatch.setattr("w3sec.atlas_ui.target_state_path", lambda: state)
+    monkeypatch.setattr("w3sec.atlas_ui.save_target_state", lambda *_args, **_kwargs: None)
     app = AtlasApp.__new__(AtlasApp)
-    app.current_target = target
+    app.repo = tmp_path
+    app.current_target = None
     app.current_target_report = {}
-    scheduled = []
-    app.after = lambda delay, callback: scheduled.append((delay, callback))
-    app._start_initial_target_audit = lambda value: scheduled.append(("audit", value))
-    monkeypatch.setattr("w3sec.atlas_ui_runtime.AtlasApp._restore_saved_target", lambda self: None)
+    app.last_audit = {}
+    app.current_report_path = None
+    app.status = _Status()
+    def set_target(value):
+        app.current_target = value
+        return value
+    app._set_current_target = set_target
+    audited = []
+    app._start_initial_target_audit = lambda value: audited.append(value)
     AtlasApp._restore_saved_target(app)
-    assert scheduled == []
+    assert app.current_target == target.resolve()
+    assert app.current_target_report == {}
+    assert app.last_audit == {}
+    assert app.current_report_path is None
+    assert audited == []
+    assert "without executing an audit" in app.status.value
+
+
+def test_saved_target_with_report_only_restores_selection_not_previous_audit(tmp_path, monkeypatch):
+    target = tmp_path / "saved.sol"
+    report = tmp_path / "saved-report.json"
+    state = tmp_path / "target.json"
+    target.write_text("contract Saved {}", encoding="utf-8")
+    report.write_text(json.dumps({
+        "target": {"path": str(target)},
+        "summary": {"finding_count": 99},
+    }), encoding="utf-8")
+    state.write_text(json.dumps({
+        "target": str(target),
+        "report_path": str(report),
+    }), encoding="utf-8")
+    monkeypatch.setattr("w3sec.atlas_ui.target_state_path", lambda: state)
+    monkeypatch.setattr("w3sec.atlas_ui.save_target_state", lambda *_args, **_kwargs: None)
+    app = AtlasApp.__new__(AtlasApp)
+    app.repo = tmp_path
+    app.current_target = None
+    app.current_target_report = {}
+    app.last_audit = {}
+    app.current_report_path = None
+    app.status = _Status()
+    def set_target(value):
+        app.current_target = value
+        return value
+    app._set_current_target = set_target
+    AtlasApp._restore_saved_target(app)
+    assert app.current_target == target.resolve()
+    assert app.current_target_report == {}
+    assert app.last_audit == {}
+    assert app.current_report_path is None
+    assert "without executing an audit" in app.status.value
+
+
+def test_choose_target_does_not_execute_audit_implicitly(tmp_path, monkeypatch):
+    target = tmp_path / "selected.sol"
+    target.write_text("contract Selected {}", encoding="utf-8")
+    app = AtlasApp.__new__(AtlasApp)
+    app._set_current_target = lambda value: setattr(app, "current_target", value)
+    app._clear_target_result = lambda: None
+    app.show_page = lambda value: setattr(app, "page", value)
+    app.status = _Status()
+    def set_target(value):
+        app.current_target = value
+        return value
+    app._set_current_target = set_target
+    app.audit_called = False
+    app.audit_target = lambda: setattr(app, "audit_called", True)
+    monkeypatch.setattr(
+        "w3sec.atlas_ui.filedialog.askopenfilename",
+        lambda **_kwargs: str(target),
+    )
+    AtlasApp.choose_target(app)
+    assert app.audit_called is False
+    assert "No audit was executed" in app.status.value

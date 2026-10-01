@@ -1,7 +1,7 @@
 """Compatibility entry point for the ATLAS desktop application.
 
 The runtime wrapper keeps the canonical UI implementation in atlas_ui while
-ensuring a persisted target is actually audited on startup.
+preserving passive startup and adding desktop-specific presentation helpers.
 """
 
 import sys
@@ -29,6 +29,17 @@ class AtlasApp(_AtlasApp):
         # Restoring a remembered target must never trigger a hidden audit.
         # Startup is passive; auditing requires an explicit user action.
         super()._restore_saved_target()
+
+    def _apply_dashboard_metrics(self, inventory, graph, intakes, federation) -> None:
+        super()._apply_dashboard_metrics(inventory, graph, intakes, federation)
+        if self.current_target and not self.current_target_report and self.busy:
+            for key in (
+                "target_files", "target_contracts", "target_functions",
+                "target_findings", "engine_findings",
+            ):
+                card = getattr(self, f"card_{key}", None)
+                if card is not None:
+                    card.configure(text="SCAN")
 
     def _dashboard_activity(self, parent: tk.Frame) -> None:
         pane = tk.Frame(parent, bg="#06121f")
@@ -119,19 +130,6 @@ class AtlasApp(_AtlasApp):
         )
         button.pack(side="left", padx=4)
         return button
-
-
-def _show_target_scan_state(self, inventory, graph, intakes, federation) -> None:
-    _AtlasApp._apply_dashboard_metrics(self, inventory, graph, intakes, federation)
-    if self.current_target and not self.current_target_report and self.busy:
-        for key in ("target_files", "target_contracts", "target_functions",
-                    "target_findings", "engine_findings"):
-            card = getattr(self, f"card_{key}", None)
-            if card is not None:
-                card.configure(text="SCAN")
-
-
-AtlasApp._apply_dashboard_metrics = _show_target_scan_state
 
 
 W3SecApp = AtlasApp

@@ -18,6 +18,7 @@ from PIL import Image, ImageOps, ImageTk
 
 from .audit import audit_repo
 from .evidence_fabric import build_evidence_fabric
+from .finding_gate import attach_gate
 from .chronicle import build_chronicle, write_chronicle
 from .contract_audit import build_contract_audit, write_contract_audit
 from .coverage import build_coverage
@@ -822,8 +823,10 @@ class AtlasApp(tk.Tk):
         return target
 
     def _refresh_cases_target_banner(self) -> None:
-        label = getattr(self, "cases_target_label", None)
-        detail = getattr(self, "cases_target_detail", None)
+        # Use __dict__ so lightweight test doubles without a Tk root do not invoke
+        # tkinter's recursive __getattr__ while checking optional widgets.
+        label = self.__dict__.get("cases_target_label")
+        detail = self.__dict__.get("cases_target_detail")
         if label is None or detail is None:
             return
         target = self.current_target
@@ -835,11 +838,17 @@ class AtlasApp(tk.Tk):
             return
         if not report:
             label.configure(text=f"CURRENT TARGET  ·  {target.name}  ·  AUDIT NOT RUN")
-            detail.configure(text=str(target))
+            detail.configure(
+                text=f"{target}  ·  select AUDIT TARGET to execute a fresh target-bound analysis."
+            )
             return
+        supporting = summary.get("supporting_finding_count", 0)
         label.configure(text=f"CURRENT TARGET  ·  {target.name}  ·  AUDIT READY")
         detail.configure(text=(
-            f"{target}  ·  SOURCE FILES {summary.get('source_file_count', 0)}  ·  CONTRACTS {summary.get('contract_count', 0)}  ·  FUNCTIONS {summary.get('function_count', 0)}  ·  FINDINGS {summary.get('finding_count', 0)}  ·  ENGINE FINDINGS {summary.get('engine_finding_count', 0)}"
+            f"{target}  ·  SOURCE FILES {summary.get('source_file_count', 0)}  ·  "
+            f"CONTRACTS {summary.get('contract_count', 0)}  ·  FUNCTIONS {summary.get('function_count', 0)}  ·  "
+            f"PRIMARY FINDINGS {summary.get('finding_count', 0)}  ·  SUPPORTING EVIDENCE {supporting}  ·  "
+            f"ENGINE FINDINGS {summary.get('engine_finding_count', 0)}"
         ))
 
     def _copy_current_target_report(self) -> None:
@@ -857,6 +866,8 @@ class AtlasApp(tk.Tk):
             save_target_state(self.current_target)
         if hasattr(self, "finding_tree"):
             self.finding_tree.delete(0, "end")
+        if hasattr(self, "supporting_tree"):
+            self.supporting_tree.delete(0, "end")
         if hasattr(self, "finding_detail"):
             self.finding_detail.delete("1.0", "end")
 
@@ -871,10 +882,13 @@ class AtlasApp(tk.Tk):
             ],
         )
         if path:
-            self._set_current_target(Path(path))
+            target = self._set_current_target(Path(path))
             self._clear_target_result()
             self.show_page("Import / Intake")
-            self.audit_target()
+            self.status.set(
+                f"Target selected - {target.name}. No audit was executed. "
+                "Press AUDIT TARGET when you are ready."
+            )
 
 
     def choose_files(self) -> None:
@@ -897,10 +911,13 @@ class AtlasApp(tk.Tk):
             filetypes=[("Archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.7z *.rar"), ("All files", "*.*")]
         )
         if path:
-            self._set_current_target(Path(path))
+            target = self._set_current_target(Path(path))
             self._clear_target_result()
             self.show_page("Import / Intake")
-            self.audit_target()
+            self.status.set(
+                f"Archive selected - {target.name}. No audit was executed. "
+                "Press AUDIT TARGET when you are ready."
+            )
 
 
     def choose_directory(self) -> None:
@@ -909,7 +926,10 @@ class AtlasApp(tk.Tk):
             target = self._set_current_target(Path(path))
             self._clear_target_result()
             self.show_page("Import / Intake")
-            self.audit_target()
+            self.status.set(
+                f"Repository selected as target - {target.name}. No audit was executed. "
+                "Press AUDIT TARGET when you are ready."
+            )
 
     def _research_runs_page(self) -> None:
         page = self.pages["Research Runs"]
@@ -1056,14 +1076,60 @@ class AtlasApp(tk.Tk):
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
         audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 8))
         self._toolbar_button(audit_actions, "VERIFY SELECTED FINDING", self.verify_selected_finding)
+        self._toolbar_button(audit_actions, "LOAD SAVED TARGET REPORT", self.load_saved_target_report)
         self._toolbar_button(audit_actions, "COPY CURRENT TARGET REPORT", self._copy_current_target_report)
         body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
-        left = self._panel(body, "Findings", "PRIORITIZED", row=0, column=0, sticky="nsew", padx=(0, 5))
+        left = self._panel(
+            body,
+            "Findings + Supporting Evidence",
+            "PRODUCTION / SUPPORTING",
+            row=0,
+            column=0,
+            sticky="nsew",
+            padx=(0, 5),
+        )
         right = self._panel(body, "Finding Detail", "EVIDENCE", row=0, column=1, sticky="nsew", padx=(5, 0))
-        self.finding_tree = tk.Listbox(left, bg="#07121d", fg="#c3dce7", selectbackground="#6b2b38", selectforeground="#ffffff", relief="flat", font=("Consolas", 9))
-        self.finding_tree.pack(fill="both", expand=True, padx=10, pady=10)
+        tk.Label(
+            left,
+            text="PRIMARY FINDINGS - production attack surface",
+            fg="#d6efff",
+            bg="#07121d",
+            font=("Segoe UI", 8, "bold"),
+            anchor="w",
+        ).pack(fill="x", padx=10, pady=(8, 3))
+        self.finding_tree = tk.Listbox(
+            left,
+            bg="#07121d",
+            fg="#c3dce7",
+            selectbackground="#6b2b38",
+            selectforeground="#ffffff",
+            relief="flat",
+            font=("Consolas", 9),
+            height=12,
+        )
+        self.finding_tree.pack(fill="both", expand=True, padx=10, pady=(0, 6))
         self.finding_tree.bind("<<ListboxSelect>>", self._finding_selected)
+        tk.Label(
+            left,
+            text="SUPPORTING EVIDENCE - Rust/tests/fuzz/bench/tooling retained for context",
+            fg="#8fb5c8",
+            bg="#07121d",
+            font=("Segoe UI", 8, "bold"),
+            anchor="w",
+        ).pack(fill="x", padx=10, pady=(4, 3))
+        self.supporting_tree = tk.Listbox(
+            left,
+            bg="#07121d",
+            fg="#94b5c4",
+            selectbackground="#12496a",
+            selectforeground="#ffffff",
+            relief="flat",
+            font=("Consolas", 8),
+            height=10,
+        )
+        self.supporting_tree.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.supporting_tree.bind("<<ListboxSelect>>", self._supporting_selected)
         self.finding_detail = ScrolledText(right, bg="#07121d", fg="#b9d8e4", insertbackground="#ffffff", relief="flat", font=("Consolas", 9))
         self.finding_detail.pack(fill="both", expand=True, padx=10, pady=10)
         self._copy_button(right, self.finding_detail)
@@ -1203,7 +1269,10 @@ class AtlasApp(tk.Tk):
         self._set_current_target(stage)
         self._clear_target_result()
         self.show_page("Import / Intake")
-        self.audit_target()
+        self.status.set(
+            f"{len(paths)} file(s) staged as the current target. "
+            "No audit was executed. Press AUDIT TARGET when you are ready."
+        )
 
 
     def _start_initial_target_audit(self, target: Path) -> None:
@@ -1271,20 +1340,49 @@ class AtlasApp(tk.Tk):
         try:
             state = json.loads(target_state_path().read_text(encoding="utf-8"))
             target = Path(str(state.get("target", ""))).expanduser()
-            report_path = Path(str(state.get("report_path", ""))).expanduser() if state.get("report_path") else None
         except (OSError, json.JSONDecodeError, TypeError, ValueError):
             return
         if not target.exists():
             clear_target_state()
             return
+        # Startup may remember which target the user last selected, but it must never
+        # re-run or re-activate a previous audit implicitly. Reports are loaded only by
+        # an explicit user action.
         self._set_current_target(target)
-        if report_path and report_path.exists() and self._report_matches_target(report_path, target):
-            report = read_report(self.repo, str(report_path.relative_to(self.repo)), {}) if report_path.is_relative_to(self.repo) else {}
-            if isinstance(report, dict) and report.get("target"):
-                self.current_target_report = report
-                self.last_audit = report
-                self.current_report_path = report_path
-                self._apply_target_report(report)
+        self.current_target_report = {}
+        self.last_audit = {}
+        self.current_report_path = None
+        self.status.set(
+            f"Target restored without executing an audit - {target.name}. "
+            "Run AUDIT TARGET explicitly when you want a new result."
+        )
+
+    def load_saved_target_report(self) -> None:
+        if not self.repo or not self.current_target:
+            self.status.set("No saved target is available.")
+            return
+        try:
+            state = json.loads(target_state_path().read_text(encoding="utf-8"))
+            raw = state.get("report_path")
+            report_path = Path(str(raw)).expanduser() if raw else None
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            report_path = None
+        if not report_path or not report_path.exists() or not self._report_matches_target(report_path, self.current_target):
+            self.status.set("No saved audit report matches the current target.")
+            return
+        report = (
+            read_report(self.repo, str(report_path.relative_to(self.repo)), {})
+            if report_path.is_relative_to(self.repo) else {}
+        )
+        if not isinstance(report, dict) or not report.get("target"):
+            self.status.set("Saved target report could not be loaded.")
+            return
+        self.current_target_report = report
+        self.last_audit = report
+        self.current_report_path = report_path
+        self._apply_target_report(report)
+        self._write_result_to_page("AUDIT TARGET", {"report": report, "report_path": str(report_path)})
+        self.status.set(f"Loaded saved audit report - {report_path.name}")
 
     @staticmethod
     def _report_matches_target(report_path: Path, target: Path) -> bool:
@@ -1316,8 +1414,22 @@ class AtlasApp(tk.Tk):
         finding = self._selected_finding()
         if finding is None:
             return
+        if hasattr(self, "supporting_tree"):
+            self.supporting_tree.selection_clear(0, "end")
         self.finding_detail.delete("1.0", "end")
         self.finding_detail.insert("end", pretty(finding))
+
+    def _supporting_selected(self, _event=None) -> None:
+        if not self.supporting_tree.curselection() or not isinstance(self.last_audit, dict):
+            return
+        items = self.last_audit.get("supporting_evidence", [])
+        index = self.supporting_tree.curselection()[0]
+        if not isinstance(items, list) or not (0 <= index < len(items)):
+            return
+        if hasattr(self, "finding_tree"):
+            self.finding_tree.selection_clear(0, "end")
+        self.finding_detail.delete("1.0", "end")
+        self.finding_detail.insert("end", pretty(items[index]))
 
     def verify_selected_finding(self) -> None:
         finding = self._selected_finding()
@@ -1763,9 +1875,12 @@ class AtlasApp(tk.Tk):
                 save_target_state(self.current_target, self.current_report_path)
             self._apply_target_report(report)
             self.finding_tree.delete(0, "end")
-            for finding in report.get("findings", []):
+            if hasattr(self, "supporting_tree"):
+                self.supporting_tree.delete(0, "end")
+            primary = report.get("findings", []) if isinstance(report, dict) else []
+            supporting = report.get("supporting_evidence", []) if isinstance(report, dict) else []
+            for finding in primary:
                 score = finding.get("triage_score", 0)
-                scope = finding.get("scope", "?")
                 status = str(finding.get("status", "candidate")).upper()
                 hint = str(finding.get("severity_hint", finding.get("priority", "?"))).upper()
                 grade = str(
@@ -1775,6 +1890,17 @@ class AtlasApp(tk.Tk):
                     "end",
                     f"[{status[:10]:10}] [{hint[:6]:6}] G{grade} S{score:02} "
                     f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
+                )
+            for item in supporting:
+                if not isinstance(item, dict) or not hasattr(self, "supporting_tree"):
+                    continue
+                scope_file = str(item.get("file") or "?")
+                line = item.get("line", "?")
+                signal = str(item.get("signal") or "evidence")
+                confidence = str(item.get("confidence") or "-")
+                self.supporting_tree.insert(
+                    "end",
+                    f"[{confidence[:4]:4}] {scope_file}:{line} · {signal}"
                 )
             self.show_page("Audit Findings")
             self.finding_detail.delete("1.0", "end")
@@ -1806,16 +1932,25 @@ class AtlasApp(tk.Tk):
             self.show_page("Audit Findings")
         elif name == "VERIFY FINDING":
             verification = value.get("verification", {}) if isinstance(value, dict) else {}
+            updated_finding = None
             if isinstance(self.last_audit, dict) and isinstance(verification, dict):
                 finding_id = str(verification.get("finding_id", ""))
-                for finding in self.last_audit.get("findings", []):
+                for index, finding in enumerate(self.last_audit.get("findings", [])):
                     if isinstance(finding, dict) and str(finding.get("id")) == finding_id:
                         finding.setdefault("verifications", []).append(verification)
+                        updated_finding = attach_gate(finding)
+                        self.last_audit["findings"][index] = updated_finding
                         break
                 self.current_target_report = self.last_audit
                 self._apply_target_report(self.last_audit)
-            outcome = str(verification.get("outcome", "unknown")).upper().replace("-", " ")
-            self.status.set(f"VERIFY FINDING · {outcome}")
+            outcome = human_outcome(
+                type("_VerificationView", (), {"outcome": str(verification.get("outcome", "unknown"))})()
+            )
+            grade = (
+                str((updated_finding or {}).get("verification", {}).get("evidence_grade", "E")).upper()
+                if updated_finding else "E"
+            )
+            self.status.set(f"VERIFY FINDING · {outcome} · GRADE {grade}")
             self.finding_detail.delete("1.0", "end")
             self.finding_detail.insert("end", pretty(value))
             self.show_page("Audit Findings")
@@ -1909,14 +2044,24 @@ class AtlasApp(tk.Tk):
                 widget.configure(text=str(value))
         target_path = target_info.get("path") or (str(self.current_target) if self.current_target else None)
         if hasattr(self, "current_target_text"):
-            if target_path:
+            if target_path and not target:
+                self.current_target_text.configure(
+                    text=f"TARGET  {target_path}\\nAUDIT NOT RUN - press AUDIT TARGET to execute analysis."
+                )
+            elif target_path:
                 self.current_target_text.configure(text=(
                     f"TARGET  {target_path}\\n"
-                    f"SOURCE FILES  {target_summary.get('source_file_count', 0)}    CONTRACTS  {target_summary.get('contract_count', 0)}    FUNCTIONS  {target_summary.get('function_count', 0)}\\n"
-                    f"FINDINGS  {target_summary.get('finding_count', 0)}    ENGINE FINDINGS  {target_summary.get('engine_finding_count', 0)}"
+                    f"SOURCE FILES  {target_summary.get('source_file_count', 0)}    "
+                    f"CONTRACTS  {target_summary.get('contract_count', 0)}    "
+                    f"FUNCTIONS  {target_summary.get('function_count', 0)}\\n"
+                    f"PRIMARY FINDINGS  {target_summary.get('finding_count', 0)}    "
+                    f"SUPPORTING EVIDENCE  {target_summary.get('supporting_finding_count', 0)}    "
+                    f"ENGINE FINDINGS  {target_summary.get('engine_finding_count', 0)}"
                 ))
             else:
-                self.current_target_text.configure(text="NO TARGET SELECTED\\nChoose a file, archive, or directory to start a target-bound audit.")
+                self.current_target_text.configure(
+                    text="NO TARGET SELECTED\\nChoose a file, archive, or directory to start a target-bound audit."
+                )
 
         self._refresh_cases_target_banner()
 

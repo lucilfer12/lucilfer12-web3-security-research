@@ -26,6 +26,14 @@ class VerificationTests(unittest.TestCase):
             validate_command(("forge", "script", "Deploy.s.sol"))
         with self.assertRaises(ValueError):
             validate_command(("powershell", "-Command", "forge test"))
+        with self.assertRaises(ValueError):
+            validate_command(("forge", "test", "--offline", "--ffi"))
+        with self.assertRaises(ValueError):
+            validate_command(("forge", "test", "--offline", "--ffi=true"))
+
+    def test_command_policy_rejects_outside_workspace_path_syntax(self):
+        with self.assertRaises(ValueError):
+            validate_command(("forge", "test", "--offline", "--root=C:\\Users\\pc\\outside"))
 
     def test_cargo_and_forge_verification_require_offline(self):
         with self.assertRaises(ValueError):
@@ -192,6 +200,14 @@ class VerificationTests(unittest.TestCase):
             )
             self.assertEqual("reproduced", result.outcome)
             self.assertTrue(result.reproduced)
+            self.assertEqual(64, len(result.target_hash))
+            self.assertEqual(64, len(result.workspace_hash_after))
+            self.assertEqual(64, len(result.target_input_hash))
+            self.assertEqual(result.target_input_hash, result.target_input_hash_after)
+            self.assertFalse(Path(result.workspace).exists())
+            binding = result.as_dict()["binding"]
+            self.assertIn("workspace_hash_before_execution", binding)
+            self.assertIn("workspace_hash_after_execution", binding)
 
     def test_cli_verify_finding_persists_reproduction_evidence(self):
         import contextlib

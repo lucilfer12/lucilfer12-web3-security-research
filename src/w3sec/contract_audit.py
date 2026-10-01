@@ -402,6 +402,14 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
         item["source_hash"] = intake["target"]["source_hash"]
         findings[i - 1] = attach_gate(item)
 
+    status_counts: dict[str, int] = {}
+    evidence_grade_counts: dict[str, int] = {}
+    for item in findings:
+        status = str(item.get("status") or "candidate")
+        grade = str((item.get("verification") or {}).get("evidence_grade") or "E")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        evidence_grade_counts[grade] = evidence_grade_counts.get(grade, 0) + 1
+
     report = {
         "schema_version": 1,
         "finding_policy": {
@@ -427,6 +435,18 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
         ],
         "summary": {
             "finding_count": len(findings),
+            "status_counts": status_counts,
+            "evidence_grade_counts": evidence_grade_counts,
+            "verification_ready_count": sum(
+                bool(
+                    (x.get("verification") or {}).get("gates", {}).get("source_pinned")
+                    and (
+                        (x.get("verification") or {}).get("gates", {}).get("security_property")
+                        or x.get("security_property")
+                    )
+                )
+                for x in findings
+            ),
             "critical": sum(x["priority"] == "critical" for x in findings),
             "high": sum(x["priority"] == "high" for x in findings),
             "medium": sum(x["priority"] == "medium" for x in findings),

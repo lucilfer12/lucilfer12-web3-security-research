@@ -29,6 +29,14 @@ class ScopeContractTests(unittest.TestCase):
             self.assertEqual(len(report["findings"]), report["summary"]["finding_count"])
             self.assertEqual(len(report["supporting_evidence"]),
                              report["summary"]["supporting_finding_count"])
+            self.assertEqual(
+                report["summary"]["status_counts"].get("candidate", 0),
+                report["summary"]["finding_count"],
+            )
+            self.assertEqual(
+                report["summary"]["evidence_grade_counts"].get("E", 0),
+                report["summary"]["finding_count"],
+            )
             self.assertTrue(any(x["file"] == "benchmarks/bench.rs" for x in report["supporting_evidence"]))
             semantic_support = [
                 x for x in report["supporting_evidence"]

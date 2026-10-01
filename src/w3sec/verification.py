@@ -26,7 +26,7 @@ ALLOWED_TEST_BINS = {
 
 FORBIDDEN_TOKENS = {
     "broadcast", "deploy", "publish", "verify", "cast", "send",
-    "anvil", "curl", "wget", "ssh", "scp",
+    "anvil", "curl", "wget", "ssh", "scp", "ffi", "vm.ffi",
 }
 
 
@@ -41,6 +41,10 @@ class VerificationResult:
     duration_seconds: float
     workspace: str
     target_hash: str
+    workspace_hash_after: str
+    target_input_hash: str
+    target_input_hash_after: str
+    source_hash_claim: str | None
     security_property: str
     stdout: str
     stderr: str
@@ -64,6 +68,18 @@ class VerificationResult:
             "duration_seconds": round(self.duration_seconds, 6),
             "workspace": self.workspace,
             "target_hash": self.target_hash,
+            "workspace_hash_after": self.workspace_hash_after,
+            "target_input_hash": self.target_input_hash,
+            "target_input_hash_after": self.target_input_hash_after,
+            "source_hash_claim": self.source_hash_claim,
+            "binding": {
+                "workspace_hash_before_execution": self.target_hash,
+                "workspace_hash_after_execution": self.workspace_hash_after,
+                "workspace_unchanged": self.target_hash == self.workspace_hash_after,
+                "target_input_hash_present": bool(self.target_input_hash),
+                "target_input_unchanged": self.target_input_hash == self.target_input_hash_after,
+                "finding_source_hash_claimed": bool(self.source_hash_claim),
+            },
             "security_property": self.security_property,
             "stdout": self.stdout,
             "stderr": self.stderr,
@@ -106,12 +122,24 @@ def validate_command(command: Sequence[str]) -> tuple[str, ...]:
             "Allowed local test runners: cargo, forge, python, pytest."
         )
     normalized = [str(token).strip('"').lower() for token in tokens[1:]]
+    normalized_ops = {token.lstrip("-") for token in normalized}
     for bad in FORBIDDEN_TOKENS:
-        if bad in normalized:
+        if (
+            bad in normalized
+            or bad in normalized_ops
+            or f"--{bad}" in normalized
+            or any(token.startswith(f"--{bad}=") for token in normalized)
+        ):
             raise ValueError(f"Command contains forbidden operation '{bad}'.")
     for token in tokens:
         raw = str(token).strip('"')
-        if Path(raw).is_absolute() or ".." in Path(raw).parts:
+        if (
+            Path(raw).is_absolute()
+            or ".." in Path(raw).parts
+            or ":\\"
+            in raw
+            or raw.startswith("\\\\")
+        ):
             raise ValueError("Verification command may not reference paths outside the isolated workspace.")
     if binary in {"cargo", "forge"}:
         if len(tokens) < 2 or tokens[1].lower() not in ALLOWED_TEST_BINS[binary]:
@@ -367,6 +395,17 @@ def tool_versions(project: Path) -> dict[str, str]:
     return versions
 
 
+def target_input_hash(target: Path) -> str:
+    target = target.expanduser().resolve()
+    if target.is_file():
+        digest = hashlib.sha256()
+        with target.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    return workspace_hash(target)
+
+
 def run_verification(
     target: Path,
     finding: dict[str, Any],
@@ -385,6 +424,10 @@ def run_verification(
     if not security_property.strip():
         raise ValueError("A security property is required for verification.")
     base, project = prepare_workspace(target, reproducer=reproducer)
+    workspace_before = workspace_hash(project)
+    input_hash = target_input_hash(target)
+    source_hash_claim = str(finding.get("source_hash")) if finding.get("source_hash") else None
+    toolchain = detect_toolchain(project)
     started = time.perf_counter()
     try:
         result = run_bounded(
@@ -401,6 +444,8 @@ def run_verification(
             },
         )
         duration = time.perf_counter() - started
+        workspace_after = workspace_hash(project)
+        original_after = target_input_hash(target)
         if result.timed_out or result.output_limited:
             outcome = "inconclusive"
         elif result.returncode == expected_exit:
@@ -416,18 +461,21 @@ def run_verification(
             returncode=result.returncode,
             duration_seconds=duration,
             workspace=str(project),
-            target_hash=workspace_hash(project),
+            target_hash=workspace_before,
+            workspace_hash_after=workspace_after,
+            target_input_hash=input_hash,
+            target_input_hash_after=original_after,
+            source_hash_claim=source_hash_claim,
             security_property=security_property.strip(),
             stdout=result.stdout,
             stderr=result.stderr,
             timed_out=result.timed_out,
             output_limited=result.output_limited,
-            toolchain=detect_toolchain(project)[0] if detect_toolchain(project) else None,
+            toolchain=toolchain[0] if toolchain else None,
             reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
         )
-    except Exception:
+    finally:
         shutil.rmtree(base, ignore_errors=True)
-        raise
 def write_verification_result(
     repo: Path,
     result: VerificationResult,
