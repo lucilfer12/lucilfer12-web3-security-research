@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,18 @@ from w3sec.verification import (
     validate_command,
     workspace_hash,
 )
+
+_TRUST = patch.dict(os.environ, {"ATLAS_TRUST_TARGET_CODE": "1"})
+
+
+def setUpModule():
+    # These legacy tests execute fixtures they create themselves in temp directories.
+    _TRUST.start()
+
+
+def tearDownModule():
+    _TRUST.stop()
+
 
 class VerificationTests(unittest.TestCase):
     def test_command_policy_allows_local_test_runners(self):

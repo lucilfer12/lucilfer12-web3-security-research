@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from .finding_gate import attach_gate
+from .isolation import VerificationRefused, require_isolation  # noqa: F401
+from .run_classifier import classify_run, tool_and_subcommand
 from .runtime import run_bounded
 
 
@@ -55,6 +57,9 @@ class VerificationResult:
     toolchain: str | None
     reproducer: str | None
     baseline: dict[str, Any] | None
+    isolation: str = "unspecified"
+    failure_class: str = "n/a"
+    failing_tests: tuple[str, ...] = ()
 
     @property
     def reproduced(self) -> bool:
@@ -94,9 +99,14 @@ class VerificationResult:
             "toolchain": self.toolchain,
             "reproducer": self.reproducer,
             "baseline": self.baseline,
+            "isolation": self.isolation,
+            "failure_class": self.failure_class,
+            "failing_tests": list(self.failing_tests),
             "policy": (
-                "isolated-copy; stdin=devnull; bounded-output; bounded-time; "
-                "cargo/forge require --offline; OS-level network access is not sandboxed"
+                "fail-closed: runs only in an attested isolated environment or when the operator "
+                "declared the target code trusted; isolated-copy; stdin=devnull; bounded-output; "
+                "bounded-time; cargo/forge require --offline; a reproduction needs executed tests, "
+                "not just an exit code"
             ),
             "promotion_effect": (
                 "reproduction evidence may satisfy the reproduction gate only when "
@@ -510,10 +520,14 @@ def run_verification(
     timeout_seconds: int = 300,
     max_output_bytes: int = 4 * 1024 * 1024,
     reproducer: Path | None = None,
+    trusted_target_code: bool = False,
 ) -> VerificationResult:
     if mode not in {"baseline", "reproduction"}:
         raise ValueError("mode must be baseline or reproduction")
     command = validate_command(command)
+    decision = require_isolation(trusted_target_code)
+    tool, subcommand = tool_and_subcommand(command)
+    judged = tool is not None and subcommand == "test"
     if not security_property.strip():
         raise ValueError("A security property is required for verification.")
     source_hash_claim = str(finding.get("source_hash")) if finding.get("source_hash") else None
@@ -554,6 +568,9 @@ def run_verification(
                 },
             )
             baseline_after = workspace_hash(baseline_project)
+            baseline_class = (
+                classify_run(tool, baseline_result.stdout, baseline_result.stderr) if judged else None
+            )
             baseline = {
                 "command": list(command),
                 "expected_exit": baseline_expected_exit,
@@ -564,10 +581,15 @@ def run_verification(
                 "workspace_hash_before": baseline_before,
                 "workspace_hash_after": baseline_after,
                 "workspace_unchanged": baseline_before == baseline_after,
+                "failure_class": baseline_class.kind if baseline_class else "n/a",
                 "healthy": (
                     not baseline_result.timed_out
                     and not baseline_result.output_limited
                     and baseline_result.returncode == baseline_expected_exit
+                    and (
+                        baseline_class is None
+                        or baseline_class.kind not in {"build-error", "no-tests-ran", "unknown"}
+                    )
                 ),
                 "stdout": baseline_result.stdout,
                 "stderr": baseline_result.stderr,
@@ -599,6 +621,8 @@ def run_verification(
                 toolchain=None,
                 reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
                 baseline=baseline,
+                isolation=decision.mode,
+                failure_class=str(baseline.get("failure_class", "n/a")),
             )
     base, project = prepare_workspace(target, reproducer=reproducer)
     workspace_before = workspace_hash(project)
@@ -634,7 +658,16 @@ def run_verification(
         duration = time.perf_counter() - started
         workspace_after = workspace_hash(project)
         original_after = target_input_hash(target)
+        run_class = classify_run(tool, result.stdout, result.stderr) if judged else None
         if result.timed_out or result.output_limited:
+            outcome = "inconclusive"
+        elif (
+            mode == "reproduction"
+            and run_class is not None
+            and run_class.kind in {"build-error", "no-tests-ran", "unknown"}
+        ):
+            # An exit code is not evidence: cargo exits 101 and forge exits 1 for compile
+            # errors as well as for failing tests. Only executed tests can reproduce.
             outcome = "inconclusive"
         elif result.returncode == expected_exit:
             outcome = "reproduced" if mode == "reproduction" else "execution-pass"
@@ -664,6 +697,9 @@ def run_verification(
             toolchain=toolchain[0] if toolchain else None,
             reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
             baseline=baseline,
+            isolation=decision.mode,
+            failure_class=run_class.kind if run_class else "n/a",
+            failing_tests=run_class.failing_tests if run_class else (),
         )
     finally:
         shutil.rmtree(base, ignore_errors=True)

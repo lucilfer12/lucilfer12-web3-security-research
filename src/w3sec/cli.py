@@ -36,6 +36,7 @@ from .research_intelligence import (
 from .validator import validate_repo
 from .verification import (
     default_command,
+    VerificationRefused,
     human_outcome,
     run_verification,
     split_command,
@@ -141,6 +142,12 @@ def main() -> int:
         help="local reproducer/test file or directory to overlay into the isolated verification workspace",
     )
     verify.add_argument("--timeout", type=int, default=300)
+    verify.add_argument(
+        "--trust-target-code",
+        action="store_true",
+        help="declare the target code trusted: build scripts and tests run with YOUR privileges "
+        "(this machine provides no OS-level isolation)",
+    )
     verify.add_argument("--os-root", default=".")
     verify.add_argument("--json", action="store_true")
     federate = sub.add_parser("federate")
@@ -494,11 +501,12 @@ def main() -> int:
                 security_property=args.security_property,
                 timeout_seconds=args.timeout,
                 reproducer=_root(args.reproducer) if args.reproducer else None,
+                trusted_target_code=args.trust_target_code,
             )
             result_path = write_verification_result(
                 _root(args.os_root), result, report_path=report_path,
             )
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, VerificationRefused) as exc:
             print(f"ERROR: verification failed to start: {exc}")
             return 2
         payload = result.as_dict()
