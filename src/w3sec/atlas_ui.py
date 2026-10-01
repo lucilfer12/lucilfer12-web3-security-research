@@ -1537,6 +1537,18 @@ class AtlasApp(tk.Tk):
         except ValueError as exc:
             messagebox.showerror("ATLAS verification", str(exc))
             return
+        trust_target = messagebox.askyesno(
+            "ATLAS · Verification execution trust",
+            "The test runner may execute target-controlled code such as tests, build scripts, "
+            "or proc-macros. On this Windows machine ATLAS does not provide OS-level sandboxing.\n\n"
+            "Choose YES only when you trust the selected target and its test/build toolchain. "
+            "Choose NO to cancel this execution.\n\n"
+            "The original target is still copied to a disposable workspace; this switch explicitly "
+            "authorizes running that copy with your user privileges.",
+            parent=self,
+        )
+        if not trust_target:
+            return
         confirm = messagebox.askyesno(
             "ATLAS · Execute verification",
             "ATLAS will make an isolated copy of the selected target and execute only "
@@ -1562,6 +1574,7 @@ class AtlasApp(tk.Tk):
             "baseline_expected_exit": baseline_expected_exit,
             "security_property": property_text,
             "reproducer": str(reproducer_path) if reproducer_path else None,
+            "trusted_target_code": trust_target,
         }
         self._run_task(
             "VERIFY FINDING",
@@ -1586,6 +1599,7 @@ class AtlasApp(tk.Tk):
                 Path(str(payload["reproducer"])).expanduser().resolve()
                 if payload.get("reproducer") else None
             ),
+            trusted_target_code=bool(payload.get("trusted_target_code")),
         )
         result_path = write_verification_result(
             self.repo,
