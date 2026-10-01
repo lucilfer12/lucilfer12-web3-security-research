@@ -47,6 +47,7 @@ class VerificationResult:
     timed_out: bool
     output_limited: bool
     toolchain: str | None
+    reproducer: str | None
 
     @property
     def reproduced(self) -> bool:
@@ -69,6 +70,7 @@ class VerificationResult:
             "timed_out": self.timed_out,
             "output_limited": self.output_limited,
             "toolchain": self.toolchain,
+            "reproducer": self.reproducer,
             "policy": (
                 "isolated-copy; stdin=devnull; bounded-output; bounded-time; "
                 "cargo/forge require --offline; OS-level network access is not sandboxed"
@@ -171,10 +173,80 @@ def _copy_tree(source: Path, destination: Path) -> None:
     shutil.copytree(source, destination, ignore=ignored, dirs_exist_ok=True)
 
 
-def prepare_workspace(target: Path) -> tuple[Path, Path]:
+def _path_within(base: Path, path: Path) -> bool:
+    try:
+        path.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _prepare_standalone_foundry(workspace: Path, target: Path, reproducer: Path) -> Path:
+    """Create a minimal offline Foundry harness for one standalone Solidity target."""
+    if target.suffix.lower() != ".sol" or not reproducer.is_file():
+        raise ValueError("Standalone Foundry verification requires a Solidity target and one reproducer file.")
+    if reproducer.suffix.lower() not in {".sol", ".t.sol"}:
+        raise ValueError("Foundry reproducer must be a .sol or .t.sol file.")
+    src_dir = workspace / "src"
+    test_dir = workspace / "test"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    test_dir.mkdir(parents=True, exist_ok=True)
+    copied_target = workspace / target.name
+    target_in_src = src_dir / target.name
+    if copied_target.exists():
+        shutil.move(str(copied_target), str(target_in_src))
+    elif not target_in_src.exists():
+        raise FileNotFoundError(f"standalone Solidity target missing from verification workspace: {target.name}")
+    shutil.copy2(reproducer, test_dir / reproducer.name)
+    (workspace / "foundry.toml").write_text(
+        "[profile.default]\n"
+        'src = "src"\n'
+        'test = "test"\n'
+        'out = "out"\n'
+        'libs = []\n',
+        encoding="utf-8",
+    )
+    return workspace
+
+
+def _attach_reproducer(project: Path, reproducer: Path, target: Path, standalone: bool) -> Path:
+    reproducer = reproducer.expanduser().resolve()
+    if not reproducer.exists():
+        raise FileNotFoundError(reproducer)
+    if reproducer.is_dir():
+        destination = project / "test" / reproducer.name
+        _copy_tree(reproducer, destination)
+        return destination
+    destination_dir = project / "test"
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    destination = destination_dir / reproducer.name
+    shutil.copy2(reproducer, destination)
+    if standalone and target.suffix.lower() == ".sol":
+        (project / "foundry.toml").write_text(
+            "[profile.default]\n"
+            'src = "src"\n'
+            'test = "test"\n'
+            'out = "out"\n'
+            'libs = []\n',
+            encoding="utf-8",
+        )
+        src_target = project / "src" / target.name
+        copied_target = project / target.name
+        (project / "src").mkdir(parents=True, exist_ok=True)
+        if copied_target.exists() and not src_target.exists():
+            shutil.move(str(copied_target), str(src_target))
+    return destination
+
+
+def prepare_workspace(
+    target: Path, reproducer: Path | None = None
+) -> tuple[Path, Path]:
     target = target.expanduser().resolve()
     if not target.exists():
         raise FileNotFoundError(target)
+    reproducer = reproducer.expanduser().resolve() if reproducer is not None else None
+    if reproducer is not None and not reproducer.exists():
+        raise FileNotFoundError(reproducer)
     base = Path(tempfile.mkdtemp(prefix="atlas-verification-"))
     workspace = base / "target"
     if target.is_dir():
@@ -186,6 +258,16 @@ def prepare_workspace(target: Path) -> tuple[Path, Path]:
         workspace.mkdir()
         shutil.copy2(target, workspace / target.name)
     project = _find_project_root(workspace)
+    if reproducer is not None:
+        standalone = target.is_file() and target.suffix.lower() == ".sol" and not (
+            (project / "foundry.toml").is_file()
+        )
+        if standalone:
+            project = _prepare_standalone_foundry(workspace, target, reproducer)
+        elif reproducer.is_dir():
+            _attach_reproducer(project, reproducer, target, False)
+        else:
+            _attach_reproducer(project, reproducer, target, False)
     return base, project
 
 
@@ -258,8 +340,11 @@ def default_command(project: Path) -> tuple[str, ...] | None:
     return None
 
 
-def suggested_command(target: Path) -> tuple[str, ...] | None:
-    for toolchain in target_toolchains(target):
+def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str, ...] | None:
+    toolchains = target_toolchains(target)
+    if reproducer is not None and target.is_file() and target.suffix.lower() == ".sol" and "foundry" not in toolchains:
+        toolchains = ["foundry", *toolchains]
+    for toolchain in toolchains:
         if toolchain == "foundry" and shutil.which("forge"):
             return ("forge", "test", "--offline", "-vv")
         if toolchain == "cargo" and shutil.which("cargo"):
@@ -292,13 +377,14 @@ def run_verification(
     security_property: str = "",
     timeout_seconds: int = 300,
     max_output_bytes: int = 4 * 1024 * 1024,
+    reproducer: Path | None = None,
 ) -> VerificationResult:
     if mode not in {"baseline", "reproduction"}:
         raise ValueError("mode must be baseline or reproduction")
     command = validate_command(command)
     if not security_property.strip():
         raise ValueError("A security property is required for verification.")
-    base, project = prepare_workspace(target)
+    base, project = prepare_workspace(target, reproducer=reproducer)
     started = time.perf_counter()
     try:
         result = run_bounded(
@@ -337,6 +423,7 @@ def run_verification(
             timed_out=result.timed_out,
             output_limited=result.output_limited,
             toolchain=detect_toolchain(project)[0] if detect_toolchain(project) else None,
+            reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
         )
     except Exception:
         shutil.rmtree(base, ignore_errors=True)

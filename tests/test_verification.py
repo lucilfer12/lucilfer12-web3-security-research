@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from w3sec.verification import (
     _attach_to_report,
@@ -44,6 +45,34 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual([], target_toolchains(sol))
             self.assertEqual([], target_toolchains(rs))
             self.assertEqual([], target_toolchains(py))
+
+    def test_standalone_solidity_with_reproducer_gets_foundry_harness(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "Target.sol"
+            reproducer = root / "Target.t.sol"
+            target.write_text("pragma solidity ^0.8.20; contract Target { uint256 public x; }", encoding="utf-8")
+            reproducer.write_text(
+                "pragma solidity ^0.8.20; import \"../src/Target.sol\"; contract TargetTest { "
+                "function test_smoke() public { Target target = new Target(); require(target.x() == 0); } }",
+                encoding="utf-8",
+            )
+            base, workspace = prepare_workspace(target, reproducer=reproducer)
+            try:
+                self.assertTrue((workspace / "foundry.toml").is_file())
+                self.assertEqual("Target.sol", (workspace / "src" / "Target.sol").name)
+                self.assertEqual(reproducer.name, (workspace / "test" / reproducer.name).name)
+                self.assertEqual(["foundry"], target_toolchains(workspace))
+                with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\forge.exe"):
+                    self.assertEqual(
+                        ("forge", "test", "--offline", "-vv"),
+                        __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(
+                            target, reproducer
+                        ),
+                    )
+            finally:
+                import shutil
+                shutil.rmtree(base, ignore_errors=True)
 
     def test_workspace_is_an_isolated_copy(self):
         with tempfile.TemporaryDirectory() as td:

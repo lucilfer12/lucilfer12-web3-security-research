@@ -129,6 +129,11 @@ def main() -> int:
     verify.add_argument("--expected-exit", type=int, default=0)
     verify.add_argument("--mode", choices=["baseline", "reproduction"], default="baseline")
     verify.add_argument("--security-property", required=True)
+    verify.add_argument(
+        "--reproducer",
+        default=None,
+        help="local reproducer/test file or directory to overlay into the isolated verification workspace",
+    )
     verify.add_argument("--timeout", type=int, default=300)
     verify.add_argument("--os-root", default=".")
     verify.add_argument("--json", action="store_true")
@@ -481,6 +486,7 @@ def main() -> int:
                 mode=args.mode,
                 security_property=args.security_property,
                 timeout_seconds=args.timeout,
+                reproducer=_root(args.reproducer) if args.reproducer else None,
             )
             result_path = write_verification_result(
                 _root(args.os_root), result, report_path=report_path,

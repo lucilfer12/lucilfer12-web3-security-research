@@ -1330,7 +1330,24 @@ class AtlasApp(tk.Tk):
                 "Run an explicit target audit first so ATLAS has a pinned report and target.",
             )
             return
+        reproducer_path = None
         suggested = suggested_command(self.current_target)
+        if suggested is None and self.current_target.lower().endswith(".sol"):
+            use_reproducer = messagebox.askyesno(
+                "ATLAS verification",
+                "The selected Solidity file is standalone (no Foundry project was detected).\n\n"
+                "Attach a local .sol/.t.sol reproducer so ATLAS can build an isolated "
+                "Foundry harness around an exact copy of the contract?",
+                parent=self,
+            )
+            if use_reproducer:
+                chosen = filedialog.askopenfilename(
+                    title="Choose Solidity reproducer",
+                    filetypes=[("Solidity files", "*.sol"), ("All files", "*.*")],
+                )
+                if chosen:
+                    reproducer_path = Path(chosen).resolve()
+                    suggested = suggested_command(self.current_target, reproducer_path)
         initial_command = " ".join(suggested) if suggested else (
             "forge test --offline -vv"
             if str(finding.get("language", "")).lower() == "solidity"
@@ -1399,6 +1416,7 @@ class AtlasApp(tk.Tk):
             "expected_exit": expected_exit,
             "mode": mode,
             "security_property": property_text,
+            "reproducer": str(reproducer_path) if reproducer_path else None,
         }
         self._run_task(
             "VERIFY FINDING",
@@ -1418,6 +1436,10 @@ class AtlasApp(tk.Tk):
             mode=str(payload["mode"]),
             security_property=str(payload["security_property"]),
             timeout_seconds=300,
+            reproducer=(
+                Path(str(payload["reproducer"])).expanduser().resolve()
+                if payload.get("reproducer") else None
+            ),
         )
         result_path = write_verification_result(
             self.repo,
