@@ -35,6 +35,20 @@ pub fn decode(input: &[u8]) -> Result<(), ()> {
         self.assertEqual(1, len(regions))
         self.assertEqual("decode", regions[0]["name"])
         self.assertIn("input: &[u8]", regions[0]["params"])
+
+    def test_semantic_finding_line_maps_to_real_source_after_multiline_signature(self):
+        source = """
+pub fn decode(
+    input: u64,
+) {
+    let value = input as u8;
+    consume(value);
+}
+"""
+        hits = _rust_semantic_findings("src/decode.rs", source, "production")
+        cast_hits = [x for x in hits if x["signal"] == "unchecked_input_arithmetic"]
+        self.assertEqual(1, len(cast_hits))
+        self.assertEqual(5, cast_hits[0]["line"])
     def test_size_bound_constant_and_guarded_length_are_proven(self):
         lines = [
             "{",
@@ -188,6 +202,50 @@ fn get_memory_or_register(
         self.assertIn("registers.get", index.charge_proof["get_memory_or_register"])
         self.assertIn("read_memory", index.charge_proof["get_memory_or_register"])
         self.assertIn("pay_base", index.charge_proof["get_memory_or_register"])
+
+    def test_nearcore_memory_helper_is_not_reported_as_gas_ordering(self):
+        source = """
+fn read_memory(
+    gas_counter: &mut GasCounter,
+    memory: &[u8],
+    ptr: u64,
+    len: u64,
+) -> Result<&[u8]> {
+    gas_counter.pay_base(read_memory_base)?;
+    gas_counter.pay_per(read_memory_byte, len)?;
+    read_memory_for_free(memory, ptr, len)
+}
+
+fn get_memory_or_register(
+    gas_counter: &mut GasCounter,
+    memory: &[u8],
+    registers: &Registers,
+    ptr: u64,
+    len: u64,
+) -> Result<&[u8]> {
+    if len == u64::MAX {
+        registers.get(gas_counter, ptr)
+    } else {
+        read_memory(gas_counter, memory, ptr, len)
+    }
+}
+
+pub fn read_and_parse_account_id(
+    gas_counter: &mut GasCounter,
+    memory: &[u8],
+    registers: &Registers,
+    ptr: u64,
+    len: u64,
+) -> Result<()> {
+    let buf = get_memory_or_register(gas_counter, memory, registers, ptr, len)?;
+    gas_counter.pay_base(utf8_decoding_base)?;
+    Ok(())
+}
+"""
+        hits = _rust_semantic_findings(
+            "runtime/near-vm-runner/src/logic/host.rs", source, "production"
+        )
+        self.assertFalse(any(x["signal"] == "gas_ordering" for x in hits))
 
     def test_nearcore_gas_wrapper_is_not_reported_as_ordering_bug(self):
         source = """

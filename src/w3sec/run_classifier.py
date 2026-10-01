@@ -23,6 +23,15 @@ _FORGE_BUILD_ERR = re.compile(
 )
 _CARGO_FAILED_TEST = re.compile(r"^---- (\S+) stdout ----$", re.MULTILINE)
 _FORGE_FAILED_TEST = re.compile(r"\[FAIL[^\]]*\]\s+([A-Za-z0-9_]+)\(")
+_PYTHON_RAN = re.compile(r"Ran (\d+) tests? in [0-9.]+s")
+_PYTHON_FAILURES = re.compile(r"FAILED \(([^)]*)\)")
+_PYTHON_COUNT = re.compile(r"(?:failures|errors)=(\d+)")
+_PYTEST_SUMMARY = re.compile(
+    r"^=+\s*(?P<body>\d+\s+(?:passed|failed|error[s]?)"
+    r"(?:,\s*\d+\s+(?:passed|failed|error[s]?))*)\s+in\s+[0-9.]+s\s*=+$",
+    re.MULTILINE,
+)
+_PYTEST_FAILED_TEST = re.compile(r"^FAILED\s+(.+?)\s+-", re.MULTILINE)
 
 KINDS = ("tests-failed", "tests-passed", "build-error", "no-tests-ran", "unknown")
 
@@ -43,6 +52,11 @@ def tool_and_subcommand(command: Sequence[str]) -> tuple[str | None, str | None]
         name = name[:-4]
     if name in {"cargo", "forge"} and len(command) > 1:
         return name, str(command[1]).lower()
+    if name in {"python", "python3", "py"} and len(command) >= 3:
+        if str(command[1]).lower() == "-m" and str(command[2]).lower() in {"unittest", "pytest"}:
+            return "python", "test"
+    if name == "pytest":
+        return "pytest", "test"
     return None, None
 
 
@@ -56,6 +70,35 @@ def classify_run(tool: str, stdout: str, stderr: str) -> RunClass:
         summaries = _FORGE_SUMMARY.findall(text)
         build_error = bool(_FORGE_BUILD_ERR.search(text))
         names = _FORGE_FAILED_TEST.findall(text)
+    elif tool == "python":
+        ran = [int(x) for x in _PYTHON_RAN.findall(text)]
+        failed_match = _PYTHON_FAILURES.search(text)
+        failure_count = 0
+        if failed_match:
+            failure_count = sum(int(x) for x in _PYTHON_COUNT.findall(failed_match.group(1)))
+        passed = max(0, (ran[-1] if ran else 0) - failure_count) if ran else 0
+        failed = failure_count
+        names = []
+        build_error = bool(re.search(r"Traceback.*(?:ImportError|ModuleNotFoundError|SyntaxError)", text, re.DOTALL)) and not ran
+        if not ran:
+            return RunClass("build-error" if build_error else "unknown", passed, failed, ())
+        if failed:
+            return RunClass("tests-failed", passed, failed, ())
+        return RunClass("tests-passed" if passed else "no-tests-ran", passed, failed, ())
+    elif tool == "pytest":
+        summaries = _PYTEST_SUMMARY.findall(text)
+        if summaries:
+            counts = re.findall(r"(\d+)\s+(passed|failed|error[s]?)", summaries[-1])
+            passed = sum(int(n) for n, kind in counts if kind == "passed")
+            failed = sum(int(n) for n, kind in counts if kind in {"failed", "error", "errors"})
+            names = _PYTEST_FAILED_TEST.findall(text)
+            return RunClass(
+                "tests-failed" if failed else ("tests-passed" if passed else "no-tests-ran"),
+                passed,
+                failed,
+                tuple(dict.fromkeys(names)),
+            )
+        return RunClass("unknown", 0, 0, ())
     else:
         return RunClass("unknown", 0, 0, ())
     passed = sum(int(p) for _, p, _ in summaries)

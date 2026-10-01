@@ -328,6 +328,34 @@ def _rust_line_has_taint(line: str, taint: set[str]) -> bool:
     return any(re.search(rf"\b{re.escape(name)}\b", line) for name in taint)
 
 
+def _rust_arithmetic_is_impactful(line: str, start: int, end: int) -> bool:
+    stripped = line.strip()
+    if re.match(r"^(?:if|while|for|match)\b", stripped):
+        return False
+    if re.search(r"\b(?:debug|trace|info|warn|error)!", line):
+        return False
+    expr = line[start:end]
+    before = line[:start]
+    after = line[end:]
+    # Comparisons used only to validate or select control flow are not arithmetic
+    # sinks; keep arithmetic when its value is subsequently assigned, returned,
+    # indexed, ranged, allocated, or passed to a non-logging call.
+    if re.search(r"(?:==|!=|<=|>=|\b(?:<|>)\b)", after):
+        if not re.search(r"=|\breturn\b|\[|\(|\.\s*(?:with_capacity|reserve|resize)\s*\(", before):
+            return False
+    if re.search(r"\b(?:==|!=|<=|>=|<|>)\s*$", before):
+        return False
+    if not re.search(
+        r"=|\+=|-=|\*=|\breturn\b|\[[^\]]*$|\.\.|\([^)]*$|"
+        r"|\([^)]*$|\.\s*(?:with_capacity|reserve|reserve_exact|resize)\s*\("
+        r"|\b(?:checked_add|checked_sub|checked_mul|saturating_add|saturating_sub|saturating_mul)\s*\(",
+        line,
+    ):
+        # A bare comparison or formatting expression has no demonstrated data-flow sink.
+        return False
+    return bool(expr.strip())
+
+
 def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict[str, Any]]:
     if not relative.lower().endswith(".rs"):
         return []
@@ -339,7 +367,9 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
     for region in regions:
         body = str(region["body"])
         body_lines = body.splitlines()
-        base_line = int(region["line"])
+        body_base_line = source.count(
+            "\n", 0, int(region.get("body_start", region.get("start", 0)))
+        ) + 1
         path_parts = set(relative.lower().replace("\\", "/").split("/"))
         name = str(region.get("name") or "")
         preamble = _mask_non_code(source)[
@@ -360,7 +390,7 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 "rule_id": f"atlas.rust.{signal}",
                 "signal": signal,
                 "file": relative,
-                "line": base_line + max(0, line_offset),
+                "line": body_base_line + max(0, line_offset),
                 "matched_text": evidence.get("matched_text", "")[:320],
                 "evidence_type": "taint-and-control-flow-analysis",
                 "scope": scope,
@@ -478,13 +508,22 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                 line,
             ))
             tainted_binary = any(
-                any(re.search(rf"\b{re.escape(name)}\b", line[m.start():m.end()]) for name in taint)
+                _rust_arithmetic_is_impactful(line, m.start(), m.end())
+                and any(
+                    re.search(rf"\b{re.escape(name)}\b", line[m.start():m.end()])
+                    for name in taint
+                )
                 for m in binary_matches
             )
             _, unproven_casts = cast_report(line, local_int_types)
             tainted_cast = any(
-                any(re.search(rf"\b{re.escape(name)}\b", item) for name in taint)
+                _rust_arithmetic_is_impactful(line, match.start(), match.end())
+                and any(
+                    re.search(rf"\b{re.escape(name)}\b", item) for name in taint
+                )
+                for match in re.finditer(r"\b[A-Za-z_]\w*\s+as\s+(?:u8|u16|u32|u64|u128|usize|isize)\b", line)
                 for item in unproven_casts
+                if item == match.group(0)
             )
             if tainted_binary or tainted_cast:
                 safe_ops = ("checked_add", "checked_sub", "checked_mul", "saturating_", "try_into")
@@ -641,7 +680,7 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, c
     for index, path in enumerate(files, 1):
         if cancel and cancel():
             raise OperationCancelled("ATLAS operation cancelled")
-        _mark(progress, 92 + int(index / total), f"ATLAS rules · {path.name}")
+        _mark(progress, 92 + int(index / total), f"ATLAS rules Â· {path.name}")
         try:
             source = path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
@@ -726,7 +765,7 @@ def run_security_scan(target: Path, progress=None, cancel=None) -> dict[str, Any
         focus = prepared_root if prepared_root.is_file() else None
         root = prepared_root.parent if prepared_root.is_file() else prepared_root
         snapshot = _structural_snapshot(root, focus=focus, cancel=cancel)
-        _mark(progress, 92, f"Structural pass · {snapshot['source_file_count']} source files")
+        _mark(progress, 92, f"Structural pass Â· {snapshot['source_file_count']} source files")
         normalized = _atlas_rule_findings(root, progress, focus=focus, cancel=cancel)
 
         has_solidity = any(x["path"].lower().endswith(".sol") for x in snapshot["files"])
@@ -755,7 +794,7 @@ def run_security_scan(target: Path, progress=None, cancel=None) -> dict[str, Any
         for index, name in enumerate(candidates):
             if cancel and cancel():
                 raise OperationCancelled("ATLAS operation cancelled")
-            _mark(progress, 93 + min(5, index + 0), f"Security engine · {name}")
+            _mark(progress, 93 + min(5, index + 0), f"Security engine Â· {name}")
             result = _run_tool(name, _EXTERNAL[name], root, cancel=cancel)
             if name == "slither":
                 external_findings.extend(_normalize_slither(result))

@@ -236,6 +236,8 @@ class AtlasApp(tk.Tk):
         self.busy = False
         self.task_name = ""
         self.last_audit: dict[str, object] = {}
+        self.visible_findings: list[dict[str, object]] = []
+        self.finding_filter_var = None
         self.current_target: Path | None = None
         self.current_target_report: dict[str, object] = {}
         self.current_report_path: Path | None = None
@@ -866,6 +868,7 @@ class AtlasApp(tk.Tk):
 
     def _clear_target_result(self) -> None:
         self.last_audit = {}
+        self.visible_findings = []
         self.current_target_report = {}
         self.current_report_path = None
         if self.current_target:
@@ -1080,10 +1083,56 @@ class AtlasApp(tk.Tk):
         self.finding_target_label = tk.Label(page, text="TARGET  ·  NONE", fg="#46F0D2", bg="#06121f", font=("Segoe UI", 8, "bold"), anchor="w")
         self.finding_target_label.pack(fill="x", pady=(0, 3))
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
-        audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 8))
+        audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 4))
         self._toolbar_button(audit_actions, "VERIFY SELECTED FINDING", self.verify_selected_finding)
         self._toolbar_button(audit_actions, "LOAD SAVED TARGET REPORT", self.load_saved_target_report)
         self._toolbar_button(audit_actions, "COPY CURRENT TARGET REPORT", self._copy_current_target_report)
+        filter_bar = tk.Frame(page, bg="#06121f")
+        filter_bar.pack(fill="x", pady=(0, 8))
+        tk.Label(
+            filter_bar,
+            text="VIEW",
+            fg="#8fb5c8",
+            bg="#06121f",
+            font=("Segoe UI", 8, "bold"),
+        ).pack(side="left", padx=(0, 6))
+        self.finding_filter_var = tk.StringVar(value="VERIFY_FIRST")
+        menu = tk.OptionMenu(
+            filter_bar,
+            self.finding_filter_var,
+            "VERIFY_FIRST",
+            "DEEP_REVIEW",
+            "CONTEXT",
+            "VERIFIED",
+            "ALL",
+            command=lambda _value: self._render_findings(),
+        )
+        menu.configure(
+            bg="#0b2940",
+            fg="#bfeeff",
+            activebackground="#12496a",
+            activeforeground="#ffffff",
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            font=("Segoe UI", 8, "bold"),
+        )
+        menu["menu"].configure(
+            bg="#07121d",
+            fg="#b9d8e4",
+            activebackground="#12496a",
+            activeforeground="#ffffff",
+        )
+        menu.pack(side="left")
+        self.finding_lane_summary = tk.Label(
+            filter_bar,
+            text="NO TARGET FINDINGS",
+            fg="#7193a7",
+            bg="#06121f",
+            font=("Consolas", 8),
+            anchor="w",
+        )
+        self.finding_lane_summary.pack(side="left", padx=10)
         body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
         left = self._panel(
@@ -1417,12 +1466,54 @@ class AtlasApp(tk.Tk):
         return {"report": report, "report_path": str(path)}
 
 
-    def _selected_finding(self) -> dict[str, object] | None:
-        if not self.finding_tree.curselection() or not isinstance(self.last_audit, dict):
-            return None
+    def _finding_is_verified(self, finding: dict[str, object]) -> bool:
+        verification = finding.get("verification", {})
+        if not isinstance(verification, dict):
+            return False
+        gates = verification.get("gates", {})
+        return isinstance(gates, dict) and bool(gates.get("reproduction"))
+
+    def _render_findings(self) -> None:
+        if not hasattr(self, "finding_tree") or not isinstance(self.last_audit, dict):
+            return
         findings = self.last_audit.get("findings", [])
+        findings = [x for x in findings if isinstance(x, dict)] if isinstance(findings, list) else []
+        selected = str(self.finding_filter_var.get()) if self.finding_filter_var is not None else "ALL"
+        if selected == "VERIFIED":
+            visible = [x for x in findings if self._finding_is_verified(x)]
+        elif selected == "ALL":
+            visible = findings
+        else:
+            visible = [x for x in findings if str(x.get("triage_lane") or "CONTEXT") == selected]
+        self.visible_findings = visible
+        self.finding_tree.delete(0, "end")
+        for finding in visible:
+            score = int(finding.get("triage_score") or 0)
+            status = str(finding.get("status", "candidate")).upper()
+            lane = str(finding.get("triage_lane") or "CONTEXT").upper()
+            grade = str((finding.get("verification") or {}).get("evidence_grade", "E")).upper()
+            self.finding_tree.insert(
+                "end",
+                f"[{status[:10]:10}] [{lane[:10]:10}] G{grade} S{score:02} "
+                f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
+            )
+        from collections import Counter
+        counts = Counter(str(x.get("triage_lane") or "CONTEXT") for x in findings)
+        verified = sum(1 for x in findings if self._finding_is_verified(x))
+        summary = (
+            f"VERIFY_FIRST={counts.get('VERIFY_FIRST', 0)}  "
+            f"DEEP_REVIEW={counts.get('DEEP_REVIEW', 0)}  "
+            f"CONTEXT={counts.get('CONTEXT', 0)}  "
+            f"VERIFIED={verified}  SHOWING={len(visible)}/{len(findings)}"
+        )
+        if hasattr(self, "finding_lane_summary"):
+            self.finding_lane_summary.configure(text=summary)
+
+    def _selected_finding(self) -> dict[str, object] | None:
+        if not self.finding_tree.curselection() or not self.visible_findings:
+            return None
         index = self.finding_tree.curselection()[0]
-        return findings[index] if isinstance(findings, list) and 0 <= index < len(findings) and isinstance(findings[index], dict) else None
+        return self.visible_findings[index] if 0 <= index < len(self.visible_findings) else None
 
     def _finding_selected(self, _event=None) -> None:
         finding = self._selected_finding()
@@ -1927,34 +2018,21 @@ class AtlasApp(tk.Tk):
             if self.current_target:
                 save_target_state(self.current_target, self.current_report_path)
             self._apply_target_report(report)
-            self.finding_tree.delete(0, "end")
             if hasattr(self, "supporting_tree"):
                 self.supporting_tree.delete(0, "end")
-            primary = report.get("findings", []) if isinstance(report, dict) else []
-            supporting = report.get("supporting_evidence", []) if isinstance(report, dict) else []
-            for finding in primary:
-                score = finding.get("triage_score", 0)
-                status = str(finding.get("status", "candidate")).upper()
-                lane = str(finding.get("triage_lane") or "CONTEXT").upper()
-                grade = str(
-                    (finding.get("verification") or {}).get("evidence_grade", "E")
-                ).upper()
-                self.finding_tree.insert(
-                    "end",
-                    f"[{status[:10]:10}] [{lane[:10]:10}] G{grade} S{score:02} "
-                    f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
-                )
-            for item in supporting:
-                if not isinstance(item, dict) or not hasattr(self, "supporting_tree"):
-                    continue
-                scope_file = str(item.get("file") or "?")
-                line = item.get("line", "?")
-                signal = str(item.get("signal") or "evidence")
-                confidence = str(item.get("confidence") or "-")
-                self.supporting_tree.insert(
-                    "end",
-                    f"[{confidence[:4]:4}] {scope_file}:{line} · {signal}"
-                )
+                supporting = report.get("supporting_evidence", []) if isinstance(report, dict) else []
+                for item in supporting:
+                    if not isinstance(item, dict):
+                        continue
+                    scope_file = str(item.get("file") or "?")
+                    line = item.get("line", "?")
+                    signal = str(item.get("signal") or "evidence")
+                    confidence = str(item.get("confidence") or "-")
+                    self.supporting_tree.insert(
+                        "end",
+                        f"[{confidence[:4]:4}] {scope_file}:{line} · {signal}"
+                    )
+            self._render_findings()
             self.show_page("Audit Findings")
             self.finding_detail.delete("1.0", "end")
             self.finding_detail.insert("end", pretty(report))
@@ -2280,11 +2358,23 @@ def run_self_test() -> int:
     return 0
 
 
+def startup_target(argv: list[str]) -> Path | None:
+    if "--target" not in argv:
+        return None
+    index = argv.index("--target")
+    if index + 1 >= len(argv):
+        raise SystemExit("--target requires a path")
+    target = Path(argv[index + 1]).expanduser()
+    if not target.exists():
+        raise SystemExit(f"--target does not exist: {target}")
+    return target
+
+
 def main() -> int:
     import sys
     if "--self-test" in sys.argv:
         return run_self_test()
-    target = next((Path(arg).expanduser() for arg in sys.argv[1:] if not arg.startswith("-") and Path(arg).exists()), None)
+    target = startup_target(sys.argv)
     try:
         app = AtlasApp(target)
         app.mainloop()

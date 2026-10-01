@@ -60,6 +60,9 @@ class VerificationResult:
     isolation: str = "unspecified"
     failure_class: str = "n/a"
     failing_tests: tuple[str, ...] = ()
+    tests_passed: int = 0
+    tests_failed: int = 0
+    tests_executed: bool = False
 
     @property
     def reproduced(self) -> bool:
@@ -102,6 +105,12 @@ class VerificationResult:
             "isolation": self.isolation,
             "failure_class": self.failure_class,
             "failing_tests": list(self.failing_tests),
+            "test_execution": {
+                "tests_executed": self.tests_executed,
+                "tests_passed": self.tests_passed,
+                "tests_failed": self.tests_failed,
+                "executed_test_count": self.tests_passed + self.tests_failed,
+            },
             "policy": (
                 "fail-closed: runs only in an attested isolated environment or when the operator "
                 "declared the target code trusted; isolated-copy; stdin=devnull; bounded-output; "
@@ -435,7 +444,10 @@ def default_command(project: Path) -> tuple[str, ...] | None:
     if "foundry" in tools and shutil.which("forge"):
         return ("forge", "test", "--offline", "-vv")
     if "cargo" in tools and shutil.which("cargo"):
-        return ("cargo", "test", "--workspace", "--offline")
+        command = ["cargo", "test", "--workspace", "--offline"]
+        if (project / "Cargo.lock").is_file():
+            command.append("--locked")
+        return tuple(command)
     if "python" in tools and shutil.which("pytest"):
         return ("pytest", "-q")
     return None
@@ -451,7 +463,11 @@ def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str
         if toolchain == "foundry" and shutil.which("forge"):
             return ("forge", "test", "--offline", "-vv")
         if toolchain == "cargo" and shutil.which("cargo"):
-            return ("cargo", "test", "--workspace", "--offline")
+            project = target if target.is_dir() else target.parent
+            command = ["cargo", "test", "--workspace", "--offline"]
+            if (project / "Cargo.lock").is_file():
+                command.append("--locked")
+            return tuple(command)
         if toolchain == "python" and shutil.which("pytest"):
             return ("pytest", "-q")
     return None
@@ -623,6 +639,10 @@ def run_verification(
                 baseline=baseline,
                 isolation=decision.mode,
                 failure_class=str(baseline.get("failure_class", "n/a")),
+                failing_tests=tuple(baseline_class.failing_tests) if baseline_class else (),
+                tests_passed=baseline_class.passed if baseline_class else 0,
+                tests_failed=baseline_class.failed if baseline_class else 0,
+                tests_executed=bool(baseline_class and (baseline_class.passed + baseline_class.failed) > 0),
             )
     base, project = prepare_workspace(target, reproducer=reproducer)
     workspace_before = workspace_hash(project)
@@ -661,13 +681,13 @@ def run_verification(
         run_class = classify_run(tool, result.stdout, result.stderr) if judged else None
         if result.timed_out or result.output_limited:
             outcome = "inconclusive"
-        elif (
-            mode == "reproduction"
-            and run_class is not None
-            and run_class.kind in {"build-error", "no-tests-ran", "unknown"}
+        elif mode == "reproduction" and (
+            run_class is None
+            or run_class.kind in {"build-error", "no-tests-ran", "unknown"}
+            or (run_class.passed + run_class.failed) == 0
         ):
-            # An exit code is not evidence: cargo exits 101 and forge exits 1 for compile
-            # errors as well as for failing tests. Only executed tests can reproduce.
+            # An exit code is not evidence: cargo/forge can fail before any test executes.
+            # Reproduction requires an actual test result, not merely process termination.
             outcome = "inconclusive"
         elif result.returncode == expected_exit:
             outcome = "reproduced" if mode == "reproduction" else "execution-pass"
@@ -700,6 +720,9 @@ def run_verification(
             isolation=decision.mode,
             failure_class=run_class.kind if run_class else "n/a",
             failing_tests=run_class.failing_tests if run_class else (),
+            tests_passed=run_class.passed if run_class else 0,
+            tests_failed=run_class.failed if run_class else 0,
+            tests_executed=bool(run_class and (run_class.passed + run_class.failed) > 0),
         )
     finally:
         shutil.rmtree(base, ignore_errors=True)

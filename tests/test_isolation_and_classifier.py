@@ -24,6 +24,10 @@ CARGO_FAIL = (
 )
 CARGO_PASS = "running 2 tests\ntest a ... ok\ntest b ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured\n"
 CARGO_EMPTY = "running 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured\n"
+PYTHON_PASS = "....\n----------------------------------------------------------------------\nRan 4 tests in 0.002s\n\nOK\n"
+PYTHON_FAIL = ".F\n======================================================================\nFAIL: test_bad (test_repro.TestBad.test_bad)\n----------------------------------------------------------------------\nTraceback\n\n----------------------------------------------------------------------\nRan 2 tests in 0.002s\n\nFAILED (failures=1)\n"
+PYTEST_PASS = "========================= 3 passed in 0.02s =========================\n"
+PYTEST_FAIL = "FAILED tests/test_repro.py::test_bad - AssertionError: False\n========================= 1 failed, 2 passed in 0.03s =========================\n"
 FORGE_COMPILE_ERR = "Error: Compiler run failed:\nerror[2314]: Expected ';' but got identifier\n"
 FORGE_FAIL = (
     "Ran 1 test for test/Repro.t.sol:ReproTest\n"
@@ -62,7 +66,8 @@ class Classifier(unittest.TestCase):
     def test_tool_detection(self):
         self.assertEqual(("cargo", "test"), tool_and_subcommand(("cargo", "test", "--offline")))
         self.assertEqual(("forge", "test"), tool_and_subcommand(("C:\\Tools\\forge.exe", "test")))
-        self.assertEqual((None, None), tool_and_subcommand(("python", "-m", "unittest")))
+        self.assertEqual(("python", "test"), tool_and_subcommand(("python", "-m", "unittest")))
+        self.assertEqual(("pytest", "test"), tool_and_subcommand(("pytest", "-q")))
 
     def test_cargo(self):
         self.assertEqual("build-error", classify_run("cargo", CARGO_COMPILE_ERR, "").kind)
@@ -77,6 +82,16 @@ class Classifier(unittest.TestCase):
         failed = classify_run("forge", FORGE_FAIL, "")
         self.assertEqual(("tests-failed", ("test_property",)), (failed.kind, failed.failing_tests))
         self.assertEqual("tests-passed", classify_run("forge", FORGE_PASS, "").kind)
+
+    def test_python_unittest_and_pytest(self):
+        passed = classify_run("python", PYTHON_PASS, "")
+        failed = classify_run("python", PYTHON_FAIL, "")
+        self.assertEqual(("tests-passed", 4, 0), (passed.kind, passed.passed, passed.failed))
+        self.assertEqual(("tests-failed", 1, 1), (failed.kind, failed.passed, failed.failed))
+        pytest_passed = classify_run("pytest", PYTEST_PASS, "")
+        pytest_failed = classify_run("pytest", PYTEST_FAIL, "")
+        self.assertEqual(("tests-passed", 3, 0), (pytest_passed.kind, pytest_passed.passed, pytest_passed.failed))
+        self.assertEqual(("tests-failed", 2, 1), (pytest_failed.kind, pytest_failed.passed, pytest_failed.failed))
 
 
 class RunVerificationGate(unittest.TestCase):
@@ -119,6 +134,10 @@ class RunVerificationGate(unittest.TestCase):
                                      **{ATTEST_ENV: "github-actions-ephemeral-vm"})
         self.assertEqual("reproduced", result.outcome)
         self.assertEqual(("repro_property",), result.failing_tests)
+        self.assertEqual(0, result.tests_passed)
+        self.assertEqual(1, result.tests_failed)
+        self.assertTrue(result.tests_executed)
+        self.assertEqual(1, result.as_dict()["test_execution"]["executed_test_count"])
         self.assertEqual("attested:github-actions-ephemeral-vm", result.isolation)
 
     def test_unbuildable_baseline_is_inconclusive(self):

@@ -55,6 +55,20 @@ class VerificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_command(("forge", "test"))
 
+    def test_cargo_default_adds_locked_when_lockfile_exists(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "Cargo.toml").write_text(
+                "[package]\nname='demo'\nversion='0.1.0'\nedition='2021'\n",
+                encoding="utf-8",
+            )
+            (root / "Cargo.lock").write_text("# generated\n", encoding="utf-8")
+            with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\cargo.exe"):
+                self.assertEqual(
+                    ("cargo", "test", "--workspace", "--offline", "--locked"),
+                    default_command(root),
+                )
+
     def test_standalone_source_does_not_claim_project_toolchain(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

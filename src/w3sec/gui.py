@@ -21,6 +21,7 @@ from .atlas_ui import (
     save_repo,
     settings_path,
     crash_path,
+    startup_target,
 )
 
 
@@ -139,11 +140,7 @@ APP_VERSION = "development"
 def main() -> int:
     if "--self-test" in sys.argv:
         return run_self_test()
-    target = next(
-        (Path(arg).expanduser() for arg in sys.argv[1:]
-         if not arg.startswith("-") and Path(arg).exists()),
-        None,
-    )
+    target = startup_target(sys.argv)
     try:
         app = AtlasApp(target)
         app.mainloop()

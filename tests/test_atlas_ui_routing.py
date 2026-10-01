@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from w3sec.gui import AtlasApp
+from w3sec.atlas_ui import startup_target
 
 
 class _Value:
@@ -36,6 +37,14 @@ def _app(raw):
     app.audit_target = target
     app.audit_repo = repo
     return app
+
+
+def test_startup_target_requires_explicit_target_switch(tmp_path):
+    target = tmp_path / "nearcore-master.zip"
+    target.write_bytes(b"fixture")
+    assert startup_target(["atlas"]) is None
+    assert startup_target(["atlas", str(target)]) is None
+    assert startup_target(["atlas", "--target", str(target)]) == target.resolve()
 
 
 def test_audit_selected_routes_existing_target_to_target_audit(tmp_path):
