@@ -356,13 +356,19 @@ def _rust_arithmetic_is_impactful(line: str, start: int, end: int) -> bool:
     return bool(expr.strip())
 
 
-def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict[str, Any]]:
+def _rust_semantic_findings(
+    relative: str,
+    source: str,
+    scope: str,
+    gas_index: RustIndex | None = None,
+) -> list[dict[str, Any]]:
     if not relative.lower().endswith(".rs"):
         return []
     regions = _rust_function_regions(source)
-    gas_index = RustIndex()
-    gas_index.add_file(relative, function_regions(_mask_non_code(source)))
-    gas_index.finalize()
+    if gas_index is None:
+        gas_index = RustIndex()
+        gas_index.add_file(relative, function_regions(_mask_non_code(source)))
+        gas_index.finalize()
     findings: list[dict[str, Any]] = []
     for region in regions:
         body = str(region["body"])
@@ -675,6 +681,19 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, c
             if not is_production and workspace_roots and not _rust_in_scope(path, workspace_roots):
                 continue
         files.append(path)
+
+    rust_index = RustIndex()
+    for path in files:
+        if path.suffix.lower() != ".rs":
+            continue
+        try:
+            relative = str(path.relative_to(root)).replace("\\", "/")
+            source = path.read_text(encoding="utf-8", errors="replace")
+            rust_index.add_file(relative, function_regions(_mask_non_code(source)))
+        except OSError:
+            continue
+    rust_index.finalize()
+
     findings: list[dict[str, Any]] = []
     total = max(1, len(files))
     for index, path in enumerate(files, 1):
@@ -714,7 +733,14 @@ def _atlas_rule_findings(root: Path, progress=None, focus: Path | None = None, c
                     "status": "review-required",
                 })
         if path.suffix.lower() == ".rs":
-            findings.extend(_rust_semantic_findings(relative, source, _rust_scope_label(relative)))
+            findings.extend(
+                _rust_semantic_findings(
+                    relative,
+                    source,
+                    _rust_scope_label(relative),
+                    gas_index=rust_index,
+                )
+            )
     if rust_meta.get("method") == "cargo-metadata":
         for item in findings:
             if item.get("language") == "rust":

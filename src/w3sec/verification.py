@@ -9,7 +9,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from .finding_gate import attach_gate
 from .isolation import VerificationRefused, require_isolation  # noqa: F401
@@ -235,6 +235,25 @@ def _path_within(base: Path, path: Path) -> bool:
         return False
 
 
+def _remove_reproducer_from_baseline(
+    target: Path,
+    baseline_project: Path,
+    reproducer: Path | None,
+) -> bool:
+    """Remove an in-tree reproducer from the clean baseline copy."""
+    if reproducer is None or not target.is_dir() or not _path_within(target, reproducer):
+        return False
+    relative = reproducer.resolve().relative_to(target.resolve())
+    candidate = baseline_project / relative
+    if candidate.is_dir():
+        shutil.rmtree(candidate)
+        return True
+    if candidate.is_file():
+        candidate.unlink()
+        return True
+    return False
+
+
 def _prepare_standalone_rust(workspace: Path, target: Path, reproducer: Path) -> Path:
     """Create a minimal Cargo harness for one standalone Rust source file."""
     if target.suffix.lower() != ".rs" or not reproducer.is_file():
@@ -439,18 +458,25 @@ def target_toolchains(target: Path) -> list[str]:
     return []
 
 
-def default_command(project: Path) -> tuple[str, ...] | None:
+def native_test_command(project: Path) -> tuple[str, ...] | None:
     tools = detect_toolchain(project)
-    if "foundry" in tools and shutil.which("forge"):
+    if "foundry" in tools:
         return ("forge", "test", "--offline", "-vv")
-    if "cargo" in tools and shutil.which("cargo"):
+    if "cargo" in tools:
         command = ["cargo", "test", "--workspace", "--offline"]
         if (project / "Cargo.lock").is_file():
             command.append("--locked")
         return tuple(command)
-    if "python" in tools and shutil.which("pytest"):
+    if "python" in tools:
         return ("pytest", "-q")
     return None
+
+
+def default_command(project: Path) -> tuple[str, ...] | None:
+    command = native_test_command(project)
+    if command is None:
+        return None
+    return command if shutil.which(command[0]) else None
 
 
 def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str, ...] | None:
@@ -534,6 +560,25 @@ def target_source_hash(target: Path) -> str | None:
         return _aggregate_source_hash(root)
 
 
+def _verification_env(extra_env: Mapping[str, str] | None = None) -> dict[str, str]:
+    value = {
+        "PATH": os.environ.get("PATH", ""),
+        "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        "WINDIR": os.environ.get("WINDIR", ""),
+        "TEMP": tempfile.gettempdir(),
+        "TMP": tempfile.gettempdir(),
+        "CARGO_NET_OFFLINE": "true",
+        "FOUNDRY_OFFLINE": "true",
+        "GIT_TERMINAL_PROMPT": "0",
+    }
+    if extra_env:
+        allowed = {"ATLAS_PROOF_MARKER", "ATLAS_PROOF_REPRODUCER_SHA256"}
+        for key, item in extra_env.items():
+            if key in allowed:
+                value[key] = str(item)
+    return value
+
+
 def run_verification(
     target: Path,
     finding: dict[str, Any],
@@ -546,6 +591,8 @@ def run_verification(
     timeout_seconds: int = 300,
     max_output_bytes: int = 4 * 1024 * 1024,
     reproducer: Path | None = None,
+    baseline_command: Sequence[str] | None = None,
+    extra_env: Mapping[str, str] | None = None,
     trusted_target_code: bool = False,
 ) -> VerificationResult:
     if mode not in {"baseline", "reproduction"}:
@@ -572,56 +619,94 @@ def run_verification(
         else None
     )
     baseline: dict[str, Any] | None = None
+    baseline_class = None
     if mode == "reproduction":
         baseline_base, baseline_project = prepare_workspace(target)
+        reproducer_removed = _remove_reproducer_from_baseline(
+            target, baseline_project, reproducer
+        )
         baseline_before = workspace_hash(baseline_project)
+        baseline_command_value = (
+            validate_command(baseline_command)
+            if baseline_command is not None
+            else command
+        )
         baseline_started = time.perf_counter()
-        try:
-            baseline_result = run_bounded(
-                command,
-                cwd=baseline_project,
-                timeout=timeout_seconds,
-                max_output_bytes=max_output_bytes,
-                env={
-                    "PATH": os.environ.get("PATH", ""),
-                    "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
-                    "WINDIR": os.environ.get("WINDIR", ""),
-                    "TEMP": tempfile.gettempdir(),
-                    "TMP": tempfile.gettempdir(),
-                    "CARGO_NET_OFFLINE": "true",
-                    "FOUNDRY_OFFLINE": "true",
-                    "GIT_TERMINAL_PROMPT": "0",
-                },
-            )
-            baseline_after = workspace_hash(baseline_project)
-            baseline_class = (
-                classify_run(tool, baseline_result.stdout, baseline_result.stderr) if judged else None
-            )
+        if baseline_command_value is None:
+            shutil.rmtree(baseline_base, ignore_errors=True)
             baseline = {
-                "command": list(command),
+                "command": None,
                 "expected_exit": baseline_expected_exit,
-                "returncode": baseline_result.returncode,
-                "duration_seconds": round(time.perf_counter() - baseline_started, 6),
-                "timed_out": baseline_result.timed_out,
-                "output_limited": baseline_result.output_limited,
+                "returncode": -1,
+                "duration_seconds": 0.0,
+                "timed_out": False,
+                "output_limited": False,
                 "workspace_hash_before": baseline_before,
-                "workspace_hash_after": baseline_after,
-                "workspace_unchanged": baseline_before == baseline_after,
-                "failure_class": baseline_class.kind if baseline_class else "n/a",
-                "healthy": (
+                "workspace_hash_after": baseline_before,
+                "workspace_unchanged": True,
+                "failure_class": "no-baseline-command",
+                "reproducer_removed_from_baseline": reproducer_removed,
+                "healthy": False,
+                "stdout": "",
+                "stderr": (
+                    "ATLAS could not derive a clean baseline test command for this target. "
+                    "Provide --baseline-command or use a native project with a test runner."
+                ),
+            }
+        else:
+            try:
+                baseline_tool, baseline_subcommand = tool_and_subcommand(baseline_command_value)
+                baseline_judged = baseline_tool is not None and baseline_subcommand == "test"
+                baseline_result = run_bounded(
+                    baseline_command_value,
+                    cwd=baseline_project,
+                    timeout=timeout_seconds,
+                    max_output_bytes=max_output_bytes,
+                    env=_verification_env(),
+                )
+                baseline_after = workspace_hash(baseline_project)
+                baseline_class = (
+                    classify_run(baseline_tool, baseline_result.stdout, baseline_result.stderr)
+                    if baseline_judged and baseline_tool
+                    else None
+                )
+                baseline_healthy = (
                     not baseline_result.timed_out
                     and not baseline_result.output_limited
                     and baseline_result.returncode == baseline_expected_exit
                     and (
-                        baseline_class is None
-                        or baseline_class.kind not in {"build-error", "no-tests-ran", "unknown"}
+                        (
+                            baseline_class is not None
+                            and baseline_class.kind == "tests-passed"
+                            and baseline_class.passed > 0
+                        )
+                        if baseline_judged
+                        else True
                     )
-                ),
-                "stdout": baseline_result.stdout,
-                "stderr": baseline_result.stderr,
-            }
-        finally:
-            shutil.rmtree(baseline_base, ignore_errors=True)
+                )
+                baseline = {
+                    "command": list(baseline_command_value),
+                    "expected_exit": baseline_expected_exit,
+                    "returncode": baseline_result.returncode,
+                    "duration_seconds": round(time.perf_counter() - baseline_started, 6),
+                    "timed_out": baseline_result.timed_out,
+                    "output_limited": baseline_result.output_limited,
+                    "workspace_hash_before": baseline_before,
+                    "workspace_hash_after": baseline_after,
+                    "workspace_unchanged": baseline_before == baseline_after,
+                    "failure_class": baseline_class.kind if baseline_class else "n/a",
+                    "reproducer_removed_from_baseline": reproducer_removed,
+                    "tests_passed": baseline_class.passed if baseline_class else 0,
+                    "tests_failed": baseline_class.failed if baseline_class else 0,
+                    "tests_executed": bool(
+                        baseline_class and (baseline_class.passed + baseline_class.failed) > 0
+                    ),
+                    "healthy": baseline_healthy,
+                    "stdout": baseline_result.stdout,
+                    "stderr": baseline_result.stderr,
+                }
+            finally:
+                shutil.rmtree(baseline_base, ignore_errors=True)
         if not baseline["healthy"]:
             return VerificationResult(
                 finding_id=str(finding.get("id") or "unknown"),
@@ -674,16 +759,7 @@ def run_verification(
             cwd=project,
             timeout=timeout_seconds,
             max_output_bytes=max_output_bytes,
-            env={
-                "PATH": os.environ.get("PATH", ""),
-                "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
-                "WINDIR": os.environ.get("WINDIR", ""),
-                "TEMP": tempfile.gettempdir(),
-                "TMP": tempfile.gettempdir(),
-                "CARGO_NET_OFFLINE": "true",
-                "FOUNDRY_OFFLINE": "true",
-                "GIT_TERMINAL_PROMPT": "0",
-            },
+            env=_verification_env(extra_env),
         )
         duration = time.perf_counter() - started
         workspace_after = workspace_hash(project)

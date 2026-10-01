@@ -1,0 +1,173 @@
+name: ATLAS Proof Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      vulnerable_repo:
+        description: "GitHub owner/repository containing the vulnerable target"
+        required: true
+      vulnerable_ref:
+        description: "Vulnerable branch, tag, or commit"
+        required: true
+      fixed_repo:
+        description: "GitHub owner/repository containing the fixed target"
+        required: true
+      fixed_ref:
+        description: "Fixed branch, tag, or commit"
+        required: true
+      finding_id:
+        description: "ATLAS finding identifier"
+        required: true
+      target_path:
+        description: "Path to the target project inside the vulnerable repository"
+        required: true
+      reproducer_path:
+        description: "Path to the focused reproducer inside the vulnerable repository"
+        required: true
+      command:
+        description: "Reproduction command, e.g. cargo test --test atlas_repro --offline"
+        required: true
+      baseline_command:
+        description: "Clean baseline command, e.g. cargo test --workspace --offline"
+        required: true
+      vulnerable_expected_exit:
+        description: "Expected exit code for the vulnerable reproduction"
+        required: true
+        default: "1"
+      fixed_expected_exit:
+        description: "Expected exit code for the fixed reproduction"
+        required: true
+        default: "0"
+      baseline_expected_exit:
+        description: "Expected exit code for a healthy baseline"
+        required: true
+        default: "0"
+      security_property:
+        description: "Concrete property the reproducer establishes or breaks"
+        required: true
+      timeout_seconds:
+        description: "Maximum seconds per execution"
+        required: true
+        default: "300"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout ATLAS
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ATLAS
+        run: python -m pip install --upgrade pip && python -m pip install -e .
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: Install bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Checkout vulnerable target
+        env:
+          TARGET_REPO: ${{ inputs.vulnerable_repo }}
+          TARGET_REF: ${{ inputs.vulnerable_ref }}
+        run: |
+          git clone --no-tags --no-checkout "https://github.com/$TARGET_REPO.git" vulnerable
+          git -C vulnerable fetch --depth 1 origin "$TARGET_REF"
+          git -C vulnerable checkout --detach FETCH_HEAD
+      - name: Checkout fixed target
+        env:
+          TARGET_REPO: ${{ inputs.fixed_repo }}
+          TARGET_REF: ${{ inputs.fixed_ref }}
+        run: |
+          git clone --no-tags --no-checkout "https://github.com/$TARGET_REPO.git" fixed
+          git -C fixed fetch --depth 1 origin "$TARGET_REF"
+          git -C fixed checkout --detach FETCH_HEAD
+      - name: Pin target hashes and build finding report
+        env:
+          FINDING_ID: ${{ inputs.finding_id }}
+          TARGET_PATH: ${{ inputs.target_path }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from w3sec.verification import target_source_hash
+          target = Path("vulnerable") / os.environ["TARGET_PATH"]
+          fixed = Path("fixed") / os.environ["TARGET_PATH"]
+          finding = {
+              "id": os.environ["FINDING_ID"],
+              "file": os.environ["TARGET_PATH"],
+              "line": 1,
+              "source_hash": target_source_hash(target),
+          }
+          payload = {"target": {"path": str(target.resolve())}, "findings": [finding]}
+          Path("proof-report.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          Path("fixed-target-sha256.txt").write_text(
+              target_source_hash(fixed) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Check target paths and reproducer
+        env:
+          TARGET_PATH: ${{ inputs.target_path }}
+          REPRODUCER_PATH: ${{ inputs.reproducer_path }}
+        run: |
+          test -e "vulnerable/$TARGET_PATH"
+          test -f "vulnerable/$REPRODUCER_PATH"
+          test -e "fixed/$TARGET_PATH"
+      - name: Execute proof verification
+        env:
+          ATLAS_ISOLATION_ATTESTATION: github-actions-ephemeral-vm
+          ATLAS_EXECUTION_SANDBOX: bwrap
+          FINDING_ID: ${{ inputs.finding_id }}
+          TARGET_PATH: ${{ inputs.target_path }}
+          REPRODUCER_PATH: ${{ inputs.reproducer_path }}
+          COMMAND: ${{ inputs.command }}
+          BASELINE_COMMAND: ${{ inputs.baseline_command }}
+          VULNERABLE_EXPECTED_EXIT: ${{ inputs.vulnerable_expected_exit }}
+          FIXED_EXPECTED_EXIT: ${{ inputs.fixed_expected_exit }}
+          BASELINE_EXPECTED_EXIT: ${{ inputs.baseline_expected_exit }}
+          SECURITY_PROPERTY: ${{ inputs.security_property }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
+        run: |
+          python -m w3sec verify-proof proof-report.json "$FINDING_ID" \
+            --fixed-target "fixed/$TARGET_PATH" \
+            --reproducer "vulnerable/$REPRODUCER_PATH" \
+            --command "$COMMAND" \
+            --baseline-command "$BASELINE_COMMAND" \
+            --fixed-target-hash "$(cat fixed-target-sha256.txt)" \
+            --vulnerable-expected-exit "$VULNERABLE_EXPECTED_EXIT" \
+            --fixed-expected-exit "$FIXED_EXPECTED_EXIT" \
+            --baseline-expected-exit "$BASELINE_EXPECTED_EXIT" \
+            --security-property "$SECURITY_PROPERTY" \
+            --timeout "$TIMEOUT_SECONDS" \
+            --os-root . --json
+      - name: Verify proof artifact integrity
+        run: |
+          test -s proof-report.json
+          test -s fixed-target-sha256.txt
+          python -m compileall -q src
+          python -m w3sec validate
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-proof-${{ github.run_id }}
+          path: |
+            proof-report.json
+            fixed-target-sha256.txt
+            reports/contract-audits/proof-verifications/
+          if-no-files-found: warn

@@ -56,3 +56,37 @@ Finding status is derived from explicit evidence gates:
 A normal passing test does not automatically disprove a finding. A compile error or a run with no tests is INCONCLUSIVE, not a successful reproduction.
 
 ATLAS keeps Rust, fuzz, test, benchmark, estimator, examples, and tooling evidence available to the audit pipeline. Production findings and supporting evidence are displayed separately so recall is preserved without treating every supporting location as production attack surface.
+
+## Proof-grade differential verification
+
+For findings that have both a vulnerable and a fixed source state, ATLAS provides a stronger differential path:
+
+    python -m w3sec verify-proof audit.json FINDING_ID \
+      --fixed-target C:/path/to/fixed-repository \
+      --reproducer C:/path/to/atlas-reproducer.py \
+      --command "cargo test --test atlas_repro --offline" \
+      --vulnerable-expected-exit 1 \
+      --fixed-expected-exit 0 \
+      --baseline-expected-exit 0 \
+      --security-property "the invariant must fail on the vulnerable state and hold after the fix"
+
+The same reproducer is copied into fresh disposable workspaces for both source states. Each side must first pass a clean baseline, execute at least one test, keep the target unchanged, and satisfy its expected outcome.
+
+The reproducer receives a one-run challenge through ATLAS_PROOF_MARKER. It should print that exact value when the focused test is executing, for example:
+
+    import os
+    print(os.environ["ATLAS_PROOF_MARKER"])
+
+ATLAS records the reproducer SHA-256, vulnerable/fixed target bindings, test classification, output, timing, and the fixed target hash. CONFIRMED means the specified property was demonstrated by the executed differential test on the two pinned source states; it does not claim that every possible environment or input is covered.
+## CI execution sandbox
+
+`.github/workflows/atlas-proof.yml` provides an operator-triggered proof runner on a fresh GitHub-hosted Linux VM. The workflow installs the ATLAS package, Rust, Foundry and bubblewrap, clones the selected vulnerable/fixed revisions without executing project code during checkout, and then runs proof verification with:
+
+    ATLAS_ISOLATION_ATTESTATION=github-actions-ephemeral-vm
+    ATLAS_EXECUTION_SANDBOX=bwrap
+
+The sandbox uses Linux namespaces, a private network namespace, isolated PID/process visibility, a hidden home directory, a disposable writable target workspace, and read-only access to the system/toolchain and offline dependency caches needed for compilation/testing. Network-dependent deployment, publishing, broadcast, remote access, and FFI commands remain outside the allowed verification policy.
+
+Use `verify-finding` for a single-state reproduction. Use `verify-proof` when a fixed state is available and the research question is whether the same focused reproducer distinguishes the vulnerable state from the fixed state.
+
+A proof result is evidence for the declared security property and exact source states; impact and independent verification remain explicit evidence gates in the broader ATLAS model.

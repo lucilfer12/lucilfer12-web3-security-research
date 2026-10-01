@@ -27,8 +27,8 @@ _PYTHON_RAN = re.compile(r"Ran (\d+) tests? in [0-9.]+s")
 _PYTHON_FAILURES = re.compile(r"FAILED \(([^)]*)\)")
 _PYTHON_COUNT = re.compile(r"(?:failures|errors)=(\d+)")
 _PYTEST_SUMMARY = re.compile(
-    r"^=+\s*(?P<body>\d+\s+(?:passed|failed|error[s]?)"
-    r"(?:,\s*\d+\s+(?:passed|failed|error[s]?))*)\s+in\s+[0-9.]+s\s*=+$",
+    r"(?P<body>\d+\s+(?:passed|failed|error[s]?)"
+    r"(?:,\s*\d+\s+(?:passed|failed|error[s]?))*)\s+in\s+[0-9.]+s",
     re.MULTILINE,
 )
 _PYTEST_FAILED_TEST = re.compile(r"^FAILED\s+(.+?)\s+-", re.MULTILINE)

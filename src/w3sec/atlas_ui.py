@@ -36,6 +36,7 @@ from .research_intelligence import build_research_metrics, write_longitudinal_re
 from .research_run import ResearchRun, resume_audit_run
 from .validator import validate_repo
 from .verification import human_outcome, run_verification, split_command, suggested_command, write_verification_result
+from .proof_verifier import run_proof_verification, write_proof_verification_result
 from .versions import build_version_diff_report, write_version_diff_report
 
 APP_NAME = "ATLAS"
@@ -1085,6 +1086,7 @@ class AtlasApp(tk.Tk):
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
         audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 4))
         self._toolbar_button(audit_actions, "VERIFY SELECTED FINDING", self.verify_selected_finding)
+        self._toolbar_button(audit_actions, "PROOF VERIFY", self.proof_verify_selected_finding)
         self._toolbar_button(audit_actions, "LOAD SAVED TARGET REPORT", self.load_saved_target_report)
         self._toolbar_button(audit_actions, "COPY CURRENT TARGET REPORT", self._copy_current_target_report)
         filter_bar = tk.Frame(page, bg="#06121f")
@@ -1704,6 +1706,185 @@ class AtlasApp(tk.Tk):
             lambda: self._verify_finding_worker(payload),
         )
 
+    def proof_verify_selected_finding(self) -> None:
+        finding = self._selected_finding()
+        if finding is None:
+            messagebox.showinfo("ATLAS proof verification", "Select a finding first.")
+            return
+        if not self.current_target or not self.current_report_path:
+            messagebox.showinfo(
+                "ATLAS proof verification",
+                "Run an explicit target audit first so ATLAS has a pinned vulnerable target.",
+            )
+            return
+        is_file = messagebox.askyesno(
+            "ATLAS proof verification",
+            "Choose YES when the fixed target is a file/archive; choose NO for a fixed target directory.",
+            parent=self,
+        )
+        if is_file:
+            chosen = filedialog.askopenfilename(
+                title="Choose fixed / patched target",
+                filetypes=[
+                    ("Source and archives", "*.zip *.tar *.tgz *.tar.gz *.tar.bz2 *.tar.xz *.sol *.rs *.vy *.move *.cairo *.*"),
+                    ("All files", "*.*"),
+                ],
+            )
+        else:
+            chosen = filedialog.askdirectory(title="Choose fixed / patched target directory")
+        if not chosen:
+            return
+        fixed_target = Path(chosen).resolve()
+        reproducer = filedialog.askopenfilename(
+            title="Choose focused reproducer / PoC test",
+            filetypes=[
+                ("Solidity tests", "*.t.sol *.sol"),
+                ("Rust tests", "*.rs"),
+                ("Python tests", "*.py"),
+                ("All files", "*.*"),
+            ],
+        )
+        if not reproducer:
+            return
+        reproducer_path = Path(reproducer).resolve()
+        suggested = suggested_command(self.current_target, reproducer_path)
+        initial_command = " ".join(suggested) if suggested else (
+            "forge test --offline -vv"
+            if str(finding.get("language", "")).lower() in {"solidity", "yul"}
+            else "cargo test --workspace --offline"
+            if str(finding.get("language", "")).lower() == "rust"
+            else "pytest -q"
+        )
+        command_text = simpledialog.askstring(
+            "ATLAS · Proof verification",
+            "One approved local test command used against BOTH vulnerable and fixed states:",
+            initialvalue=initial_command,
+            parent=self,
+        )
+        if not command_text:
+            return
+        baseline_text = simpledialog.askstring(
+            "ATLAS · Baseline command",
+            "Clean baseline test command (must pass before the reproducer is added):",
+            initialvalue=(
+                "forge test --offline"
+                if str(finding.get("language", "")).lower() in {"solidity", "yul"}
+                else "cargo test --workspace --offline"
+                if str(finding.get("language", "")).lower() == "rust"
+                else "python -m unittest discover -s tests"
+            ),
+            parent=self,
+        )
+        if not baseline_text:
+            return
+        try:
+            baseline_command = split_command(baseline_text)
+        except ValueError as exc:
+            messagebox.showerror("ATLAS proof verification", str(exc))
+            return
+        vulnerable_expected_exit = simpledialog.askinteger(
+            "ATLAS · Vulnerable result",
+            "Expected exit code for the vulnerable target (normally non-zero for a failing PoC):",
+            initialvalue=1,
+            minvalue=0,
+            maxvalue=255,
+            parent=self,
+        )
+        if vulnerable_expected_exit is None:
+            return
+        fixed_expected_exit = simpledialog.askinteger(
+            "ATLAS · Fixed result",
+            "Expected exit code for the fixed target:",
+            initialvalue=0,
+            minvalue=0,
+            maxvalue=255,
+            parent=self,
+        )
+        if fixed_expected_exit is None:
+            return
+        baseline_expected_exit = simpledialog.askinteger(
+            "ATLAS · Baseline health",
+            "Expected exit code for both clean baselines before the reproducer is added:",
+            initialvalue=0,
+            minvalue=0,
+            maxvalue=255,
+            parent=self,
+        )
+        if baseline_expected_exit is None:
+            return
+        property_text = simpledialog.askstring(
+            "ATLAS · Security property",
+            "State the security property the reproducer is intended to violate in the vulnerable state:",
+            initialvalue=str(finding.get("title") or finding.get("signal") or "").strip(),
+            parent=self,
+        )
+        if not property_text:
+            return
+        try:
+            command = split_command(command_text)
+        except ValueError as exc:
+            messagebox.showerror("ATLAS proof verification", str(exc))
+            return
+        trust_target = messagebox.askyesno(
+            "ATLAS · Execution trust",
+            "This executes target-controlled tests/build scripts in disposable copies with your privileges. "
+            "Proceed only for trusted local research targets.",
+            parent=self,
+        )
+        if not trust_target:
+            return
+        confirm = messagebox.askyesno(
+            "ATLAS · Execute proof",
+            "ATLAS will run the SAME reproducer against two distinct source states:\n\n"
+            "1) vulnerable target -> expected failing proof\n"
+            "2) fixed target -> expected passing proof\n\n"
+            "Both clean baselines must pass first. Source/input hashes and test execution are recorded.",
+            parent=self,
+        )
+        if not confirm:
+            return
+        payload = {
+            "target": self.current_target,
+            "fixed_target": fixed_target,
+            "finding": finding,
+            "command": command,
+            "baseline_command": baseline_command,
+            "vulnerable_expected_exit": vulnerable_expected_exit,
+            "fixed_expected_exit": fixed_expected_exit,
+            "baseline_expected_exit": baseline_expected_exit,
+            "security_property": property_text,
+            "reproducer": reproducer_path,
+            "trusted_target_code": trust_target,
+        }
+        self._run_task(
+            "PROOF VERIFY",
+            lambda: self._proof_verify_worker(payload),
+        )
+
+    def _proof_verify_worker(self, payload: dict[str, object]) -> dict[str, object]:
+        if not self.repo:
+            raise RuntimeError("Choose the ATLAS research repository first.")
+        result = run_proof_verification(
+            Path(str(payload["target"])).expanduser().resolve(),
+            Path(str(payload["fixed_target"])).expanduser().resolve(),
+            payload["finding"] if isinstance(payload["finding"], dict) else {},
+            payload["command"],
+            vulnerable_expected_exit=int(payload["vulnerable_expected_exit"]),
+            fixed_expected_exit=int(payload["fixed_expected_exit"]),
+            baseline_expected_exit=int(payload["baseline_expected_exit"]),
+            security_property=str(payload["security_property"]),
+            reproducer=Path(str(payload["reproducer"])).expanduser().resolve(),
+            baseline_command=payload["baseline_command"],
+            timeout_seconds=300,
+            trusted_target_code=bool(payload.get("trusted_target_code")),
+        )
+        result_path = write_proof_verification_result(
+            self.repo,
+            result,
+            report_path=self.current_report_path,
+        )
+        return {"proof_verification": result.as_dict(), "result_path": str(result_path)}
+
     def _verify_finding_worker(self, payload: dict[str, object]) -> dict[str, object]:
         if not self.repo:
             raise RuntimeError("Choose the ATLAS research repository first.")
@@ -2109,6 +2290,22 @@ class AtlasApp(tk.Tk):
                 if updated_finding else "E"
             )
             self.status.set(f"VERIFY FINDING · {outcome} · GRADE {grade}")
+            self.finding_detail.delete("1.0", "end")
+            self.finding_detail.insert("end", pretty(value))
+            self.show_page("Audit Findings")
+        elif name == "PROOF VERIFY":
+            proof = value.get("proof_verification", {}) if isinstance(value, dict) else {}
+            if isinstance(self.last_audit, dict) and isinstance(proof, dict):
+                finding_id = str(proof.get("finding_id", ""))
+                for index, finding in enumerate(self.last_audit.get("findings", [])):
+                    if isinstance(finding, dict) and str(finding.get("id")) == finding_id:
+                        finding.setdefault("proof_verifications", []).append(proof)
+                        self.last_audit["findings"][index] = finding
+                        break
+                self.current_target_report = self.last_audit
+                self._apply_target_report(self.last_audit)
+            outcome = str(proof.get("outcome", "unknown")).upper()
+            self.status.set(f"PROOF VERIFY · {outcome}")
             self.finding_detail.delete("1.0", "end")
             self.finding_detail.insert("end", pretty(value))
             self.show_page("Audit Findings")

@@ -403,6 +403,47 @@ class VerificationTests(unittest.TestCase):
             self.assertIn("workspace_hash_before_execution", binding)
             self.assertIn("workspace_hash_after_execution", binding)
 
+    def test_focused_reproducer_uses_clean_project_test_baseline(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            (project / "tests").mkdir(parents=True)
+            (project / "pyproject.toml").write_text(
+                "[project]\nname='focused-repro-fixture'\n",
+                encoding="utf-8",
+            )
+            (project / "tests" / "test_health.py").write_text(
+                "import unittest\n\n"
+                "class TestHealth(unittest.TestCase):\n"
+                "    def test_health(self):\n"
+                "        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            reproducer = Path(td) / "test_poc.py"
+            reproducer.write_text(
+                "import unittest\n\n"
+                "class TestPoC(unittest.TestCase):\n"
+                "    def test_security_property_fails(self):\n"
+                "        self.assertTrue(False)\n",
+                encoding="utf-8",
+            )
+            result = run_verification(
+                project,
+                {"id": "focused-repro"},
+                split_command("python -m unittest discover -s tests"),
+                expected_exit=1,
+                baseline_expected_exit=0,
+                mode="reproduction",
+                security_property="the security property is violated by the reproducer",
+                reproducer=reproducer,
+                timeout_seconds=30,
+            )
+            self.assertEqual("reproduced", result.outcome)
+            self.assertTrue(result.baseline["healthy"])
+            self.assertEqual(["python", "-m", "unittest", "discover", "-s", "tests"],
+                             result.baseline["command"])
+            self.assertEqual(1, result.tests_failed)
+            self.assertTrue(result.tests_executed)
+
     def test_reproduction_is_inconclusive_when_baseline_is_unhealthy(self):
         with tempfile.TemporaryDirectory() as td:
             project = Path(td)

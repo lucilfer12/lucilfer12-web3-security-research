@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -10,6 +11,7 @@ from typing import Mapping, Sequence
 
 
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
+_HOST_IS_WINDOWS = os.name == "nt"
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +44,87 @@ def _safe_env(env: Mapping[str, str] | None, allowlist: Sequence[str] | None) ->
     return {key: value for key, value in source.items() if key in allowed}
 
 
+def _sandbox_command(
+    command: Sequence[str],
+    *,
+    cwd: Path | None,
+    env: Mapping[str, str],
+) -> tuple[str, ...]:
+    """Wrap untrusted test execution in a Linux namespace sandbox when requested.
+
+    Bubblewrap provides a private PID/user/network namespace, a read-only system view,
+    hidden home directories, a writable disposable work tree, and a minimal environment.
+    It is opt-in so normal local development keeps the existing execution path.
+    """
+    if _HOST_IS_WINDOWS or str(env.get("ATLAS_EXECUTION_SANDBOX", os.environ.get("ATLAS_EXECUTION_SANDBOX", ""))).lower() != "bwrap":
+        return tuple(command)
+    if cwd is None or not cwd.exists():
+        raise ValueError("bubblewrap sandbox requires an existing working directory")
+    bwrap = shutil.which("bwrap")
+    if not bwrap:
+        raise RuntimeError("ATLAS_EXECUTION_SANDBOX=bwrap requested, but bubblewrap is not installed")
+
+    path = str(cwd.resolve())
+    args: list[str] = [
+        bwrap,
+        "--die-with-parent",
+        "--unshare-all",
+        "--new-session",
+        "--ro-bind", "/", "/",
+        "--tmpfs", "/home",
+        "--tmpfs", "/root",
+        "--tmpfs", "/run",
+        "--tmpfs", "/tmp",
+        "--bind", path, "/atlas-work",
+        "--chdir", "/atlas-work",
+        "--proc", "/proc",
+        "--dev", "/dev",
+        "--clearenv",
+        "--setenv", "PATH", env.get("PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")),
+        "--setenv", "HOME", "/root",
+        "--setenv", "TMPDIR", "/tmp",
+    ]
+
+    # Keep compiler/test tools reachable when distributions place them in $HOME,
+    # without exposing the rest of the host user's home directory.
+    tool_paths = []
+    for binary in (str(command[0]), "cargo", "forge", "rustc"):
+        resolved = shutil.which(binary, path=env.get("PATH")) or (binary if Path(binary).is_file() else None)
+        if resolved:
+            tool_paths.append(Path(resolved).resolve())
+    mounted_dirs: set[str] = set()
+    for tool in tool_paths:
+        parent = str(tool.parent)
+        if parent.startswith("/home/"):
+            parts = Path(parent).parts
+            current = Path("/home")
+            for part in parts[2:]:
+                current /= part
+                args.extend(["--dir", str(current)])
+            if str(parent) not in mounted_dirs:
+                args.extend(["--ro-bind", parent, parent])
+                mounted_dirs.add(str(parent))
+
+    # Cargo's offline registry/git cache is bind-mounted read-only when present.
+    for cache in (
+        Path.home() / ".cargo" / "registry",
+        Path.home() / ".cargo" / "git",
+        Path.home() / ".rustup",
+        Path.home() / ".foundry",
+    ):
+        resolved_cache = cache.resolve()
+        if resolved_cache.is_dir() and str(resolved_cache).startswith("/home/"):
+            parts = resolved_cache.parts
+            current = Path("/home")
+            for part in parts[2:]:
+                current /= part
+                args.extend(["--dir", str(current)])
+            args.extend(["--ro-bind", str(resolved_cache), str(resolved_cache)])
+
+    args.extend(["--", *map(str, command)])
+    return tuple(args)
+
+
 def run_bounded(
     command: Sequence[str],
     *,
@@ -57,14 +140,16 @@ def run_bounded(
     if max_output_bytes < 1024:
         raise ValueError("max_output_bytes must be >= 1024")
 
+    effective_env = _safe_env(env, env_allowlist)
+    effective_command = _sandbox_command(command, cwd=cwd, env=effective_env)
     process = subprocess.Popen(
-        list(command),
-        cwd=str(cwd) if cwd else None,
+        list(effective_command),
+        cwd=None if len(effective_command) != len(tuple(command)) else (str(cwd) if cwd else None),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.DEVNULL,
         text=False,
-        env=_safe_env(env, env_allowlist),
+        env=effective_env,
         **_windows_kwargs(),
     )
     stdout = bytearray()

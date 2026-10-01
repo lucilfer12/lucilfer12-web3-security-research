@@ -42,6 +42,10 @@ from .verification import (
     split_command,
     write_verification_result,
 )
+from .proof_verifier import (
+    run_proof_verification,
+    write_proof_verification_result,
+)
 from .versions import build_version_diff_report, write_version_diff_report
 
 
@@ -134,6 +138,12 @@ def main() -> int:
         default=0,
         help="expected exit code for the clean baseline run before reproduction",
     )
+    verify.add_argument(
+        "--baseline-command",
+        dest="baseline_command",
+        default=None,
+        help="optional clean-baseline test command; otherwise ATLAS reuses the verification command on the clean copy",
+    )
     verify.add_argument("--mode", choices=["baseline", "reproduction"], default="baseline")
     verify.add_argument("--security-property", required=True)
     verify.add_argument(
@@ -150,6 +160,36 @@ def main() -> int:
     )
     verify.add_argument("--os-root", default=".")
     verify.add_argument("--json", action="store_true")
+
+    proof_verify = sub.add_parser(
+        "verify-proof",
+        help="perform proof-grade differential verification against vulnerable and fixed targets",
+    )
+    proof_verify.add_argument("report", help="contract-audit JSON report for the vulnerable target")
+    proof_verify.add_argument("finding_id", help="finding id from the report")
+    proof_verify.add_argument("--fixed-target", required=True, help="local fixed/patched target copy or archive")
+    proof_verify.add_argument(
+        "--fixed-target-hash",
+        default=None,
+        help="optional expected source/input hash for the fixed target",
+    )
+    proof_verify.add_argument("--reproducer", required=True, help="focused reproducer/test")
+    proof_verify.add_argument("--command", dest="verify_command", required=True, help="local test command")
+    proof_verify.add_argument("--vulnerable-expected-exit", type=int, required=True)
+    proof_verify.add_argument("--fixed-expected-exit", type=int, default=0)
+    proof_verify.add_argument("--baseline-expected-exit", type=int, default=0)
+    proof_verify.add_argument(
+        "--baseline-command",
+        dest="baseline_command",
+        default=None,
+        help="clean baseline test command; use this when the reproduction command targets the PoC itself",
+    )
+    proof_verify.add_argument("--security-property", required=True)
+    proof_verify.add_argument("--timeout", type=int, default=300)
+    proof_verify.add_argument("--trust-target-code", action="store_true")
+    proof_verify.add_argument("--os-root", default=".")
+    proof_verify.add_argument("--json", action="store_true")
+
     federate = sub.add_parser("federate")
     federate.add_argument("path", nargs="?", default=".")
     federate.add_argument("--write", action="store_true")
@@ -501,6 +541,10 @@ def main() -> int:
                 security_property=args.security_property,
                 timeout_seconds=args.timeout,
                 reproducer=_root(args.reproducer) if args.reproducer else None,
+                baseline_command=(
+                    split_command(args.baseline_command)
+                    if args.baseline_command else None
+                ),
                 trusted_target_code=args.trust_target_code,
             )
             result_path = write_verification_result(
@@ -513,6 +557,57 @@ def main() -> int:
         payload["result_path"] = str(result_path)
         print(json.dumps(payload, indent=2, ensure_ascii=False) if args.json else human_outcome(result))
         return 0 if result.outcome in {"reproduced", "execution-pass"} else 1
+
+    if args.command == "verify-proof":
+        report_path = _root(args.report)
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"ERROR: cannot read audit report: {exc}")
+            return 2
+        finding = next(
+            (item for item in report.get("findings", []) if str(item.get("id")) == str(args.finding_id)),
+            None,
+        )
+        if finding is None:
+            print(f"ERROR: finding not found: {args.finding_id}")
+            return 2
+        target_path = _root(str(report.get("target", {}).get("path", "")))
+        if not target_path.exists():
+            print(f"ERROR: vulnerable target not found: {target_path}")
+            return 2
+        try:
+            result = run_proof_verification(
+                target_path,
+                _root(args.fixed_target),
+                finding,
+                split_command(args.verify_command),
+                vulnerable_expected_exit=args.vulnerable_expected_exit,
+                fixed_expected_exit=args.fixed_expected_exit,
+                baseline_expected_exit=args.baseline_expected_exit,
+                security_property=args.security_property,
+                reproducer=_root(args.reproducer),
+                baseline_command=(
+                    split_command(args.baseline_command)
+                    if args.baseline_command else None
+                ),
+                timeout_seconds=args.timeout,
+                fixed_target_hash_claim=args.fixed_target_hash,
+                trusted_target_code=args.trust_target_code,
+            )
+            result_path = write_proof_verification_result(
+                _root(args.os_root), result, report_path=report_path,
+            )
+        except (OSError, ValueError, VerificationRefused) as exc:
+            print(f"ERROR: proof verification failed to start: {exc}")
+            return 2
+        payload = result.as_dict()
+        payload["result_path"] = str(result_path)
+        print(
+            json.dumps(payload, indent=2, ensure_ascii=False)
+            if args.json else result.outcome.upper()
+        )
+        return 0 if result.confirmed else 1
 
     if args.command == "intake":
         target = _root(args.target)
