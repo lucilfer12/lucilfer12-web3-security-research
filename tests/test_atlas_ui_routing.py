@@ -109,7 +109,7 @@ def test_audit_selected_rejects_missing_target_without_running_audit(tmp_path):
     assert app.repo_called is False
     assert app.status.value == 'Selected target does not exist.'
 
-def test_saved_target_without_report_is_audited_on_startup(tmp_path, monkeypatch):
+def test_saved_target_without_report_is_not_audited_on_startup(tmp_path, monkeypatch):
     target = tmp_path / "saved.sol"
     target.write_text("contract Saved {}", encoding="utf-8")
     app = AtlasApp.__new__(AtlasApp)
@@ -120,4 +120,4 @@ def test_saved_target_without_report_is_audited_on_startup(tmp_path, monkeypatch
     app._start_initial_target_audit = lambda value: scheduled.append(("audit", value))
     monkeypatch.setattr("w3sec.atlas_ui_runtime.AtlasApp._restore_saved_target", lambda self: None)
     AtlasApp._restore_saved_target(app)
-    assert scheduled == [(500, scheduled[0][1])] or scheduled[0][0] == 500
+    assert scheduled == []

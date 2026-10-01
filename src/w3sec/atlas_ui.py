@@ -11,7 +11,7 @@ from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox, simpledialog
 from tkinter.scrolledtext import ScrolledText
 
 from PIL import Image, ImageOps, ImageTk
@@ -33,6 +33,7 @@ from .negative_knowledge import load_negative_results
 from .research_intelligence import build_research_metrics, write_longitudinal_report
 from .research_run import ResearchRun, resume_audit_run
 from .validator import validate_repo
+from .verification import human_outcome, run_verification, split_command, suggested_command, write_verification_result
 from .versions import build_version_diff_report, write_version_diff_report
 
 APP_NAME = "ATLAS"
@@ -259,8 +260,6 @@ class AtlasApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
         self.after(2500, self._live_refresh_tick)
-        if self.initial_target:
-            self.after(500, lambda: self._start_initial_target_audit(self.initial_target))
 
 
 
@@ -1056,6 +1055,7 @@ class AtlasApp(tk.Tk):
         self.finding_target_label.pack(fill="x", pady=(0, 3))
         tk.Label(page, text="Deterministic review leads · not automatic proof of exploitability", fg="#7193a7", bg="#06121f", font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 6))
         audit_actions = tk.Frame(page, bg="#06121f"); audit_actions.pack(fill="x", pady=(0, 8))
+        self._toolbar_button(audit_actions, "VERIFY SELECTED FINDING", self.verify_selected_finding)
         self._toolbar_button(audit_actions, "COPY CURRENT TARGET REPORT", self._copy_current_target_report)
         body = tk.Frame(page, bg="#06121f"); self._apply_background(body); body.pack(fill="both", expand=True)
         body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=2); body.rowconfigure(0, weight=1)
@@ -1305,16 +1305,126 @@ class AtlasApp(tk.Tk):
         return {"report": report, "report_path": str(path)}
 
 
-    def _finding_selected(self, _event=None) -> None:
+    def _selected_finding(self) -> dict[str, object] | None:
         if not self.finding_tree.curselection() or not isinstance(self.last_audit, dict):
-            return
-        report = self.last_audit
-        findings = report.get("findings", [])
+            return None
+        findings = self.last_audit.get("findings", [])
         index = self.finding_tree.curselection()[0]
-        if 0 <= index < len(findings):
-            self.finding_detail.delete("1.0", "end")
-            self.finding_detail.insert("end", pretty(findings[index]))
+        return findings[index] if isinstance(findings, list) and 0 <= index < len(findings) and isinstance(findings[index], dict) else None
 
+    def _finding_selected(self, _event=None) -> None:
+        finding = self._selected_finding()
+        if finding is None:
+            return
+        self.finding_detail.delete("1.0", "end")
+        self.finding_detail.insert("end", pretty(finding))
+
+    def verify_selected_finding(self) -> None:
+        finding = self._selected_finding()
+        if finding is None:
+            messagebox.showinfo("ATLAS verification", "Select a finding first.")
+            return
+        if not self.current_target or not self.current_report_path:
+            messagebox.showinfo(
+                "ATLAS verification",
+                "Run an explicit target audit first so ATLAS has a pinned report and target.",
+            )
+            return
+        suggested = suggested_command(self.current_target)
+        initial_command = " ".join(suggested) if suggested else (
+            "forge test --offline -vv"
+            if str(finding.get("language", "")).lower() == "solidity"
+            else "cargo test --workspace --offline"
+            if str(finding.get("language", "")).lower() == "rust"
+            else ""
+        )
+        command_text = simpledialog.askstring(
+            "ATLAS · Verify finding",
+            "Local verification command (test/build only):",
+            initialvalue=initial_command,
+            parent=self,
+        )
+        if not command_text:
+            return
+        expected_exit = simpledialog.askinteger(
+            "ATLAS · Expected result",
+            "Expected process exit code:",
+            initialvalue=0,
+            minvalue=0,
+            maxvalue=255,
+            parent=self,
+        )
+        if expected_exit is None:
+            return
+        mode = simpledialog.askstring(
+            "ATLAS · Verification mode",
+            "Mode: baseline or reproduction",
+            initialvalue="reproduction",
+            parent=self,
+        )
+        mode = (mode or "reproduction").strip().lower()
+        if mode not in {"baseline", "reproduction"}:
+            messagebox.showerror("ATLAS verification", "Mode must be baseline or reproduction.")
+            return
+        property_text = simpledialog.askstring(
+            "ATLAS · Security property",
+            "State the security property this test is intended to prove/disprove:",
+            initialvalue=str(finding.get("title") or finding.get("signal") or "").strip(),
+            parent=self,
+        )
+        if not property_text:
+            return
+        try:
+            command = split_command(command_text)
+        except ValueError as exc:
+            messagebox.showerror("ATLAS verification", str(exc))
+            return
+        confirm = messagebox.askyesno(
+            "ATLAS · Execute verification",
+            "ATLAS will make an isolated copy of the selected target and execute only "
+            "the approved local test/build command there. The original target is not modified.\n\n"
+            f"Command: {' '.join(command)}\n"
+            f"Mode: {mode}\n"
+            f"Expected exit: {expected_exit}\n\n"
+            "A reproduced result is evidence for the security-property gate; an ordinary "
+            "passing test is not, by itself, proof that the finding is false.",
+            parent=self,
+        )
+        if not confirm:
+            return
+        payload = {
+            "target": self.current_target,
+            "finding": finding,
+            "command": command,
+            "expected_exit": expected_exit,
+            "mode": mode,
+            "security_property": property_text,
+        }
+        self._run_task(
+            "VERIFY FINDING",
+            lambda: self._verify_finding_worker(payload),
+        )
+
+    def _verify_finding_worker(self, payload: dict[str, object]) -> dict[str, object]:
+        if not self.repo:
+            raise RuntimeError("Choose the ATLAS research repository first.")
+        target = Path(str(payload["target"])).expanduser().resolve()
+        finding = payload["finding"]
+        result = run_verification(
+            target,
+            finding if isinstance(finding, dict) else {},
+            payload["command"],
+            expected_exit=int(payload["expected_exit"]),
+            mode=str(payload["mode"]),
+            security_property=str(payload["security_property"]),
+            timeout_seconds=300,
+        )
+        result_path = write_verification_result(
+            self.repo,
+            result,
+            report_path=self.current_report_path,
+        )
+        return {"verification": result.as_dict(), "result_path": str(result_path)}
 
     def open_report(self, relative: str) -> None:
         if not self.repo:
@@ -1634,9 +1744,14 @@ class AtlasApp(tk.Tk):
             for finding in report.get("findings", []):
                 score = finding.get("triage_score", 0)
                 scope = finding.get("scope", "?")
+                status = str(finding.get("status", "candidate")).upper()
+                hint = str(finding.get("severity_hint", finding.get("priority", "?"))).upper()
+                grade = str(
+                    (finding.get("verification") or {}).get("evidence_grade", "E")
+                ).upper()
                 self.finding_tree.insert(
                     "end",
-                    f"[{finding.get('priority','?').upper():8}] [{scope[:10]:10}] S{score:02} "
+                    f"[{status[:10]:10}] [{hint[:6]:6}] G{grade} S{score:02} "
                     f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
                 )
             self.show_page("Audit Findings")
@@ -1667,6 +1782,22 @@ class AtlasApp(tk.Tk):
             self.finding_detail.delete("1.0", "end")
             self.finding_detail.insert("end", pretty(report))
             self.show_page("Audit Findings")
+        elif name == "VERIFY FINDING":
+            verification = value.get("verification", {}) if isinstance(value, dict) else {}
+            if isinstance(self.last_audit, dict) and isinstance(verification, dict):
+                finding_id = str(verification.get("finding_id", ""))
+                for finding in self.last_audit.get("findings", []):
+                    if isinstance(finding, dict) and str(finding.get("id")) == finding_id:
+                        finding.setdefault("verifications", []).append(verification)
+                        break
+                self.current_target_report = self.last_audit
+                self._apply_target_report(self.last_audit)
+            outcome = str(verification.get("outcome", "unknown")).upper().replace("-", " ")
+            self.status.set(f"VERIFY FINDING · {outcome}")
+            self.finding_detail.delete("1.0", "end")
+            self.finding_detail.insert("end", pretty(value))
+            self.show_page("Audit Findings")
+
         elif name == "FULL REFRESH":
             # An explicit repository operation starts the live research session.
             self.session_active = True

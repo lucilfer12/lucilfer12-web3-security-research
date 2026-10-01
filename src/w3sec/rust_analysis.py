@@ -240,7 +240,9 @@ class RustIndex:
                 if last is None:
                     return None
                 chains.append(last)
-                return min(chains, key=len)
+                # Both branches must prove the charge. Never discard an unproven branch
+                # merely because the other branch has a shorter proof chain.
+                return [step for chain in chains for step in chain]
             return None
 
 

@@ -58,15 +58,28 @@ def evaluate_finding(finding: dict[str, Any]) -> GateResult:
         verification.get("security_property")
         or finding.get("security_property")
     )
+    verification_runs = finding.get("verifications")
+    verification_runs = verification_runs if isinstance(verification_runs, list) else []
+    reproduced_runs = [
+        item for item in verification_runs
+        if isinstance(item, dict)
+        and item.get("outcome") == "reproduced"
+        and str(item.get("security_property") or "").strip()
+    ]
     reproduction = _truth(verification.get("reproduction")) or _truth(
         finding.get("reproduction_status")
-    )
+    ) or bool(reproduced_runs)
+    if not security_property and reproduced_runs:
+        security_property = True
     impact = _truth(verification.get("impact")) or _truth(
         finding.get("impact_status")
     )
     independent = _truth(
         verification.get("independent_verification")
     ) or _truth(finding.get("independent_verification"))
+    # Multiple reproductions do not automatically prove independence. A second
+    # runner/test may share the same harness or failure mechanism, so independence
+    # remains an explicit evidence field rather than an inferred state.
     regression = _truth(
         verification.get("regression")
     ) or _truth(finding.get("regression_status"))

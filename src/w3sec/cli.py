@@ -34,6 +34,13 @@ from .research_intelligence import (
     build_research_metrics, write_longitudinal_report,
 )
 from .validator import validate_repo
+from .verification import (
+    default_command,
+    human_outcome,
+    run_verification,
+    split_command,
+    write_verification_result,
+)
 from .versions import build_version_diff_report, write_version_diff_report
 
 
@@ -111,6 +118,20 @@ def main() -> int:
     contract_audit.add_argument("target")
     contract_audit.add_argument("--os-root", default=".")
     contract_audit.add_argument("--json", action="store_true")
+
+    verify = sub.add_parser(
+        "verify-finding",
+        help="run an explicit local verification on an isolated target copy",
+    )
+    verify.add_argument("report", help="contract-audit JSON report")
+    verify.add_argument("finding_id", help="finding id from the report")
+    verify.add_argument("--command", dest="verify_command", required=True, help="local test/build command")
+    verify.add_argument("--expected-exit", type=int, default=0)
+    verify.add_argument("--mode", choices=["baseline", "reproduction"], default="baseline")
+    verify.add_argument("--security-property", required=True)
+    verify.add_argument("--timeout", type=int, default=300)
+    verify.add_argument("--os-root", default=".")
+    verify.add_argument("--json", action="store_true")
     federate = sub.add_parser("federate")
     federate.add_argument("path", nargs="?", default=".")
     federate.add_argument("--write", action="store_true")
@@ -429,6 +450,46 @@ def main() -> int:
             s = report["summary"]
             print(f"findings={s['finding_count']} critical={s['critical']} high={s['high']} medium={s['medium']} low={s['low']}")
         return 0
+
+    if args.command == "verify-finding":
+        report_path = _root(args.report)
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"ERROR: cannot read audit report: {exc}")
+            return 2
+        finding = next(
+            (item for item in report.get("findings", []) if str(item.get("id")) == str(args.finding_id)),
+            None,
+        )
+        if finding is None:
+            print(f"ERROR: finding not found: {args.finding_id}")
+            return 2
+        target_path = _root(str(report.get("target", {}).get("path", "")))
+        if not target_path.exists():
+            print(f"ERROR: report target not found: {target_path}")
+            return 2
+        try:
+            command = split_command(args.verify_command)
+            result = run_verification(
+                target_path,
+                finding,
+                command,
+                expected_exit=args.expected_exit,
+                mode=args.mode,
+                security_property=args.security_property,
+                timeout_seconds=args.timeout,
+            )
+            result_path = write_verification_result(
+                _root(args.os_root), result, report_path=report_path,
+            )
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: verification failed to start: {exc}")
+            return 2
+        payload = result.as_dict()
+        payload["result_path"] = str(result_path)
+        print(json.dumps(payload, indent=2, ensure_ascii=False) if args.json else human_outcome(result))
+        return 0 if result.outcome in {"reproduced", "execution-pass"} else 1
 
     if args.command == "intake":
         target = _root(args.target)

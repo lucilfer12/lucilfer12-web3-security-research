@@ -85,12 +85,30 @@ pub fn decode(input: &[u8]) -> Result<(), ()> {
     def test_gas_summary_requires_charge_on_all_paths(self):
         charging = "fn charge(ctx: &mut HostCtx) { pay_base(ctx); }"
         conditional = "fn conditional_charge(ctx: &mut HostCtx, ok: bool) { if ok { pay_base(ctx); } }"
+        both = """fn both(ctx: &mut HostCtx, ok: bool) {
+    if ok {
+        pay_base(ctx);
+    } else {
+        use_gas(ctx);
+    }
+}"""
+        one_branch = """fn one_branch(ctx: &mut HostCtx, ok: bool) {
+    if ok {
+        pay_base(ctx);
+    } else {
+        read_memory(ptr);
+    }
+}"""
         index = RustIndex()
         index.add_file("a.rs", function_regions(charging))
         index.add_file("b.rs", function_regions(conditional))
+        index.add_file("c.rs", function_regions(both))
+        index.add_file("d.rs", function_regions(one_branch))
         index.finalize()
         self.assertIn("charge", index.charge_proof)
         self.assertNotIn("conditional_charge", index.charge_proof)
+        self.assertIn("both", index.charge_proof)
+        self.assertNotIn("one_branch", index.charge_proof)
 
     def test_analyse_gas_finds_work_before_direct_charge(self):
         body = "{ read_memory(ptr); pay_base(ctx); }"
@@ -167,8 +185,48 @@ fn get_memory_or_register(
         index.add_file("host.rs", function_regions(_mask_non_code(source)))
         index.finalize()
         self.assertIn("get_memory_or_register", index.charge_proof)
-        self.assertEqual(["registers.get"],
-                         index.charge_proof["get_memory_or_register"])
+        self.assertIn("registers.get", index.charge_proof["get_memory_or_register"])
+        self.assertIn("read_memory", index.charge_proof["get_memory_or_register"])
+        self.assertIn("pay_base", index.charge_proof["get_memory_or_register"])
+
+    def test_nearcore_gas_wrapper_is_not_reported_as_ordering_bug(self):
+        source = """
+fn read_memory(gas_counter: &mut GasCounter, memory: &[u8], ptr: u64, len: u64) -> Result<&[u8]> {
+    gas_counter.pay_base(read_memory_base)?;
+    gas_counter.pay_per(read_memory_byte, len)?;
+    read_memory_for_free(memory, ptr, len)
+}
+
+fn get_memory_or_register<'a>(
+    gas_counter: &mut GasCounter,
+    memory: &'a [u8],
+    registers: &'a Registers,
+    ptr: u64,
+    len: u64,
+) -> Result<&'a [u8]> {
+    if len == u64::MAX {
+        registers.get(gas_counter, ptr)
+    } else {
+        read_memory(gas_counter, memory, ptr, len)
+    }
+}
+
+fn read_and_parse_account_id(
+    gas_counter: &mut GasCounter,
+    memory: &[u8],
+    registers: &Registers,
+    ptr: u64,
+    len: u64,
+) -> Result<AccountId> {
+    let buf = get_memory_or_register(gas_counter, memory, registers, ptr, len)?;
+    gas_counter.pay_base(utf8_decoding_base)?;
+    String::from_utf8(buf.into()).map_err(|_| HostError::BadUTF8)
+}
+"""
+        hits = _rust_semantic_findings(
+            "runtime/near-vm-runner/src/logic/host.rs", source, "production"
+        )
+        self.assertFalse(any(x["signal"] == "gas_ordering" for x in hits))
 
     def test_triage_score_uses_security_signal_and_guard_evidence(self):
         base = {

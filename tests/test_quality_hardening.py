@@ -54,6 +54,22 @@ class QualityHardeningTests(unittest.TestCase):
         self.assertEqual("candidate", candidate["status"])
         self.assertFalse(candidate["verification"]["gates"]["reproduction"])
 
+        reproduced = attach_gate({
+            "id": "F-2",
+            "signal": "unchecked_input_arithmetic",
+            "file": "runtime.rs",
+            "line": 42,
+            "source_hash": "b" * 64,
+            "verifications": [{
+                "outcome": "reproduced",
+                "security_property": "checked arithmetic preserves accounting invariant",
+                "command": ["cargo", "test", "repro_a"],
+            }],
+        })
+        self.assertEqual("reproduced", reproduced["status"])
+        self.assertTrue(reproduced["verification"]["gates"]["security_property"])
+        self.assertTrue(reproduced["verification"]["gates"]["reproduction"])
+
         validated = evaluate_finding({
             "file": "Vault.sol",
             "line": 12,

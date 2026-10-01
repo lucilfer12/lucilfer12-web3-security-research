@@ -26,10 +26,9 @@ from .atlas_ui import (
 
 class AtlasApp(_AtlasApp):
     def _restore_saved_target(self) -> None:
+        # Restoring a remembered target must never trigger a hidden audit.
+        # Startup is passive; auditing requires an explicit user action.
         super()._restore_saved_target()
-        if self.current_target and not self.current_target_report:
-            target = self.current_target
-            self.after(500, lambda t=target: self._start_initial_target_audit(t))
 
     def _dashboard_activity(self, parent: tk.Frame) -> None:
         pane = tk.Frame(parent, bg="#06121f")
