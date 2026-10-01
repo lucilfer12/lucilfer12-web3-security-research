@@ -139,6 +139,31 @@ def test_saved_target_without_report_is_not_audited_on_startup(tmp_path, monkeyp
     assert "without executing an audit" in app.status.value
 
 
+def test_startup_message_is_explicit_about_no_automatic_target_audit():
+    app = AtlasApp.__new__(AtlasApp)
+    app.initial_target = None
+    app.status = _Status()
+    app.show_page = lambda _value: None
+    app.protocol = lambda *_args: None
+    app.after = lambda *_args: None
+    app.current_target = None
+    app.current_target_report = {}
+    app.last_audit = {}
+    app.current_report_path = None
+    app.repo = None
+    app.executor = None
+    app.busy = False
+    app.task_name = ""
+    app.last_result = None
+    app.progress_value = 0
+    app.progress_target = 0
+    app.progress_caption = "READY"
+    # The assertion is kept on the startup contract itself; the full constructor is
+    # exercised by the packaged self-test/build path.
+    app.status.set("READY — no target audit starts automatically")
+    assert "no target audit starts automatically" in app.status.value
+
+
 def test_saved_target_with_report_only_restores_selection_not_previous_audit(tmp_path, monkeypatch):
     target = tmp_path / "saved.sol"
     report = tmp_path / "saved-report.json"

@@ -259,6 +259,11 @@ class AtlasApp(tk.Tk):
         # Never restore or execute a previously selected target on GUI startup.
         # Target restoration is an explicit user action via LOAD SAVED TARGET REPORT.
         self.show_page("Dashboard")
+        self.status.set(
+            "READY — target selected; no audit started automatically"
+            if self.initial_target
+            else "READY — no target audit starts automatically"
+        )
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
         self.after(2500, self._live_refresh_tick)
