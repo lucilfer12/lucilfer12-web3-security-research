@@ -41,11 +41,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ATLAS-windows-x64
-          path: |
-            dist/ATLAS.exe
-            dist/atlas-cli.exe
-            dist/ATLAS.exe.sha256
-            dist/atlas-cli.exe.sha256
-            dist/BUILD-MANIFEST.txt
-            dist/ATLAS-windows-x64.zip
+          path: dist/ATLAS-windows-x64.zip
           if-no-files-found: error
