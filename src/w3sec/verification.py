@@ -461,14 +461,24 @@ def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str
         toolchains = ["cargo", *toolchains]
     for toolchain in toolchains:
         if toolchain == "foundry" and shutil.which("forge"):
+            if reproducer is not None:
+                return (
+                    "forge", "test", "--offline", "-vv",
+                    "--match-path", f"test/{reproducer.name}",
+                )
             return ("forge", "test", "--offline", "-vv")
         if toolchain == "cargo" and shutil.which("cargo"):
             project = target if target.is_dir() else target.parent
-            command = ["cargo", "test", "--workspace", "--offline"]
+            if reproducer is not None and reproducer.suffix.lower() == ".rs":
+                command = ["cargo", "test", "--test", reproducer.stem, "--offline"]
+            else:
+                command = ["cargo", "test", "--workspace", "--offline"]
             if (project / "Cargo.lock").is_file():
                 command.append("--locked")
             return tuple(command)
         if toolchain == "python" and shutil.which("pytest"):
+            if reproducer is not None:
+                return ("pytest", "-q", f"tests/{reproducer.name}")
             return ("pytest", "-q")
     return None
 

@@ -55,6 +55,36 @@ class VerificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_command(("forge", "test"))
 
+    def test_focused_reproducer_command_for_native_foundry_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "project"
+            root.mkdir()
+            (root / "foundry.toml").write_text("[profile.default]\nsrc='src'\n", encoding="utf-8")
+            repro = Path(td) / "PoC.t.sol"
+            repro.write_text("contract PoC {}", encoding="utf-8")
+            with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\forge.exe"):
+                self.assertEqual(
+                    ("forge", "test", "--offline", "-vv", "--match-path", f"test/{repro.name}"),
+                    __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(root, repro),
+                )
+
+    def test_focused_reproducer_command_for_native_cargo_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "project"
+            root.mkdir()
+            (root / "Cargo.toml").write_text(
+                "[package]\nname='demo'\nversion='0.1.0'\nedition='2021'\n",
+                encoding="utf-8",
+            )
+            (root / "Cargo.lock").write_text("# generated\n", encoding="utf-8")
+            repro = Path(td) / "poc.rs"
+            repro.write_text("#[test] fn poc() {}", encoding="utf-8")
+            with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\cargo.exe"):
+                self.assertEqual(
+                    ("cargo", "test", "--test", "poc", "--offline", "--locked"),
+                    __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(root, repro),
+                )
+
     def test_cargo_default_adds_locked_when_lockfile_exists(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -101,7 +131,7 @@ class VerificationTests(unittest.TestCase):
                 self.assertEqual(["foundry"], target_toolchains(workspace))
                 with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\forge.exe"):
                     self.assertEqual(
-                        ("forge", "test", "--offline", "-vv"),
+                        ("forge", "test", "--offline", "-vv", "--match-path", f"test/{reproducer.name}"),
                         __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(
                             target, reproducer
                         ),
@@ -166,7 +196,7 @@ class VerificationTests(unittest.TestCase):
                 )
                 with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\cargo.exe"):
                     self.assertEqual(
-                        ("cargo", "test", "--workspace", "--offline"),
+                        ("cargo", "test", "--test", reproducer.stem, "--offline"),
                         __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(
                             target, reproducer
                         ),

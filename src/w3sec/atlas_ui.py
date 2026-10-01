@@ -1550,7 +1550,10 @@ class AtlasApp(tk.Tk):
         reproducer_path = None
         suggested = suggested_command(self.current_target)
         target_suffix = self.current_target.suffix.lower()
+        language = str(finding.get("language") or target_suffix.lstrip(".")).lower()
+        reproducer_prompted = False
         if suggested is None and target_suffix in {".sol", ".rs"}:
+            reproducer_prompted = True
             is_solidity = target_suffix == ".sol"
             target_label = "Solidity" if is_solidity else "Rust"
             reproducer_glob = "*.sol" if is_solidity else "*.rs"
@@ -1569,6 +1572,30 @@ class AtlasApp(tk.Tk):
                 chosen = filedialog.askopenfilename(
                     title=f"Choose {target_label} reproducer",
                     filetypes=[(f"{target_label} files", reproducer_glob), ("All files", "*.*")],
+                )
+                if chosen:
+                    reproducer_path = Path(chosen).resolve()
+                    suggested = suggested_command(self.current_target, reproducer_path)
+        if suggested is not None and not reproducer_prompted:
+            glob = (
+                "*.t.sol *.sol" if language in {"solidity", "yul"} else
+                "*.rs" if language == "rust" else
+                "*.py" if language in {"python", "py"} else
+                "*.*"
+            )
+            attach = messagebox.askyesno(
+                "ATLAS verification",
+                "Attach a focused reproducer / PoC test for this finding?\n\n"
+                "ATLAS will copy the target and the selected test into a disposable "
+                "verification workspace, then run the focused test command. "
+                "The original project is not modified.",
+                parent=self,
+            )
+            if attach:
+                reproducer_prompted = True
+                chosen = filedialog.askopenfilename(
+                    title="Choose reproducer / PoC test",
+                    filetypes=[("Reproducer", glob), ("All files", "*.*")],
                 )
                 if chosen:
                     reproducer_path = Path(chosen).resolve()
