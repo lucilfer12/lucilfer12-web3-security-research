@@ -42,21 +42,18 @@ jobs:
       - name: Install bubblewrap
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
 
-      - name: Download and authenticate vulnerable source
+      - name: Fetch exact vulnerable source commit
         run: |
           set -euxo pipefail
-          curl -L --fail --retry 3 --retry-delay 2 \
-            "https://codeload.github.com/hackenproof-public/rain-usdr-contracts/zip/bd6e03abe34936b7dbece2509b90457bd5c9b119" \
-            -o rain-usdr.zip
-          echo "33517d733a5c17ae3f25b13cca6b02db4943b7b1ef9d6c8ff9d78309d191d74d  rain-usdr.zip" | sha256sum -c -
+          git clone --no-tags --no-checkout https://github.com/hackenproof-public/rain-usdr-contracts.git rain-vulnerable
+          git -C rain-vulnerable fetch --depth 1 origin bd6e03abe34936b7dbece2509b90457bd5c9b119
+          git -C rain-vulnerable checkout --detach FETCH_HEAD
+          test "$(git -C rain-vulnerable rev-parse HEAD)" = "bd6e03abe34936b7dbece2509b90457bd5c9b119"
 
       - name: Prepare vulnerable and candidate-fixed states
         run: |
           set -euxo pipefail
-          unzip -q rain-usdr.zip
-          mv "rain-usdr-contracts-bd6e03abe34936b7dbece2509b90457bd5c9b119" rain-vulnerable
           cp -a rain-vulnerable rain-fixed
-          rm -f rain-usdr.zip
           for d in rain-vulnerable rain-fixed; do
             cd "$GITHUB_WORKSPACE/$d"
             npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund @openzeppelin/contracts@5.4.0
