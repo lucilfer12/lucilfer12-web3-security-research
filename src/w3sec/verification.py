@@ -45,6 +45,8 @@ class VerificationResult:
     target_input_hash: str
     target_input_hash_after: str
     source_hash_claim: str | None
+    target_input_hash_claim: str | None
+    source_hash_match: bool | None
     security_property: str
     stdout: str
     stderr: str
@@ -72,6 +74,8 @@ class VerificationResult:
             "target_input_hash": self.target_input_hash,
             "target_input_hash_after": self.target_input_hash_after,
             "source_hash_claim": self.source_hash_claim,
+            "target_input_hash_claim": self.target_input_hash_claim,
+            "source_hash_match": self.source_hash_match,
             "binding": {
                 "workspace_hash_before_execution": self.target_hash,
                 "workspace_hash_after_execution": self.workspace_hash_after,
@@ -237,17 +241,26 @@ def _prepare_standalone_foundry(workspace: Path, target: Path, reproducer: Path)
     return workspace
 
 
+def _reproducer_destination(project: Path, reproducer: Path) -> Path:
+    """Choose the native test location for the detected project toolchain."""
+    if (project / "foundry.toml").is_file():
+        return project / "test" / reproducer.name
+    if (project / "Cargo.toml").is_file():
+        return project / "tests" / reproducer.name
+    if any((project / marker).is_file() for marker in ("pyproject.toml", "pytest.ini", "setup.py")):
+        return project / "tests" / reproducer.name
+    return project / "test" / reproducer.name
+
+
 def _attach_reproducer(project: Path, reproducer: Path, target: Path, standalone: bool) -> Path:
     reproducer = reproducer.expanduser().resolve()
     if not reproducer.exists():
         raise FileNotFoundError(reproducer)
+    destination = _reproducer_destination(project, reproducer)
     if reproducer.is_dir():
-        destination = project / "test" / reproducer.name
         _copy_tree(reproducer, destination)
         return destination
-    destination_dir = project / "test"
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination = destination_dir / reproducer.name
+    destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(reproducer, destination)
     if standalone and target.suffix.lower() == ".sol":
         (project / "foundry.toml").write_text(
@@ -311,13 +324,32 @@ def _find_project_root(workspace: Path) -> Path:
     return workspace
 
 
+_HASH_IGNORED_DIRS = {
+    ".git", "target", "out", "cache", ".cache", ".venv", "venv",
+    "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
+}
+
+
+def _hashable_files(root: Path):
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            parts = path.relative_to(root).parts
+        except ValueError:
+            continue
+        if any(part.lower() in _HASH_IGNORED_DIRS for part in parts[:-1]):
+            continue
+        yield path
+
+
 def workspace_hash(root: Path) -> str:
     digest = hashlib.sha256()
     if root.is_file():
         digest.update(root.name.encode())
         digest.update(root.read_bytes())
         return digest.hexdigest()
-    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+    for path in sorted(_hashable_files(root)):
         rel = path.relative_to(root).as_posix()
         digest.update(rel.encode())
         digest.update(b"\0")
@@ -427,6 +459,17 @@ def run_verification(
     workspace_before = workspace_hash(project)
     input_hash = target_input_hash(target)
     source_hash_claim = str(finding.get("source_hash")) if finding.get("source_hash") else None
+    input_hash_claim = (
+        str(finding.get("target_input_sha256"))
+        if finding.get("target_input_sha256")
+        else None
+    )
+    source_hash_match = (input_hash == input_hash_claim) if input_hash_claim else None
+    if input_hash_claim and not source_hash_match:
+        shutil.rmtree(base, ignore_errors=True)
+        raise ValueError(
+            "Verification target binding mismatch: the finding was generated from different input bytes."
+        )
     toolchain = detect_toolchain(project)
     started = time.perf_counter()
     try:
@@ -466,6 +509,8 @@ def run_verification(
             target_input_hash=input_hash,
             target_input_hash_after=original_after,
             source_hash_claim=source_hash_claim,
+            target_input_hash_claim=input_hash_claim,
+            source_hash_match=source_hash_match,
             security_property=security_property.strip(),
             stdout=result.stdout,
             stderr=result.stderr,

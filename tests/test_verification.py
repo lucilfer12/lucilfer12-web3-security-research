@@ -82,6 +82,40 @@ class VerificationTests(unittest.TestCase):
                 import shutil
                 shutil.rmtree(base, ignore_errors=True)
 
+    def test_workspace_hash_ignores_generated_build_outputs(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "project"
+            (root / "src").mkdir(parents=True)
+            (root / "src" / "C.sol").write_text("contract C {}", encoding="utf-8")
+            before = workspace_hash(root)
+            (root / "out").mkdir()
+            (root / "out" / "C.json").write_text("generated", encoding="utf-8")
+            (root / "target").mkdir()
+            (root / "target" / "debug.bin").write_bytes(b"generated")
+            self.assertEqual(before, workspace_hash(root))
+            (root / "src" / "C.sol").write_text("contract C { uint x; }", encoding="utf-8")
+            self.assertNotEqual(before, workspace_hash(root))
+
+    def test_cargo_reproducer_uses_native_tests_directory(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "project"
+            root.mkdir()
+            (root / "Cargo.toml").write_text(
+                "[package]\nname='demo'\nversion='0.1.0'\nedition='2021'\n",
+                encoding="utf-8",
+            )
+            reproducer = Path(td) / "repro.rs"
+            reproducer.write_text("#[test] fn repro() {}", encoding="utf-8")
+            (root / "src").mkdir()
+            (root / "src" / "lib.rs").write_text("", encoding="utf-8")
+            base, workspace = prepare_workspace(root, reproducer=reproducer)
+            try:
+                self.assertTrue((workspace / "tests" / "repro.rs").is_file())
+                self.assertFalse((workspace / "test" / "repro.rs").exists())
+            finally:
+                import shutil
+                shutil.rmtree(base, ignore_errors=True)
+
     def test_workspace_is_an_isolated_copy(self):
         with tempfile.TemporaryDirectory() as td:
             source = Path(td) / "project"
@@ -254,6 +288,30 @@ class VerificationTests(unittest.TestCase):
             updated = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual("reproduced", updated["findings"][0]["verification"]["derived_status"])
             self.assertTrue(updated["findings"][0]["verification"]["gates"]["reproduction"])
+
+    def test_verification_blocks_wrong_input_bytes_from_a_pinned_finding(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            project.mkdir()
+            (project / "pyproject.toml").write_text(
+                "[project]\nname='verify-fixture'\n",
+                encoding="utf-8",
+            )
+            target = project / "target.py"
+            target.write_text("print('original')\n", encoding="utf-8")
+            finding = {
+                "id": "binding-test",
+                "file": "target.py",
+                "line": 1,
+                "target_input_sha256": "0" * 64,
+            }
+            with self.assertRaises(ValueError):
+                run_verification(
+                    project,
+                    finding,
+                    ("python", "-m", "unittest"),
+                    security_property="input binding must remain exact",
+                )
 
     def test_missing_property_invalid_mode_and_escape_are_rejected(self):
         with tempfile.TemporaryDirectory() as td:

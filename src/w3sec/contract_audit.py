@@ -400,6 +400,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
     for i, item in enumerate(findings, 1):
         item["id"] = f"atlas-review-{i:04d}"
         item["source_hash"] = intake["target"]["source_hash"]
+        item["target_input_sha256"] = intake["target"].get("input_sha256")
         findings[i - 1] = attach_gate(item)
 
     status_counts: dict[str, int] = {}
