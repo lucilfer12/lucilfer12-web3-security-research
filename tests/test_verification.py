@@ -8,6 +8,7 @@ from unittest.mock import patch
 from w3sec.verification import (
     _attach_to_report,
     default_command,
+    prepare_baseline_workspace,
     prepare_workspace,
     run_verification,
     split_command,
@@ -111,6 +112,30 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual([], target_toolchains(sol))
             self.assertEqual([], target_toolchains(rs))
             self.assertEqual([], target_toolchains(py))
+
+    def test_standalone_baseline_workspace_has_a_real_health_test(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            sol = root / "Target.sol"
+            rs = root / "Target.rs"
+            sol.write_text(
+                "pragma solidity ^0.8.20; contract Target { uint256 public x; }",
+                encoding="utf-8",
+            )
+            rs.write_text("pub fn value() -> u64 { 7 }", encoding="utf-8")
+            sol_base, sol_workspace = prepare_baseline_workspace(sol)
+            rs_base, rs_workspace = prepare_baseline_workspace(rs)
+            try:
+                self.assertTrue((sol_workspace / "foundry.toml").is_file())
+                self.assertTrue((sol_workspace / "test" / "AtlasBaseline.t.sol").is_file())
+                self.assertTrue((rs_workspace / "Cargo.toml").is_file())
+                self.assertTrue((rs_workspace / "tests" / "atlas_baseline.rs").is_file())
+                self.assertEqual(("foundry",), tuple(target_toolchains(sol_workspace)))
+                self.assertEqual(("cargo",), tuple(target_toolchains(rs_workspace)))
+            finally:
+                import shutil
+                shutil.rmtree(sol_base, ignore_errors=True)
+                shutil.rmtree(rs_base, ignore_errors=True)
 
     def test_standalone_solidity_with_reproducer_gets_foundry_harness(self):
         with tempfile.TemporaryDirectory() as td:
@@ -439,8 +464,7 @@ class VerificationTests(unittest.TestCase):
             )
             self.assertEqual("reproduced", result.outcome)
             self.assertTrue(result.baseline["healthy"])
-            self.assertEqual(["python", "-m", "unittest", "discover", "-s", "tests"],
-                             result.baseline["command"])
+            self.assertEqual(["pytest", "-q"], result.baseline["command"])
             self.assertEqual(1, result.tests_failed)
             self.assertTrue(result.tests_executed)
 

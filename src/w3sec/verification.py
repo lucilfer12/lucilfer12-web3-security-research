@@ -254,11 +254,13 @@ def _remove_reproducer_from_baseline(
     return False
 
 
-def _prepare_standalone_rust(workspace: Path, target: Path, reproducer: Path) -> Path:
+def _prepare_standalone_rust(
+    workspace: Path, target: Path, reproducer: Path | None = None
+) -> Path:
     """Create a minimal Cargo harness for one standalone Rust source file."""
-    if target.suffix.lower() != ".rs" or not reproducer.is_file():
-        raise ValueError("Standalone Cargo verification requires a Rust target and one reproducer file.")
-    if reproducer.suffix.lower() != ".rs":
+    if target.suffix.lower() != ".rs":
+        raise ValueError("Standalone Cargo verification requires a Rust target.")
+    if reproducer is not None and reproducer.suffix.lower() != ".rs":
         raise ValueError("Cargo reproducer must be a .rs file.")
     src_dir = workspace / "src"
     test_dir = workspace / "tests"
@@ -266,7 +268,16 @@ def _prepare_standalone_rust(workspace: Path, target: Path, reproducer: Path) ->
     test_dir.mkdir(parents=True, exist_ok=True)
     target_copy = src_dir / "lib.rs"
     shutil.copy2(target, target_copy)
-    shutil.copy2(reproducer, test_dir / reproducer.name)
+    if reproducer is None:
+        (test_dir / "atlas_baseline.rs").write_text(
+            "#[test]\n"
+            "fn atlas_baseline_compiles_target() {\n"
+            "    assert!(true);\n"
+            "}\n",
+            encoding="utf-8",
+        )
+    else:
+        shutil.copy2(reproducer, test_dir / reproducer.name)
     (workspace / "Cargo.toml").write_text(
         "[package]\n"
         'name = "atlas_standalone_target"\n'
@@ -277,11 +288,13 @@ def _prepare_standalone_rust(workspace: Path, target: Path, reproducer: Path) ->
     return workspace
 
 
-def _prepare_standalone_foundry(workspace: Path, target: Path, reproducer: Path) -> Path:
+def _prepare_standalone_foundry(
+    workspace: Path, target: Path, reproducer: Path | None = None
+) -> Path:
     """Create a minimal offline Foundry harness for one standalone Solidity target."""
-    if target.suffix.lower() != ".sol" or not reproducer.is_file():
-        raise ValueError("Standalone Foundry verification requires a Solidity target and one reproducer file.")
-    if reproducer.suffix.lower() not in {".sol", ".t.sol"}:
+    if target.suffix.lower() != ".sol":
+        raise ValueError("Standalone Foundry verification requires a Solidity target.")
+    if reproducer is not None and reproducer.suffix.lower() not in {".sol", ".t.sol"}:
         raise ValueError("Foundry reproducer must be a .sol or .t.sol file.")
     src_dir = workspace / "src"
     test_dir = workspace / "test"
@@ -293,7 +306,17 @@ def _prepare_standalone_foundry(workspace: Path, target: Path, reproducer: Path)
         shutil.move(str(copied_target), str(target_in_src))
     elif not target_in_src.exists():
         raise FileNotFoundError(f"standalone Solidity target missing from verification workspace: {target.name}")
-    shutil.copy2(reproducer, test_dir / reproducer.name)
+    if reproducer is None:
+        (test_dir / "AtlasBaseline.t.sol").write_text(
+            "pragma solidity ^0.8.20;\n"
+            f'import "../src/{target.name}";\n'
+            "contract AtlasBaseline {\n"
+            "    function test_atlas_baseline() external {}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+    else:
+        shutil.copy2(reproducer, test_dir / reproducer.name)
     (workspace / "foundry.toml").write_text(
         "[profile.default]\n"
         'src = "src"\n'
@@ -378,6 +401,16 @@ def prepare_workspace(
             _attach_reproducer(project, reproducer, target, False)
         else:
             _attach_reproducer(project, reproducer, target, False)
+    return base, project
+
+
+def prepare_baseline_workspace(target: Path) -> tuple[Path, Path]:
+    """Prepare a clean verification workspace with a runnable health test."""
+    base, project = prepare_workspace(target)
+    if target.is_file() and target.suffix.lower() == ".rs" and not (project / "Cargo.toml").is_file():
+        project = _prepare_standalone_rust(project, target)
+    elif target.is_file() and target.suffix.lower() == ".sol" and not (project / "foundry.toml").is_file():
+        project = _prepare_standalone_foundry(project, target)
     return base, project
 
 
@@ -621,7 +654,7 @@ def run_verification(
     baseline: dict[str, Any] | None = None
     baseline_class = None
     if mode == "reproduction":
-        baseline_base, baseline_project = prepare_workspace(target)
+        baseline_base, baseline_project = prepare_baseline_workspace(target)
         reproducer_removed = _remove_reproducer_from_baseline(
             target, baseline_project, reproducer
         )
@@ -629,7 +662,7 @@ def run_verification(
         baseline_command_value = (
             validate_command(baseline_command)
             if baseline_command is not None
-            else command
+            else (native_test_command(baseline_project) or command)
         )
         baseline_started = time.perf_counter()
         if baseline_command_value is None:
