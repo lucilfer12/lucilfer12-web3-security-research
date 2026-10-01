@@ -164,6 +164,14 @@ def _semantic_priority(signal: str, scope: str) -> str:
     return "medium" if hint == "high" else hint
 
 
+def _triage_lane(score: int) -> str:
+    if score >= 80:
+        return "VERIFY_FIRST"
+    if score >= 60:
+        return "DEEP_REVIEW"
+    return "CONTEXT"
+
+
 def _triage_score(item: dict[str, Any]) -> int:
     score = int(item.get("triage_score") or 0)
     if score:
@@ -387,6 +395,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             "entry_point": x.get("entry_point", False),
             "entry_point_reason": x.get("entry_point_reason"),
             "triage_score": x.get("triage_score"),
+            "triage_lane": x.get("triage_lane"),
             "analysis": x.get("analysis"),
             "related_research_patterns": x.get("related_research_patterns", []),
             "limitation": x.get("limitation"),
@@ -400,6 +409,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
     # consensus-boundary reachability, missing guards, and production scope move candidates up.
     for item in findings:
         item["triage_score"] = _triage_score(item)
+        item["triage_lane"] = _triage_lane(int(item["triage_score"]))
     findings.sort(key=lambda x: (-int(x.get("triage_score", 0)), x.get("file") or "", int(x.get("line", 0) or 0), x.get("signal") or ""))
     for i, item in enumerate(findings, 1):
         item["id"] = f"atlas-review-{i:04d}"
@@ -409,11 +419,14 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
 
     status_counts: dict[str, int] = {}
     evidence_grade_counts: dict[str, int] = {}
+    triage_lane_counts: dict[str, int] = {}
     for item in findings:
         status = str(item.get("status") or "candidate")
         grade = str((item.get("verification") or {}).get("evidence_grade") or "E")
+        lane = str(item.get("triage_lane") or _triage_lane(_triage_score(item)))
         status_counts[status] = status_counts.get(status, 0) + 1
         evidence_grade_counts[grade] = evidence_grade_counts.get(grade, 0) + 1
+        triage_lane_counts[lane] = triage_lane_counts.get(lane, 0) + 1
 
     report = {
         "schema_version": 1,
@@ -442,6 +455,7 @@ def build_contract_audit(target: Path, research_root: Path, progress=None, cance
             "finding_count": len(findings),
             "status_counts": status_counts,
             "evidence_grade_counts": evidence_grade_counts,
+            "triage_lane_counts": triage_lane_counts,
             "verification_ready_count": sum(
                 bool(
                     (x.get("verification") or {}).get("gates", {}).get("source_pinned")

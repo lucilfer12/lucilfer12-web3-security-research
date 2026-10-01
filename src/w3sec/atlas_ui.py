@@ -1916,13 +1916,13 @@ class AtlasApp(tk.Tk):
             for finding in primary:
                 score = finding.get("triage_score", 0)
                 status = str(finding.get("status", "candidate")).upper()
-                hint = str(finding.get("severity_hint", finding.get("priority", "?"))).upper()
+                lane = str(finding.get("triage_lane") or "CONTEXT").upper()
                 grade = str(
                     (finding.get("verification") or {}).get("evidence_grade", "E")
                 ).upper()
                 self.finding_tree.insert(
                     "end",
-                    f"[{status[:10]:10}] [{hint[:6]:6}] G{grade} S{score:02} "
+                    f"[{status[:10]:10}] [{lane[:10]:10}] G{grade} S{score:02} "
                     f"{finding.get('file')}:{finding.get('line')} · {finding.get('signal')}"
                 )
             for item in supporting:

@@ -10,7 +10,7 @@ from w3sec.rust_analysis import (
 )
 from w3sec.intake import _mask_non_code
 from w3sec.scanner import _rust_semantic_findings
-from w3sec.contract_audit import _triage_score
+from w3sec.contract_audit import _triage_lane, _triage_score
 
 
 class RustAnalysisTests(unittest.TestCase):
@@ -289,6 +289,11 @@ pub fn read(input: &[u8], idx: usize) -> u8 {
 """
         hits = _rust_semantic_findings("src/read.rs", source, "production")
         self.assertFalse(any(x["signal"] == "panic_on_input" for x in hits))
+
+    def test_triage_lanes_make_medium_candidates_actionable(self):
+        self.assertEqual("VERIFY_FIRST", _triage_lane(90))
+        self.assertEqual("DEEP_REVIEW", _triage_lane(67))
+        self.assertEqual("CONTEXT", _triage_lane(33))
 
     def test_triage_score_uses_security_signal_and_guard_evidence(self):
         base = {
