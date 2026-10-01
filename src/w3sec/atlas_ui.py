@@ -1444,18 +1444,26 @@ class AtlasApp(tk.Tk):
             return
         reproducer_path = None
         suggested = suggested_command(self.current_target)
-        if suggested is None and self.current_target.lower().endswith(".sol"):
+        target_suffix = self.current_target.suffix.lower()
+        if suggested is None and target_suffix in {".sol", ".rs"}:
+            is_solidity = target_suffix == ".sol"
+            target_label = "Solidity" if is_solidity else "Rust"
+            reproducer_glob = "*.sol" if is_solidity else "*.rs"
+            harness = (
+                "Foundry harness around an exact copy of the contract"
+                if is_solidity else
+                "Cargo harness around an exact copy of the Rust source"
+            )
             use_reproducer = messagebox.askyesno(
                 "ATLAS verification",
-                "The selected Solidity file is standalone (no Foundry project was detected).\n\n"
-                "Attach a local .sol/.t.sol reproducer so ATLAS can build an isolated "
-                "Foundry harness around an exact copy of the contract?",
+                f"The selected {target_label} file is standalone (no native project was detected).\n\n"
+                f"Attach a local reproducer so ATLAS can build an isolated {harness}?",
                 parent=self,
             )
             if use_reproducer:
                 chosen = filedialog.askopenfilename(
-                    title="Choose Solidity reproducer",
-                    filetypes=[("Solidity files", "*.sol"), ("All files", "*.*")],
+                    title=f"Choose {target_label} reproducer",
+                    filetypes=[(f"{target_label} files", reproducer_glob), ("All files", "*.*")],
                 )
                 if chosen:
                     reproducer_path = Path(chosen).resolve()

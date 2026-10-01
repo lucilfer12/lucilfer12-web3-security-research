@@ -11,6 +11,7 @@ from w3sec.verification import (
     run_verification,
     split_command,
     target_toolchains,
+    target_source_hash,
     validate_command,
     workspace_hash,
 )
@@ -82,6 +83,23 @@ class VerificationTests(unittest.TestCase):
                 import shutil
                 shutil.rmtree(base, ignore_errors=True)
 
+    def test_target_source_hash_matches_intake_for_directory_and_archive(self):
+        import zipfile
+        from w3sec.intake import build_intake
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "project"
+            (root / "src").mkdir(parents=True)
+            (root / "src" / "C.sol").write_text("contract C {}", encoding="utf-8")
+            (root / "README.md").write_text("fixture", encoding="utf-8")
+            intake = build_intake(root)
+            self.assertEqual(intake["target"]["source_hash"], target_source_hash(root))
+            archive = Path(td) / "project.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                for path in root.rglob("*"):
+                    if path.is_file():
+                        zf.write(path, path.relative_to(root).as_posix())
+            self.assertEqual(intake["target"]["source_hash"], target_source_hash(archive))
+
     def test_workspace_hash_ignores_generated_build_outputs(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td) / "project"
@@ -95,6 +113,40 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual(before, workspace_hash(root))
             (root / "src" / "C.sol").write_text("contract C { uint x; }", encoding="utf-8")
             self.assertNotEqual(before, workspace_hash(root))
+
+    def test_standalone_rust_with_reproducer_gets_cargo_harness(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "Target.rs"
+            reproducer = root / "Target_repro.rs"
+            target.write_text("pub fn value() -> u64 { 7 }", encoding="utf-8")
+            reproducer.write_text(
+                "use atlas_standalone_target::value;\n"
+                "#[test] fn test_value() { assert_eq!(value(), 7); }\n",
+                encoding="utf-8",
+            )
+            base, workspace = prepare_workspace(target, reproducer=reproducer)
+            try:
+                self.assertTrue((workspace / "Cargo.toml").is_file())
+                self.assertTrue((workspace / "src" / "lib.rs").is_file())
+                self.assertTrue((workspace / "tests" / reproducer.name).is_file())
+                import tomllib
+                with (workspace / "Cargo.toml").open("rb") as cargo_file:
+                    manifest = tomllib.load(cargo_file)
+                self.assertEqual(
+                    "atlas_standalone_target",
+                    manifest["package"]["name"],
+                )
+                with patch("w3sec.verification.shutil.which", return_value=r"C:\Tools\cargo.exe"):
+                    self.assertEqual(
+                        ("cargo", "test", "--workspace", "--offline"),
+                        __import__("w3sec.verification", fromlist=["suggested_command"]).suggested_command(
+                            target, reproducer
+                        ),
+                    )
+            finally:
+                import shutil
+                shutil.rmtree(base, ignore_errors=True)
 
     def test_cargo_reproducer_uses_native_tests_directory(self):
         with tempfile.TemporaryDirectory() as td:
@@ -136,6 +188,21 @@ class VerificationTests(unittest.TestCase):
             finally:
                 import shutil
                 shutil.rmtree(base, ignore_errors=True)
+    def test_reproduced_without_verified_binding_does_not_advance_gate(self):
+        from w3sec.finding_gate import evaluate_finding
+        result = evaluate_finding({
+            "file": "src/C.sol",
+            "line": 10,
+            "source_hash": "a" * 64,
+            "verifications": [{
+                "outcome": "reproduced",
+                "security_property": "property P fails",
+                "command": ["forge", "test", "--offline"],
+            }],
+        })
+        self.assertFalse(result.gates["reproduction"])
+        self.assertEqual("candidate", result.status)
+
     def test_multiple_reproductions_do_not_infer_independence(self):
         from w3sec.finding_gate import evaluate_finding
         finding = {
@@ -147,11 +214,23 @@ class VerificationTests(unittest.TestCase):
                     "outcome": "reproduced",
                     "security_property": "property P fails",
                     "command": ["forge", "test", "--offline", "-vv"],
+                    "binding": {
+                        "workspace_unchanged": True,
+                        "target_input_unchanged": True,
+                        "target_input_hash_present": True,
+                        "source_hash_match": True,
+                    },
                 },
                 {
                     "outcome": "reproduced",
                     "security_property": "property P fails",
                     "command": ["cargo", "test", "--offline"],
+                    "binding": {
+                        "workspace_unchanged": True,
+                        "target_input_unchanged": True,
+                        "target_input_hash_present": True,
+                        "source_hash_match": True,
+                    },
                 },
             ],
         }
@@ -180,6 +259,12 @@ class VerificationTests(unittest.TestCase):
                 "mode": "reproduction",
                 "security_property": "the invariant remains true under adversarial input",
                 "command": ["forge", "test", "--offline"],
+                "binding": {
+                    "workspace_unchanged": True,
+                    "target_input_unchanged": True,
+                    "target_input_hash_present": True,
+                    "source_hash_match": True,
+                },
             }
             _attach_to_report(report, verification)
             saved = json.loads(report.read_text(encoding="utf-8"))
@@ -252,7 +337,9 @@ class VerificationTests(unittest.TestCase):
         from w3sec.cli import main
 
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
+            from w3sec.intake import build_intake
+            root = Path(td) / "project"
+            root.mkdir()
             (root / "test_fail.py").write_text(
                 "import unittest\n\n"
                 "class TestFail(unittest.TestCase):\n"
@@ -260,14 +347,15 @@ class VerificationTests(unittest.TestCase):
                 "        self.assertTrue(False)\n",
                 encoding="utf-8",
             )
-            report_path = root / "audit.json"
+            report_path = Path(td) / "audit.json"
+            source_hash = build_intake(root)["target"]["source_hash"]
             report_path.write_text(json.dumps({
                 "target": {"path": str(root)},
                 "findings": [{
                     "id": "F-CLI",
                     "file": "test_fail.py",
                     "line": 1,
-                    "source_hash": "c" * 64,
+                    "source_hash": source_hash,
                     "signal": "test_failure",
                 }],
             }), encoding="utf-8-sig")

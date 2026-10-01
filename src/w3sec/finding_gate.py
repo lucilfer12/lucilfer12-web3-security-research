@@ -60,11 +60,23 @@ def evaluate_finding(finding: dict[str, Any]) -> GateResult:
     )
     verification_runs = finding.get("verifications")
     verification_runs = verification_runs if isinstance(verification_runs, list) else []
+    def _binding_verified(item: dict[str, Any]) -> bool:
+        binding = item.get("binding")
+        if not isinstance(binding, dict):
+            return False
+        return (
+            binding.get("workspace_unchanged") is True
+            and binding.get("target_input_unchanged") is True
+            and binding.get("target_input_hash_present") is True
+            and binding.get("source_hash_match") is not False
+        )
+
     reproduced_runs = [
         item for item in verification_runs
         if isinstance(item, dict)
         and item.get("outcome") == "reproduced"
         and str(item.get("security_property") or "").strip()
+        and _binding_verified(item)
     ]
     reproduction = _truth(verification.get("reproduction")) or _truth(
         finding.get("reproduction_status")

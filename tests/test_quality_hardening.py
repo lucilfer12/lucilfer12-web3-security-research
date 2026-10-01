@@ -64,6 +64,12 @@ class QualityHardeningTests(unittest.TestCase):
                 "outcome": "reproduced",
                 "security_property": "checked arithmetic preserves accounting invariant",
                 "command": ["cargo", "test", "repro_a"],
+                "binding": {
+                    "workspace_unchanged": True,
+                    "target_input_unchanged": True,
+                    "target_input_hash_present": True,
+                    "source_hash_match": True,
+                },
             }],
         })
         self.assertEqual("reproduced", reproduced["status"])

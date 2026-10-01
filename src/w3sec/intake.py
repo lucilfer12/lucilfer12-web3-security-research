@@ -33,6 +33,7 @@ SKIP_DIRS = {
     ".git", ".hg", ".svn", "node_modules", "venv", ".venv", "env",
     "cache", "out", "artifacts", "broadcast", "dist", "build", ".next",
     "target", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox",
+    "reports", "runs", "dist-txt",
 }
 CONFIG_NAMES = {
     "foundry.toml", "hardhat.config.js", "hardhat.config.ts",

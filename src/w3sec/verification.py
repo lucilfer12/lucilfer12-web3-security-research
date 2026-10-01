@@ -83,6 +83,7 @@ class VerificationResult:
                 "target_input_hash_present": bool(self.target_input_hash),
                 "target_input_unchanged": self.target_input_hash == self.target_input_hash_after,
                 "finding_source_hash_claimed": bool(self.source_hash_claim),
+                "finding_source_hash_match": self.source_hash_match,
             },
             "security_property": self.security_property,
             "stdout": self.stdout,
@@ -213,6 +214,29 @@ def _path_within(base: Path, path: Path) -> bool:
         return False
 
 
+def _prepare_standalone_rust(workspace: Path, target: Path, reproducer: Path) -> Path:
+    """Create a minimal Cargo harness for one standalone Rust source file."""
+    if target.suffix.lower() != ".rs" or not reproducer.is_file():
+        raise ValueError("Standalone Cargo verification requires a Rust target and one reproducer file.")
+    if reproducer.suffix.lower() != ".rs":
+        raise ValueError("Cargo reproducer must be a .rs file.")
+    src_dir = workspace / "src"
+    test_dir = workspace / "tests"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    test_dir.mkdir(parents=True, exist_ok=True)
+    target_copy = src_dir / "lib.rs"
+    shutil.copy2(target, target_copy)
+    shutil.copy2(reproducer, test_dir / reproducer.name)
+    (workspace / "Cargo.toml").write_text(
+        "[package]\n"
+        'name = "atlas_standalone_target"\n'
+        'version = "0.0.0"\n'
+        'edition = "2021"\n',
+        encoding="utf-8",
+    )
+    return workspace
+
+
 def _prepare_standalone_foundry(workspace: Path, target: Path, reproducer: Path) -> Path:
     """Create a minimal offline Foundry harness for one standalone Solidity target."""
     if target.suffix.lower() != ".sol" or not reproducer.is_file():
@@ -300,11 +324,16 @@ def prepare_workspace(
         shutil.copy2(target, workspace / target.name)
     project = _find_project_root(workspace)
     if reproducer is not None:
-        standalone = target.is_file() and target.suffix.lower() == ".sol" and not (
+        standalone_sol = target.is_file() and target.suffix.lower() == ".sol" and not (
             (project / "foundry.toml").is_file()
         )
-        if standalone:
+        standalone_rust = target.is_file() and target.suffix.lower() == ".rs" and not (
+            (project / "Cargo.toml").is_file()
+        )
+        if standalone_sol:
             project = _prepare_standalone_foundry(workspace, target, reproducer)
+        elif standalone_rust:
+            project = _prepare_standalone_rust(workspace, target, reproducer)
         elif reproducer.is_dir():
             _attach_reproducer(project, reproducer, target, False)
         else:
@@ -404,6 +433,8 @@ def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str
     toolchains = target_toolchains(target)
     if reproducer is not None and target.is_file() and target.suffix.lower() == ".sol" and "foundry" not in toolchains:
         toolchains = ["foundry", *toolchains]
+    if reproducer is not None and target.is_file() and target.suffix.lower() == ".rs" and "cargo" not in toolchains:
+        toolchains = ["cargo", *toolchains]
     for toolchain in toolchains:
         if toolchain == "foundry" and shutil.which("forge"):
             return ("forge", "test", "--offline", "-vv")
@@ -438,6 +469,33 @@ def target_input_hash(target: Path) -> str:
     return workspace_hash(target)
 
 
+def _aggregate_source_hash(root: Path) -> str:
+    """Match the intake source_hash algorithm for directory/archive targets."""
+    from .intake import _files
+
+    files = _files(root)
+    aggregate = hashlib.sha256()
+    for path in files:
+        rel = path.relative_to(root).as_posix()
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        aggregate.update(rel.encode("utf-8"))
+        aggregate.update(digest.encode("ascii"))
+    return aggregate.hexdigest()
+
+
+def target_source_hash(target: Path) -> str | None:
+    target = target.expanduser().resolve()
+    if target.is_dir():
+        return _aggregate_source_hash(target)
+    if target.suffix.lower() not in {".zip", ".tar", ".tgz", ".gz", ".bz2", ".xz"}:
+        return None
+    with tempfile.TemporaryDirectory(prefix="atlas-source-bind-") as td:
+        root = Path(td) / "target"
+        root.mkdir()
+        _extract_archive(target, root)
+        return _aggregate_source_hash(root)
+
+
 def run_verification(
     target: Path,
     finding: dict[str, Any],
@@ -455,16 +513,28 @@ def run_verification(
     command = validate_command(command)
     if not security_property.strip():
         raise ValueError("A security property is required for verification.")
+    source_hash_claim = str(finding.get("source_hash")) if finding.get("source_hash") else None
+    claimed_source_match = None
+    bound_source = target_source_hash(target)
+    if source_hash_claim and bound_source is not None:
+        claimed_source_match = bound_source == source_hash_claim
+        if not claimed_source_match:
+            raise ValueError(
+                "Verification target binding mismatch: directory/archive source differs from the finding."
+            )
     base, project = prepare_workspace(target, reproducer=reproducer)
     workspace_before = workspace_hash(project)
     input_hash = target_input_hash(target)
-    source_hash_claim = str(finding.get("source_hash")) if finding.get("source_hash") else None
     input_hash_claim = (
         str(finding.get("target_input_sha256"))
         if finding.get("target_input_sha256")
         else None
     )
-    source_hash_match = (input_hash == input_hash_claim) if input_hash_claim else None
+    source_hash_match = (
+        claimed_source_match
+        if claimed_source_match is not None
+        else ((input_hash == input_hash_claim) if input_hash_claim else None)
+    )
     if input_hash_claim and not source_hash_match:
         shutil.rmtree(base, ignore_errors=True)
         raise ValueError(
