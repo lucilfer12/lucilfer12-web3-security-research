@@ -14,6 +14,7 @@ from w3sec.verification import (
     split_command,
     target_toolchains,
     target_source_hash,
+    toolchain_manifest,
     validate_command,
     workspace_hash,
 )
@@ -181,6 +182,23 @@ class VerificationTests(unittest.TestCase):
                     if path.is_file():
                         zf.write(path, path.relative_to(root).as_posix())
             self.assertEqual(intake["target"]["source_hash"], target_source_hash(archive))
+
+    def test_toolchain_manifest_records_versions_and_dependency_hashes(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "pyproject.toml").write_text("[project]\nname='fixture'\n", encoding="utf-8")
+            (root / "requirements.txt").write_text("pytest>=8\n", encoding="utf-8")
+            with patch("w3sec.verification.shutil.which", return_value=None):
+                manifest = toolchain_manifest(root)
+            self.assertEqual(["python"], manifest["toolchains"])
+            self.assertEqual({}, manifest["versions"])
+            self.assertIn("pyproject.toml", manifest["dependency_manifests"])
+            self.assertIn("requirements.txt", manifest["dependency_manifests"])
+            self.assertEqual(
+                64,
+                len(manifest["dependency_manifests"]["pyproject.toml"]["sha256"]),
+            )
+            self.assertGreater(manifest["dependency_manifests"]["requirements.txt"]["bytes"], 0)
 
     def test_workspace_hash_ignores_generated_build_outputs(self):
         with tempfile.TemporaryDirectory() as td:

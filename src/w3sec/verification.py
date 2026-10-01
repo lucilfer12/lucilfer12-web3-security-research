@@ -5,6 +5,7 @@ import json
 import os
 import shlex
 import shutil
+import subprocess
 import tempfile
 import time
 from dataclasses import dataclass
@@ -55,6 +56,7 @@ class VerificationResult:
     timed_out: bool
     output_limited: bool
     toolchain: str | None
+    toolchain_manifest: dict[str, Any]
     reproducer: str | None
     baseline: dict[str, Any] | None
     isolation: str = "unspecified"
@@ -100,6 +102,7 @@ class VerificationResult:
             "timed_out": self.timed_out,
             "output_limited": self.output_limited,
             "toolchain": self.toolchain,
+            "toolchain_manifest": self.toolchain_manifest,
             "reproducer": self.reproducer,
             "baseline": self.baseline,
             "isolation": self.isolation,
@@ -542,17 +545,72 @@ def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str
     return None
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def tool_versions(project: Path) -> dict[str, str]:
     versions: dict[str, str] = {}
-    for binary, args in (("forge", ("--version",)), ("cargo", ("--version",)), ("pytest", ("--version",))):
+    candidates = (
+        ("forge", ("--version",)),
+        ("cargo", ("--version",)),
+        ("rustc", ("--version",)),
+        ("pytest", ("--version",)),
+        ("python", ("--version",)),
+        ("solc", ("--version",)),
+    )
+    for binary, args in candidates:
         exe = shutil.which(binary)
         if not exe:
             continue
-        result = run_bounded((exe, *args), cwd=project, timeout=15, max_output_bytes=16384)
+        try:
+            result = subprocess.run(
+                (exe, *args),
+                cwd=project,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                errors="replace",
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
         text = (result.stdout or result.stderr).strip().splitlines()
         if result.returncode == 0 and text:
             versions[binary] = text[0][:240]
     return versions
+
+
+def toolchain_manifest(project: Path) -> dict[str, Any]:
+    """Capture reproducibility metadata without installing or mutating dependencies."""
+    project = project.expanduser().resolve()
+    manifests = {}
+    for name in (
+        "Cargo.lock",
+        "foundry.lock",
+        "pyproject.toml",
+        "pytest.ini",
+        "requirements.txt",
+        "requirements-dev.txt",
+    ):
+        path = project / name
+        if path.is_file():
+            manifests[name] = {
+                "sha256": _sha256_file(path),
+                "bytes": path.stat().st_size,
+            }
+    return {
+        "platform": os.name,
+        "toolchains": detect_toolchain(project),
+        "versions": tool_versions(project),
+        "dependency_manifests": manifests,
+    }
 
 
 def target_input_hash(target: Path) -> str:
@@ -653,12 +711,14 @@ def run_verification(
     )
     baseline: dict[str, Any] | None = None
     baseline_class = None
+    baseline_manifest: dict[str, Any] = {}
     if mode == "reproduction":
         baseline_base, baseline_project = prepare_baseline_workspace(target)
         reproducer_removed = _remove_reproducer_from_baseline(
             target, baseline_project, reproducer
         )
         baseline_before = workspace_hash(baseline_project)
+        baseline_manifest = toolchain_manifest(baseline_project)
         baseline_command_value = (
             validate_command(baseline_command)
             if baseline_command is not None
@@ -762,7 +822,8 @@ def run_verification(
                 stderr=str(baseline.get("stderr") or ""),
                 timed_out=bool(baseline["timed_out"]),
                 output_limited=bool(baseline["output_limited"]),
-                toolchain=None,
+                toolchain=(baseline_manifest.get("toolchains") or [None])[0],
+                toolchain_manifest=baseline_manifest,
                 reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
                 baseline=baseline,
                 isolation=decision.mode,
@@ -785,6 +846,7 @@ def run_verification(
             "Verification target binding mismatch: the finding was generated from different input bytes."
         )
     toolchain = detect_toolchain(project)
+    manifest = toolchain_manifest(project)
     started = time.perf_counter()
     try:
         result = run_bounded(
@@ -834,6 +896,7 @@ def run_verification(
             timed_out=result.timed_out,
             output_limited=result.output_limited,
             toolchain=toolchain[0] if toolchain else None,
+            toolchain_manifest=manifest,
             reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
             baseline=baseline,
             isolation=decision.mode,

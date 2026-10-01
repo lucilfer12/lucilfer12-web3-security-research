@@ -90,3 +90,5 @@ The sandbox uses Linux namespaces, a private network namespace, isolated PID/pro
 Use `verify-finding` for a single-state reproduction. Use `verify-proof` when a fixed state is available and the research question is whether the same focused reproducer distinguishes the vulnerable state from the fixed state.
 
 A proof result is evidence for the declared security property and exact source states; impact and independent verification remain explicit evidence gates in the broader ATLAS model.
+Proof verification also records the source/input binding, execution timing, test counts, and the exact reproducer SHA256.
+Each verification now carries a `toolchain_manifest` containing the detected ATLAS toolchains, available tool versions (for example `forge`, `cargo`, `rustc`, `pytest`, `python`, and `solc`), and SHA256 hashes of dependency/lock manifests such as `Cargo.lock`, `foundry.lock`, `pyproject.toml`, and `requirements.txt`. This metadata is observational: ATLAS never installs dependencies during proof execution.

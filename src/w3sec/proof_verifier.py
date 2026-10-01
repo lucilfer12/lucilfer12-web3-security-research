@@ -54,6 +54,10 @@ class ProofVerificationResult:
             "vulnerable_baseline_healthy": self.vulnerable_baseline_healthy,
             "fixed_baseline_healthy": self.fixed_baseline_healthy,
             "reproducer_hash": self.reproducer_hash,
+            "toolchain_manifest": {
+                "vulnerable": self.vulnerable.toolchain_manifest,
+                "fixed": self.fixed.toolchain_manifest,
+            },
             "fixed_target_hash": self.fixed_target_hash,
             "fixed_target_hash_claim": self.fixed_target_hash_claim,
             "fixed_target_hash_match": (
