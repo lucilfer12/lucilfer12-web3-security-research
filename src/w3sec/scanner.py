@@ -14,6 +14,7 @@ from .rust_analysis import (
     analyse_gas,
     cast_report,
     function_regions,
+    index_bound_proofs,
     length_upper_bound_proofs,
     line_depths,
     local_types,
@@ -216,6 +217,16 @@ RUST_BOUNDARY_FN = re.compile(
     r"parse|receive|accept|route|serve|commit|import|export|sync|load|store|call|run|verify)\b",
     re.IGNORECASE,
 )
+RUST_ENTRYPOINT_FN = re.compile(
+    r"^(?:handle|on_|process|dispatch|execute|apply|submit|receive|accept|route|serve|"
+    r"commit|sync|run|validate(?:_|$)|verify(?:_|$)|instantiate$|migrate$|reply$|sudo$|"
+    r"query$|entry_point$)",
+    re.IGNORECASE,
+)
+RUST_ENTRYPOINT_ATTR = re.compile(
+    r"#\[[^\]]*(?:entry_point|near_bindgen|program|anchor_lang::program|no_mangle)[^\]]*\]",
+    re.IGNORECASE,
+)
 RUST_VALIDATION_FN = re.compile(
     r"\b(?:validate_header|validate_block(?:_impl)?|validate_transaction|validate_receipt|"
     r"process_block|process_transactions|apply_block|verify_block)\b"
@@ -252,9 +263,11 @@ def _rust_function_regions(source: str) -> list[dict[str, Any]]:
                     break
         params = match.group("params")
         line = masked.count("\n", 0, match.start()) + 1
+        is_pub = bool(re.search(r"\bpub(?:\s*\([^)]*\))?\s+(?:async\s+)?fn\b", match.group(0)))
         regions.append({
             "name": match.group("name"),
             "params": params,
+            "is_pub": is_pub,
             "line": line,
             "start": match.start(),
             "body_start": body_start,
@@ -328,11 +341,12 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
         body_lines = body.splitlines()
         base_line = int(region["line"])
         path_parts = set(relative.lower().replace("\\", "/").split("/"))
-        boundary = bool(RUST_BOUNDARY_FN.search(str(region.get("name") or ""))) or bool(
-            path_parts.intersection({
-                "near-vm-runner", "logic", "network", "jsonrpc", "rpc", "state_sync",
-                "chunk", "chunks", "receipt", "transaction", "transactions", "peer_manager",
-            })
+        name = str(region.get("name") or "")
+        preamble = _mask_non_code(source)[
+            max(0, int(region.get("start", 0)) - 900):int(region.get("start", 0))
+        ]
+        boundary = bool(RUST_ENTRYPOINT_FN.match(name)) or bool(
+            RUST_ENTRYPOINT_ATTR.search(preamble)
         )
         context = _rust_taint_context(region, boundary=boundary)
         taint = set(context["tainted_variables"])
@@ -364,18 +378,52 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
             })
 
         # Panic-on-input: unwrap/expect/unreachable plus indexing/slicing tied to tainted
-        # values or a boundary function. Constant unwraps and lock unwraps are not tainted.
+        # values. Index expressions are checked directly, rather than by variable-name guesses.
         for idx, line in enumerate(body_lines):
             panic = re.search(
-                r"\b(?:unwrap|expect)\s*\(|\bunreachable!\s*\(|"
-                r"\[[^\]\n]*\b(?:len|count|index|ord|idx)\b[^\]\n]*\]",
+                r"\b(?:unwrap|expect)\s*\(|\bunreachable!\s*\(",
                 line,
                 flags=re.IGNORECASE,
             )
-            if not panic:
+            index_match = next(
+                (
+                    m for m in re.finditer(r"\[([^\]\n]+)\]", line)
+                    if _rust_line_has_taint(m.group(1), taint)
+                    or bool(
+                        (base := re.search(r"[A-Za-z_]\w*(?:\.\w+)*\s*$", line[:m.start()]))
+                        and _rust_line_has_taint(base.group(0), taint)
+                    )
+                ),
+                None,
+            )
+            if not panic and not index_match:
                 continue
-            panic_prefix = line[:panic.start()]
+            if index_match:
+                base_match = re.search(
+                    r"[A-Za-z_]\w*(?:\.\w+)*\s*$",
+                    line[:index_match.start()],
+                )
+                index_expr = index_match.group(1).strip()
+                base_expr = base_match.group(0).strip() if base_match else ""
+                if base_expr and index_bound_proofs(
+                    body_lines, depths, idx, base_expr, index_expr
+                ):
+                    index_match = None
+                    if not panic:
+                        continue
+            marker = panic or index_match
+            panic_prefix = line[:marker.start()]
+            # Common unwraps that are independent of attacker-controlled validity should
+            # not become panic findings merely because the value being wrapped contains input.
+            if panic and any((
+                bool(re.search(r"\b(?:Some|Ok)\s*\([^;]*\)\s*\.\s*$", panic_prefix)),
+                bool(re.search(r"\.(?:lock|read|write|join)\s*\(\)\s*\.\s*$", panic_prefix)),
+                bool(re.search(r"\bNonZero(?:Usize|U32|U64)::new\s*\(\s*\d[\d_]*\s*\)\s*\.\s*$", panic_prefix)),
+            )):
+                continue
             direct = _rust_line_has_taint(panic_prefix, taint)
+            indexed_taint = bool(index_match and _rust_line_has_taint(index_match.group(1), taint))
+            direct = direct or indexed_taint
             # Boundary function names alone are not enough: constant/lock unwraps are
             # common and should not be treated as attacker-controlled panic paths.
             if direct:
@@ -453,15 +501,48 @@ def _rust_semantic_findings(relative: str, source: str, scope: str) -> list[dict
                     "Arithmetic or cast uses an input-tainted value without an obvious checked/saturating operation.",
                 )
 
+        # Division/remainder/shift by input-derived values can fail on zero or
+        # invalid shift counts. Keep it separate from generic arithmetic so the report
+        # states the exact safety property to verify.
+        for idx, line in enumerate(body_lines):
+            for operation in re.finditer(
+                r"(?P<lhs>\b[A-Za-z_]\w*\b|\d[\d_]*)\s*"
+                r"(?P<op>/|%|<<|>>)\s*"
+                r"(?P<rhs>\b[A-Za-z_]\w*\b|\d[\d_]*)",
+                line,
+            ):
+                expr = operation.group(0)
+                rhs = operation.group("rhs")
+                if not any(
+                    re.search(rf"\b{re.escape(name)}\b", rhs)
+                    for name in taint
+                ):
+                    continue
+                safe_ops = (
+                    "checked_div", "checked_rem", "checked_shl", "checked_shr",
+                    "saturating_div", "wrapping_div", "try_into",
+                )
+                guards = [op for op in safe_ops if op in line]
+                add(
+                    "unchecked_input_division",
+                    idx,
+                    {
+                        "matched_text": expr.strip(),
+                        "confidence": "high" if boundary and not guards else "medium",
+                        "reachability": "entry-point-direct" if boundary else "internal-taint",
+                        "guards": guards,
+                    },
+                    "Input-derived division/remainder/shift requires explicit zero/range handling.",
+                )
+                break
+
         # Deserialization without a nearby visible size bound. This deliberately does not
         # claim a vulnerability; upstream caps can exist in callers, so the result is a trace lead.
         for idx, line in enumerate(body_lines):
             if not re.search(r"\b(?:try_from_slice|deserialize|from_slice|decode)\b", line):
                 continue
             joined = "\n".join(body_lines[max(0, idx - 10):idx + 1])
-            direct = _rust_line_has_taint(line, taint) or bool(
-                re.search(r"(?:input|payload|bytes|data)\b", joined, re.IGNORECASE)
-            )
+            direct = _rust_line_has_taint(line, taint)
             if not direct:
                 continue
             bounded = False

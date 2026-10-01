@@ -228,6 +228,68 @@ fn read_and_parse_account_id(
         )
         self.assertFalse(any(x["signal"] == "gas_ordering" for x in hits))
 
+    def test_semantic_flags_input_division_and_shift(self):
+        source = """
+#[no_mangle]
+pub fn calc(input: u64, len: u64) {
+    let x = input / len;
+    let y = input << input;
+}
+"""
+        hits = _rust_semantic_findings("src/calc.rs", source, "production")
+        division = [
+            x for x in hits if x["signal"] == "unchecked_input_division"
+        ]
+        self.assertEqual(2, len(division))
+        self.assertTrue(any("input / len" in x["matched_text"] for x in division))
+        self.assertTrue(any("input << input" in x["matched_text"] for x in division))
+
+    def test_semantic_suppresses_value_independent_unwraps(self):
+        source = """
+pub fn unwraps(input: &[u8]) {
+    let _a = Some(input).unwrap();
+    let _b = Ok(input).unwrap();
+    let _c = std::sync::Mutex::new(input).lock().unwrap();
+}
+"""
+        hits = _rust_semantic_findings("src/unwraps.rs", source, "production")
+        self.assertFalse(any(x["signal"] == "panic_on_input" for x in hits))
+
+    def test_semantic_retains_input_sensitive_unwraps(self):
+        source = """
+#[no_mangle]
+pub fn parse(input: &str) {
+    let _a: u64 = input.parse().unwrap();
+    let _b = input.len().checked_add(1).unwrap();
+}
+"""
+        hits = _rust_semantic_findings("src/parse.rs", source, "production")
+        panic_hits = [x for x in hits if x["signal"] == "panic_on_input"]
+        self.assertEqual(2, len(panic_hits))
+
+    def test_semantic_flags_tainted_index_expression(self):
+        source = """
+pub fn read(input: &[u8], idx: usize) -> u8 {
+    input[idx]
+}
+"""
+        hits = _rust_semantic_findings("src/read.rs", source, "production")
+        panic_hits = [x for x in hits if x["signal"] == "panic_on_input"]
+        self.assertEqual(1, len(panic_hits))
+        self.assertIn("input[idx]", panic_hits[0]["matched_text"])
+
+    def test_semantic_suppresses_index_with_dominating_bound_check(self):
+        source = """
+pub fn read(input: &[u8], idx: usize) -> u8 {
+    if idx >= input.len() {
+        return 0;
+    }
+    input[idx]
+}
+"""
+        hits = _rust_semantic_findings("src/read.rs", source, "production")
+        self.assertFalse(any(x["signal"] == "panic_on_input" for x in hits))
+
     def test_triage_score_uses_security_signal_and_guard_evidence(self):
         base = {
             "confidence": "high",

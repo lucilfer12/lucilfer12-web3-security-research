@@ -54,6 +54,7 @@ class VerificationResult:
     output_limited: bool
     toolchain: str | None
     reproducer: str | None
+    baseline: dict[str, Any] | None
 
     @property
     def reproduced(self) -> bool:
@@ -92,6 +93,7 @@ class VerificationResult:
             "output_limited": self.output_limited,
             "toolchain": self.toolchain,
             "reproducer": self.reproducer,
+            "baseline": self.baseline,
             "policy": (
                 "isolated-copy; stdin=devnull; bounded-output; bounded-time; "
                 "cargo/forge require --offline; OS-level network access is not sandboxed"
@@ -503,6 +505,7 @@ def run_verification(
     *,
     expected_exit: int = 0,
     mode: str = "baseline",
+    baseline_expected_exit: int = 0,
     security_property: str = "",
     timeout_seconds: int = 300,
     max_output_bytes: int = 4 * 1024 * 1024,
@@ -522,14 +525,83 @@ def run_verification(
             raise ValueError(
                 "Verification target binding mismatch: directory/archive source differs from the finding."
             )
-    base, project = prepare_workspace(target, reproducer=reproducer)
-    workspace_before = workspace_hash(project)
     input_hash = target_input_hash(target)
     input_hash_claim = (
         str(finding.get("target_input_sha256"))
         if finding.get("target_input_sha256")
         else None
     )
+    baseline: dict[str, Any] | None = None
+    if mode == "reproduction":
+        baseline_base, baseline_project = prepare_workspace(target)
+        baseline_before = workspace_hash(baseline_project)
+        baseline_started = time.perf_counter()
+        try:
+            baseline_result = run_bounded(
+                command,
+                cwd=baseline_project,
+                timeout=timeout_seconds,
+                max_output_bytes=max_output_bytes,
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                    "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+                    "WINDIR": os.environ.get("WINDIR", ""),
+                    "TEMP": tempfile.gettempdir(),
+                    "TMP": tempfile.gettempdir(),
+                    "CARGO_NET_OFFLINE": "true",
+                    "FOUNDRY_OFFLINE": "true",
+                    "GIT_TERMINAL_PROMPT": "0",
+                },
+            )
+            baseline_after = workspace_hash(baseline_project)
+            baseline = {
+                "command": list(command),
+                "expected_exit": baseline_expected_exit,
+                "returncode": baseline_result.returncode,
+                "duration_seconds": round(time.perf_counter() - baseline_started, 6),
+                "timed_out": baseline_result.timed_out,
+                "output_limited": baseline_result.output_limited,
+                "workspace_hash_before": baseline_before,
+                "workspace_hash_after": baseline_after,
+                "workspace_unchanged": baseline_before == baseline_after,
+                "healthy": (
+                    not baseline_result.timed_out
+                    and not baseline_result.output_limited
+                    and baseline_result.returncode == baseline_expected_exit
+                ),
+                "stdout": baseline_result.stdout,
+                "stderr": baseline_result.stderr,
+            }
+        finally:
+            shutil.rmtree(baseline_base, ignore_errors=True)
+        if not baseline["healthy"]:
+            return VerificationResult(
+                finding_id=str(finding.get("id") or "unknown"),
+                outcome="inconclusive",
+                mode=mode,
+                command=tuple(command),
+                expected_exit=expected_exit,
+                returncode=int(baseline["returncode"]),
+                duration_seconds=float(baseline["duration_seconds"]),
+                workspace=str(baseline_project),
+                target_hash=str(baseline["workspace_hash_before"]),
+                workspace_hash_after=str(baseline["workspace_hash_after"]),
+                target_input_hash=input_hash,
+                target_input_hash_after=target_input_hash(target),
+                source_hash_claim=source_hash_claim,
+                target_input_hash_claim=input_hash_claim if "input_hash_claim" in locals() else None,
+                source_hash_match=claimed_source_match,
+                security_property=security_property.strip(),
+                stdout=str(baseline.get("stdout") or ""),
+                stderr=str(baseline.get("stderr") or ""),
+                timed_out=bool(baseline["timed_out"]),
+                output_limited=bool(baseline["output_limited"]),
+                toolchain=None,
+                reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
+                baseline=baseline,
+            )
+    base, project = prepare_workspace(target, reproducer=reproducer)
+    workspace_before = workspace_hash(project)
     source_hash_match = (
         claimed_source_match
         if claimed_source_match is not None
@@ -554,6 +626,9 @@ def run_verification(
                 "WINDIR": os.environ.get("WINDIR", ""),
                 "TEMP": tempfile.gettempdir(),
                 "TMP": tempfile.gettempdir(),
+                "CARGO_NET_OFFLINE": "true",
+                "FOUNDRY_OFFLINE": "true",
+                "GIT_TERMINAL_PROMPT": "0",
             },
         )
         duration = time.perf_counter() - started
@@ -588,6 +663,7 @@ def run_verification(
             output_limited=result.output_limited,
             toolchain=toolchain[0] if toolchain else None,
             reproducer=str(reproducer.expanduser().resolve()) if reproducer is not None else None,
+            baseline=baseline,
         )
     finally:
         shutil.rmtree(base, ignore_errors=True)

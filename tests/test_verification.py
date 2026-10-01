@@ -298,10 +298,23 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual("execution-pass", result.outcome)
             self.assertFalse(result.reproduced)
             self.assertIn("isolated-copy", result.as_dict()["policy"])
-    def test_reproduction_outcome_is_distinct_from_ordinary_execution_pass(self):
+    def test_reproduction_requires_clean_baseline_before_reproduced(self):
         with tempfile.TemporaryDirectory() as td:
             project = Path(td)
-            (project / "test_fail.py").write_text(
+            (project / "pyproject.toml").write_text(
+                "[project]\nname='verify-repro-fixture'\n",
+                encoding="utf-8",
+            )
+            (project / "tests").mkdir()
+            (project / "tests" / "test_ok.py").write_text(
+                "import unittest\n\n"
+                "class TestOK(unittest.TestCase):\n"
+                "    def test_ok(self):\n"
+                "        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            reproducer = project / "test_repro_fail.py"
+            reproducer.write_text(
                 "import unittest\n\n"
                 "class TestFail(unittest.TestCase):\n"
                 "    def test_failure(self):\n"
@@ -311,13 +324,18 @@ class VerificationTests(unittest.TestCase):
             result = run_verification(
                 project,
                 {"id": "finding-repro"},
-                split_command("python -m unittest discover -s ."),
+                split_command("python -m unittest discover -s tests"),
                 expected_exit=1,
+                baseline_expected_exit=0,
                 mode="reproduction",
                 security_property="the security invariant must hold under the reproduced input",
+                reproducer=reproducer,
                 timeout_seconds=30,
             )
             self.assertEqual("reproduced", result.outcome)
+            self.assertTrue(result.baseline["healthy"])
+            self.assertEqual(0, result.baseline["returncode"])
+            self.assertEqual(1, result.returncode)
             self.assertTrue(result.reproduced)
             self.assertEqual(64, len(result.target_hash))
             self.assertEqual(64, len(result.workspace_hash_after))
@@ -327,6 +345,30 @@ class VerificationTests(unittest.TestCase):
             binding = result.as_dict()["binding"]
             self.assertIn("workspace_hash_before_execution", binding)
             self.assertIn("workspace_hash_after_execution", binding)
+
+    def test_reproduction_is_inconclusive_when_baseline_is_unhealthy(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td)
+            (project / "test_bad.py").write_text(
+                "import unittest\n\n"
+                "class TestBad(unittest.TestCase):\n"
+                "    def test_bad(self):\n"
+                "        self.assertTrue(False)\n",
+                encoding="utf-8",
+            )
+            result = run_verification(
+                project,
+                {"id": "finding-unhealthy"},
+                split_command("python -m unittest discover -s ."),
+                expected_exit=0,
+                baseline_expected_exit=0,
+                mode="reproduction",
+                security_property="security invariant under adversarial input",
+                timeout_seconds=30,
+            )
+            self.assertEqual("inconclusive", result.outcome)
+            self.assertFalse(result.baseline["healthy"])
+            self.assertEqual(1, result.baseline["returncode"])
 
     def test_cli_verify_finding_persists_reproduction_evidence(self):
         import contextlib
@@ -340,7 +382,20 @@ class VerificationTests(unittest.TestCase):
             from w3sec.intake import build_intake
             root = Path(td) / "project"
             root.mkdir()
-            (root / "test_fail.py").write_text(
+            (root / "pyproject.toml").write_text(
+                "[project]\nname='verify-cli-fixture'\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_ok.py").write_text(
+                "import unittest\n\n"
+                "class TestOK(unittest.TestCase):\n"
+                "    def test_ok(self):\n"
+                "        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            reproducer = Path(td) / "test_repro_fail.py"
+            reproducer.write_text(
                 "import unittest\n\n"
                 "class TestFail(unittest.TestCase):\n"
                 "    def test_failure(self):\n"
@@ -353,7 +408,7 @@ class VerificationTests(unittest.TestCase):
                 "target": {"path": str(root)},
                 "findings": [{
                     "id": "F-CLI",
-                    "file": "test_fail.py",
+                    "file": "tests/test_ok.py",
                     "line": 1,
                     "source_hash": source_hash,
                     "signal": "test_failure",
@@ -362,10 +417,12 @@ class VerificationTests(unittest.TestCase):
             output = io.StringIO()
             argv = [
                 "w3sec", "verify-finding", str(report_path), "F-CLI",
-                "--command", "python -m unittest discover -s .",
+                "--command", "python -m unittest discover -s tests",
                 "--expected-exit", "1",
+                "--baseline-expected-exit", "0",
                 "--mode", "reproduction",
                 "--security-property", "security invariant must fail under the attack reproducer",
+                "--reproducer", str(reproducer),
                 "--os-root", str(root),
                 "--json",
             ]

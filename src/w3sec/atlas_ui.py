@@ -255,8 +255,8 @@ class AtlasApp(tk.Tk):
         self._set_repo(self.repo)
         if self.initial_target:
             self._set_current_target(self.initial_target)
-        else:
-            self._restore_saved_target()
+        # Never restore or execute a previously selected target on GUI startup.
+        # Target restoration is an explicit user action via LOAD SAVED TARGET REPORT.
         self.show_page("Dashboard")
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(250, self.refresh_views)
@@ -1358,15 +1358,23 @@ class AtlasApp(tk.Tk):
         )
 
     def load_saved_target_report(self) -> None:
-        if not self.repo or not self.current_target:
-            self.status.set("No saved target is available.")
+        if not self.repo:
+            self.status.set("Choose the ATLAS research repository first.")
             return
         try:
             state = json.loads(target_state_path().read_text(encoding="utf-8"))
-            raw = state.get("report_path")
-            report_path = Path(str(raw)).expanduser() if raw else None
+            raw_target = state.get("target")
+            raw_report = state.get("report_path")
+            saved_target = Path(str(raw_target)).expanduser() if raw_target else None
+            report_path = Path(str(raw_report)).expanduser() if raw_report else None
         except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            saved_target = None
             report_path = None
+        if self.current_target is None and saved_target is not None and saved_target.exists():
+            self._set_current_target(saved_target)
+        if self.current_target is None:
+            self.status.set("No saved target is available.")
+            return
         if not report_path or not report_path.exists() or not self._report_matches_target(report_path, self.current_target):
             self.status.set("No saved audit report matches the current target.")
             return
@@ -1503,6 +1511,18 @@ class AtlasApp(tk.Tk):
         if mode not in {"baseline", "reproduction"}:
             messagebox.showerror("ATLAS verification", "Mode must be baseline or reproduction.")
             return
+        baseline_expected_exit = 0
+        if mode == "reproduction":
+            baseline_expected_exit = simpledialog.askinteger(
+                "ATLAS �� Baseline health",
+                "Expected exit code for the clean target BEFORE adding the reproducer:",
+                initialvalue=0,
+                minvalue=0,
+                maxvalue=255,
+                parent=self,
+            )
+            if baseline_expected_exit is None:
+                return
         property_text = simpledialog.askstring(
             "ATLAS · Security property",
             "State the security property this test is intended to prove/disprove:",
@@ -1522,7 +1542,10 @@ class AtlasApp(tk.Tk):
             "the approved local test/build command there. The original target is not modified.\n\n"
             f"Command: {' '.join(command)}\n"
             f"Mode: {mode}\n"
-            f"Expected exit: {expected_exit}\n\n"
+            f"Expected exit: {expected_exit}\n"
+            f"Baseline expected exit: {baseline_expected_exit}\n\n"
+            "For reproduction, ATLAS first runs the clean target. A non-clean baseline makes "
+            "the result INCONCLUSIVE; only then is the reproducer executed on a fresh copy.\n\n"
             "A reproduced result is evidence for the security-property gate; an ordinary "
             "passing test is not, by itself, proof that the finding is false.",
             parent=self,
@@ -1535,6 +1558,7 @@ class AtlasApp(tk.Tk):
             "command": command,
             "expected_exit": expected_exit,
             "mode": mode,
+            "baseline_expected_exit": baseline_expected_exit,
             "security_property": property_text,
             "reproducer": str(reproducer_path) if reproducer_path else None,
         }
@@ -1554,6 +1578,7 @@ class AtlasApp(tk.Tk):
             payload["command"],
             expected_exit=int(payload["expected_exit"]),
             mode=str(payload["mode"]),
+            baseline_expected_exit=int(payload.get("baseline_expected_exit", 0)),
             security_property=str(payload["security_property"]),
             timeout_seconds=300,
             reproducer=(

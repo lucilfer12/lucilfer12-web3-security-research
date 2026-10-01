@@ -31,6 +31,7 @@ PRIORITY = {
     "rust_unwrap_expect": "medium",
     "rust_input_sized_allocation": "medium",
     "rust_gas_ordering": "medium",
+    "unchecked_input_division": "medium",
     "invoke_signed": "high",
     "raw_call": "high",
     "sysvar": "medium",
@@ -66,6 +67,7 @@ TITLES = {
     "rust_unwrap_expect": "Rust panic path requires attacker-input reachability review",
     "rust_input_sized_allocation": "Rust input-sized allocation requires resource-limit review",
     "rust_gas_ordering": "Rust host work before gas charge requires ordering review",
+    "unchecked_input_division": "Input-derived division, remainder, or shift requires zero/range review",
     "invoke_signed": "Program-derived authority invocation requires signer-seed review",
     "raw_call": "Raw external-call primitive requires value / target / callback review",
     "sysvar": "System-variable dependency requires freshness and authority review",
@@ -151,6 +153,7 @@ SEMANTIC_PRIORITY = {
     "unchecked_input_arithmetic": "medium",
     "uncapped_deserialization": "medium",
     "gas_ordering": "medium",
+    "unchecked_input_division": "medium",
 }
 
 
@@ -184,6 +187,7 @@ def _triage_score(item: dict[str, Any]) -> int:
         "uncapped_deserialization": 6,
         "input_sized_resource": 5,
         "unchecked_input_arithmetic": 5,
+        "unchecked_input_division": 5,
         "panic_on_input": 3,
     }.get(signal, 0)
     score += 2 if evidence_type.startswith("taint-and-control-flow") else 0

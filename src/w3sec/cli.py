@@ -127,6 +127,12 @@ def main() -> int:
     verify.add_argument("finding_id", help="finding id from the report")
     verify.add_argument("--command", dest="verify_command", required=True, help="local test/build command")
     verify.add_argument("--expected-exit", type=int, default=0)
+    verify.add_argument(
+        "--baseline-expected-exit",
+        type=int,
+        default=0,
+        help="expected exit code for the clean baseline run before reproduction",
+    )
     verify.add_argument("--mode", choices=["baseline", "reproduction"], default="baseline")
     verify.add_argument("--security-property", required=True)
     verify.add_argument(
@@ -484,6 +490,7 @@ def main() -> int:
                 command,
                 expected_exit=args.expected_exit,
                 mode=args.mode,
+                baseline_expected_exit=args.baseline_expected_exit,
                 security_property=args.security_property,
                 timeout_seconds=args.timeout,
                 reproducer=_root(args.reproducer) if args.reproducer else None,

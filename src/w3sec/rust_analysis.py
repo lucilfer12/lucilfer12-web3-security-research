@@ -363,6 +363,42 @@ def upper_bound_proofs(lines: list[str], depths: list[int], idx: int, var: str) 
     return []
 
 
+def index_bound_proofs(
+    lines: list[str], depths: list[int], idx: int, base: str, index: str
+) -> list[dict[str, Any]]:
+    base = base.strip()
+    index = index.strip()
+    if not base or not index:
+        return []
+    ib = re.escape(index)
+    bb = re.escape(base)
+    guard_patterns = (
+        rf"\b{ib}\b\s*<\s*\b{bb}\.(?:len|capacity)\(\)",
+        rf"\b{ib}\b\s*<\s*\b{bb}\b",
+        rf"\b{ib}\b\s*>=\s*\b{bb}\.len\(\)",
+        rf"\b{bb}\.len\(\)\s*<=\s*\b{ib}\b",
+    )
+    exit_pattern = re.compile(r"\breturn\b|\bErr\s*\(|\bbreak\b|\bcontinue\b")
+    for j in range(idx - 1, max(-1, idx - 12), -1):
+        line = lines[j]
+        if depths[j] > depths[idx]:
+            continue
+        if not any(re.search(p, line) for p in guard_patterns):
+            continue
+        if not re.search(r"\b(?:if|ensure|assert|require)!?\b", line):
+            continue
+        text = "\n".join(lines[j:min(len(lines), j + 8)])
+        if exit_pattern.search(text):
+            return [{
+                "kind": "index-upper-bound",
+                "line": j + 1,
+                "text": line.strip()[:140],
+                "base": base,
+                "index": index,
+            }]
+    return []
+
+
 def length_upper_bound_proofs(
     lines: list[str], depths: list[int], idx: int, expr: str
 ) -> list[dict[str, Any]]:
