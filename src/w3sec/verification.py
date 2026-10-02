@@ -223,9 +223,44 @@ def _extract_archive(archive: Path, destination: Path) -> None:
     raise ValueError(f"Unsupported verification archive: {archive.suffix}")
 
 
+def _foundry_profile(root: Path) -> dict[str, str]:
+    """Read a Foundry project's [profile.default] test/out/cache_path, falling back to Foundry's
+    own defaults (test, out, cache). Never raises: a missing or malformed foundry.toml, or a
+    non-string value for one of these keys, just yields the default for that key.
+
+    This exists because several places in this module used to hardcode Foundry's defaults
+    (assuming every project keeps test="test" and cache_path="cache"), which silently broke on
+    any project that customizes either -- a real reproducer could land in a directory forge never
+    scans, and a customized cache directory's internal bookkeeping file (which forge touches on
+    every invocation, even a no-op one) would not be excluded from the workspace-unchanged hash,
+    permanently preventing a "confirmed" outcome regardless of how real the finding is.
+    """
+    defaults = {"test": "test", "out": "out", "cache_path": "cache"}
+    toml_path = root / "foundry.toml"
+    if not toml_path.is_file():
+        return defaults
+    try:
+        import tomllib
+
+        with toml_path.open("rb") as handle:
+            doc = tomllib.load(handle)
+        profile = doc.get("profile", {}).get("default", {})
+        for key in defaults:
+            value = profile.get(key)
+            if isinstance(value, str) and value.strip():
+                defaults[key] = value.strip()
+    except Exception:
+        pass
+    return defaults
+
+
 def _copy_tree(source: Path, destination: Path) -> None:
+    extra_ignored: set[str] = set()
+    if (source / "foundry.toml").is_file():
+        profile = _foundry_profile(source)
+        extra_ignored = {profile["cache_path"].lower(), profile["out"].lower()}
     ignored = shutil.ignore_patterns(
-        ".git", "target", "out", "cache", ".venv", "venv", "node_modules", "__pycache__"
+        *({".git", "target", "out", "cache", ".venv", "venv", "__pycache__"} | extra_ignored)
     )
     shutil.copytree(source, destination, ignore=ignored, dirs_exist_ok=True)
 
@@ -334,7 +369,8 @@ def _prepare_standalone_foundry(
 def _reproducer_destination(project: Path, reproducer: Path) -> Path:
     """Choose the native test location for the detected project toolchain."""
     if (project / "foundry.toml").is_file():
-        return project / "test" / reproducer.name
+        test_dir = _foundry_profile(project)["test"]
+        return project / test_dir / reproducer.name
     if (project / "Cargo.toml").is_file():
         return project / "tests" / reproducer.name
     if any((project / marker).is_file() for marker in ("pyproject.toml", "pytest.ini", "setup.py")):
@@ -436,6 +472,10 @@ _HASH_IGNORED_DIRS = {
 
 
 def _hashable_files(root: Path):
+    ignored_dirs = _HASH_IGNORED_DIRS
+    if (root / "foundry.toml").is_file():
+        profile = _foundry_profile(root)
+        ignored_dirs = _HASH_IGNORED_DIRS | {profile["cache_path"].lower(), profile["out"].lower()}
     for path in root.rglob("*"):
         if not path.is_file():
             continue
@@ -443,7 +483,7 @@ def _hashable_files(root: Path):
             parts = path.relative_to(root).parts
         except ValueError:
             continue
-        if any(part.lower() in _HASH_IGNORED_DIRS for part in parts[:-1]):
+        if any(part.lower() in ignored_dirs for part in parts[:-1]):
             continue
         yield path
 
@@ -523,10 +563,12 @@ def suggested_command(target: Path, reproducer: Path | None = None) -> tuple[str
         toolchains = ["cargo", *toolchains]
     for toolchain in toolchains:
         if toolchain == "foundry" and shutil.which("forge"):
+            project = target if target.is_dir() else target.parent
+            test_dir = _foundry_profile(project)["test"]
             if reproducer is not None:
                 return (
                     "forge", "test", "--offline", "-vv",
-                    "--match-path", f"test/{reproducer.name}",
+                    "--match-path", f"{test_dir}/{reproducer.name}",
                 )
             return ("forge", "test", "--offline", "-vv")
         if toolchain == "cargo" and shutil.which("cargo"):

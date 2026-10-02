@@ -1,0 +1,33 @@
+schema_version: 1
+fixture_id: rain-usdr-shadow-redemption
+product_under_test: ATLAS
+purpose: recall-fixture
+target_archive: rain-usdr-source.zip
+target_sha256: 33517D733A5C17AE3F25B13CCA6B02DB4943B7B1EF9D6C8FF9D78309D191D74D
+target_commit: bd6e03abe34936b7dbece2509b90457bd5c9b119
+contract: contracts/core/VaultEngine.sol
+fix_strategy: gate noFee stable-ilk collateral withdrawal during solvency breach
+fix_condition:
+  - dart < 0
+  - noFee[ilkId] == true
+  - solvencyEngine.isBreached() == true
+reproducer: DifferentialShadowPath.t.sol
+foundry_profile_test_dir: tests
+vendor_dependency: node_modules/@openzeppelin/contracts
+vendor_version: 5.4.0
+vendor_commit: c64a1edb67b6e3f4a15cca8909c9482ad33a02b0
+command: forge test --offline -vv --match-path tests/DifferentialShadowPath.t.sol
+baseline_command: forge test --offline -vv --match-path tests/AtlasBaseline.t.sol
+vulnerable_expected_exit: 1
+fixed_expected_exit: 0
+baseline_expected_exit: 0
+proof_property: a declared solvency breach must block the shadow stablecoin redemption path
+effect_witness:
+  vulnerable:
+    breach: true
+    shadow_path: true
+    user_asset_delta: 100000000
+  fixed:
+    breach: true
+    shadow_path: false
+    user_asset_delta: 0

@@ -4,11 +4,21 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from w3sec.effect_witness import extract_effect_witness
 from w3sec.isolation import ATTEST_ENV
 from w3sec.proof_verifier import proof_marker, run_proof_verification
 
 
 class ProofVerification(unittest.TestCase):
+    def test_indented_foundry_effect_witness_is_parsed(self):
+        witness = extract_effect_witness(
+            'Logs:\n  ATLAS-EFFECT:{"breach":true,"shadow_path":true,"user_asset_delta":100}',
+            "",
+        )
+        self.assertIsNotNone(witness)
+        self.assertEqual(True, witness.get("breach"))
+        self.assertEqual(100, witness.get("user_asset_delta"))
+
     def _target(self, root: Path, state: str) -> Path:
         project = root / state
         project.mkdir()

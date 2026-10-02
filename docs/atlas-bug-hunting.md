@@ -38,6 +38,8 @@ The nearcore total-supply case records:
 
 The recall test must flag the pre-fix validation seam and must stay silent after the invariant check is present.
 
+The Rain/USDR shadow-redemption fixture under `corpus/recall/rain-usdr/` exercises the same rule using a real Foundry project, a pinned OpenZeppelin dependency snapshot, and ATLAS's proof-grade differential verifier. It is opt-in because it requires Foundry and is kept as a regression fixture rather than a production finding.
+
 ## Windows release
 
 The Windows build is produced from the active repository with no staging clone and no copy-back step. The visible release artifact is `ATLAS-windows-x64.zip`, accompanied by `dist/BUILD-MANIFEST.txt` and SHA-256 files.

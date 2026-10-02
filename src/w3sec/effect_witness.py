@@ -25,9 +25,10 @@ def extract_effect_witness(stdout: str, stderr: str) -> EffectWitness | None:
     """Extract the last machine-readable ATLAS-EFFECT witness from a run."""
     candidate: EffectWitness | None = None
     for line in (f"{stdout}\n{stderr}").splitlines():
-        if not line.startswith(EFFECT_PREFIX):
+        normalized = line.strip()
+        if not normalized.startswith(EFFECT_PREFIX):
             continue
-        raw = line[len(EFFECT_PREFIX):].strip()
+        raw = normalized[len(EFFECT_PREFIX):].strip()
         try:
             payload = json.loads(raw)
         except json.JSONDecodeError:

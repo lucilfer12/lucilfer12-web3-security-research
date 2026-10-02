@@ -36,6 +36,46 @@ def _windows_kwargs() -> dict[str, object]:
     }
 
 
+def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
+    if os.name == "nt":
+        try:
+            subprocess.run(
+                (
+                    "taskkill",
+                    "/PID",
+                    str(process.pid),
+                    "/T",
+                    "/F",
+                ),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=2,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    else:
+        try:
+            import signal
+
+            os.killpg(process.pid, signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            pass
+
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+
+
 def _safe_env(env: Mapping[str, str] | None, allowlist: Sequence[str] | None) -> dict[str, str]:
     source = dict(os.environ if env is None else env)
     if allowlist is None:
@@ -150,6 +190,7 @@ def run_bounded(
         stdin=subprocess.DEVNULL,
         text=False,
         env=effective_env,
+        start_new_session=(os.name != "nt"),
         **_windows_kwargs(),
     )
     stdout = bytearray()
@@ -159,7 +200,10 @@ def run_bounded(
 
     def pump(stream, bucket: bytearray) -> None:
         while True:
-            chunk = stream.read(8192)
+            try:
+                chunk = stream.read(8192)
+            except (OSError, ValueError):
+                return
             if not chunk:
                 return
             with output_lock:
@@ -173,10 +217,6 @@ def run_bounded(
                     if len(chunk) > remaining:
                         limited.set()
             if limited.is_set():
-                try:
-                    process.terminate()
-                except OSError:
-                    pass
                 return
 
     threads = [
@@ -188,43 +228,45 @@ def run_bounded(
 
     timed_out = False
     cancelled = False
+    terminated = False
     started = time.monotonic()
     while process.poll() is None:
+        if limited.is_set():
+            _terminate_process_tree(process)
+            terminated = True
+            break
         if cancel and cancel():
             cancelled = True
-            try:
-                process.terminate()
-                process.wait(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
-                try:
-                    process.kill()
-                except OSError:
-                    pass
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    pass
+            _terminate_process_tree(process)
+            terminated = True
             break
         if timeout is not None and time.monotonic() - started >= timeout:
             timed_out = True
-            try:
-                process.terminate()
-                process.wait(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
-                try:
-                    process.kill()
-                except OSError:
-                    pass
-                process.wait()
+            _terminate_process_tree(process)
+            terminated = True
             break
         time.sleep(0.05)
-    for thread in threads:
-        thread.join(timeout=2)
-    for stream in (process.stdout, process.stderr):
-        try:
-            stream.close()
-        except Exception:
-            pass
+
+    if terminated:
+        # A descendant can inherit stdout/stderr on Windows and keep the reader blocked
+        # after the parent has been terminated. Close the read ends before joining so the
+        # daemon pumps can exit immediately; pump() turns the resulting stream-close
+        # exception into a normal EOF path.
+        for stream in (process.stdout, process.stderr):
+            try:
+                stream.close()
+            except Exception:
+                pass
+        for thread in threads:
+            thread.join(timeout=1)
+    else:
+        for thread in threads:
+            thread.join(timeout=2)
+        for stream in (process.stdout, process.stderr):
+            try:
+                stream.close()
+            except Exception:
+                pass
 
     return BoundedRunResult(
         command=tuple(command),
